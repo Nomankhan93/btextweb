@@ -5,6 +5,8 @@ const requiredFiles = [
   'package.json',
   '.env.example',
   'src/App.tsx',
+  'src/pages/DashboardPage.tsx',
+  'src/pages/CampaignsPage.tsx',
   'src/auth/AuthProvider.tsx',
   'src/workspace/WorkspaceProvider.tsx',
   'src/workspace/RequireWorkspace.tsx',
@@ -22,6 +24,7 @@ const requiredFiles = [
   'src/lib/messageComposer.ts',
   'src/lib/messageComposerApi.ts',
   'src/lib/smsSegments.ts',
+  'src/lib/productNavigation.ts',
   'src/lib/supabase.ts',
   'src/components/PairingQr.tsx',
   'src/pages/DevicesPage.tsx',
@@ -33,18 +36,18 @@ const requiredFiles = [
   'src/pages/MessageComposerPage.tsx',
   'src/pages/SettingsPage.tsx',
   'supabase/config.toml',
-  'supabase/migrations/20260930000100_web_cloud_foundation.sql',
-  'supabase/migrations/20260930000200_auth_organizations_rbac.sql',
-  'supabase/migrations/20260930000210_organization_rbac_stabilization.sql',
-  'supabase/migrations/20260930000220_secure_android_device_pairing.sql',
-  'supabase/migrations/20260930000230_device_dashboard_sim_binding.sql',
-  'supabase/migrations/20261001000010_phone_number_foundation.sql',
-  'supabase/migrations/20261001000020_excel_csv_import.sql',
-  'supabase/migrations/20261001000030_recipient_validation_preview.sql',
-  'supabase/migrations/20261001000040_consent_suppression.sql',
-  'supabase/migrations/20261001000050_message_composer_personalization.sql',
-  'supabase/migrations/20261001000060_individual_account_transition.sql',
-  'supabase/migrations/20261001000070_sms_segment_usage_calculator.sql',
+  'supabase/migrations/20261001000100_individual_account_foundation.sql',
+  'supabase/migrations/20261001000110_secure_android_device_pairing.sql',
+  'supabase/migrations/20261001000120_device_dashboard_sim_binding.sql',
+  'supabase/migrations/20261001000130_phone_number_foundation.sql',
+  'supabase/migrations/20261001000140_excel_csv_import.sql',
+  'supabase/migrations/20261001000150_recipient_validation_preview.sql',
+  'supabase/migrations/20261001000200_consent_suppression.sql',
+  'supabase/migrations/20261001000210_message_composer_personalization.sql',
+  'supabase/migrations/20261001000220_sms_segment_usage_calculator.sql',
+  'supabase/migrations/20261001000230_gateway_sql_ambiguity_fix.sql',
+  'supabase/migrations/20261001000240_gateway_sql_lint_stabilization.sql',
+  'supabase/migrations/20261001000250_gateway_pairing_expiry_qualification.sql',
   'scripts/test-individual-account-local.mjs',
   'scripts/test-pairing-local.mjs',
   'scripts/test-device-dashboard-local.mjs',
@@ -62,7 +65,9 @@ const requiredFiles = [
   'docs/CONSENT_SUPPRESSION.md',
   'docs/MESSAGE_COMPOSER_PERSONALIZATION.md',
   'docs/SMS_SEGMENT_USAGE_CALCULATOR.md',
+  'docs/INDIVIDUAL_UX_0.13.1.md',
   'src/test/smsSegments.test.ts',
+  'src/test/productNavigation.test.ts',
 ]
 
 const forbiddenFiles = [
@@ -101,4 +106,4 @@ if (missing.length || forbiddenPresent.length) {
   process.exit(1)
 }
 
-console.log('BulkText 0.13.0 preflight PASS')
+console.log('BulkText 0.13.1 preflight PASS')

@@ -72,7 +72,7 @@ export function RecipientEligibilityPage() {
       setSnapshots(nextSnapshots)
       setStoredRows(nextStored)
       setActiveSnapshotId(snapshotId)
-      setMessage('Consent/suppression eligibility snapshot created. This snapshot is immutable and still does not send SMS.')
+      setMessage('Eligibility result saved. Nothing has been sent.')
     } catch (reason) {
       setError(errorMessage(reason, 'Could not create eligibility snapshot.'))
     } finally {
@@ -98,41 +98,40 @@ export function RecipientEligibilityPage() {
   if (loading) return <LoadingState label="Evaluating consent and suppression…" />
 
   const sourceFilename = rows[0]?.sourceFilename ?? 'Recipient preview'
-  const previewRevision = rows[0]?.previewRevision ?? 0
 
   return (
     <div className="page-stack">
       <section className="page-heading recipient-heading">
         <div>
-          <p className="eyebrow">Consent gate</p>
-          <h1>Consent & Suppression Gate</h1>
-          <p>Evaluate structurally included recipients against current consent evidence and your suppression list, then freeze the result as an immutable eligibility snapshot.</p>
+          <p className="eyebrow">Eligibility</p>
+          <h1>Check consent & do-not-send</h1>
+          <p>Check each prepared recipient against current consent evidence and your do-not-send list before writing the campaign message.</p>
         </div>
-        <Link className="secondary-button compact-button" to="/imports">Back to imports</Link>
+        <Link className="secondary-button compact-button" to="/imports">Back to recipients</Link>
       </section>
 
       {error ? <div className="notice error-notice">{error}</div> : null}
       {message ? <div className="notice success-notice">{message}</div> : null}
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Recipient preview</p><h2>{sourceFilename}{previewRevision ? ` · preview #${previewRevision}` : ''}</h2></div><span className="badge badge-muted">consent-suppression-v1</span></div>
-        <p className="muted-copy">Suppression always overrides consent. A recipient with no active consent evidence, revoked consent or expired consent is blocked even when the number is not suppressed.</p>
+        <div className="panel-heading"><div><p className="eyebrow">Recipient list</p><h2>{sourceFilename}</h2></div></div>
+        <p className="muted-copy">A do-not-send block always overrides consent. Recipients without active consent cannot continue.</p>
       </section>
 
       <section className="metric-grid eligibility-metrics">
-        <article className="metric-card"><span>Candidates</span><h2>{summary.total}</h2><p>Included rows from the immutable recipient preview.</p></article>
-        <article className="metric-card"><span>Eligible</span><h2>{summary.eligible}</h2><p>Active consent and no suppression.</p></article>
+        <article className="metric-card"><span>Candidates</span><h2>{summary.total}</h2><p>Prepared recipients ready for eligibility checks.</p></article>
+        <article className="metric-card"><span>Eligible</span><h2>{summary.eligible}</h2><p>Active consent and no do-not-send block.</p></article>
         <article className="metric-card"><span>Consent blocked</span><h2>{summary.noConsent + summary.revoked + summary.expired}</h2><p>{summary.noConsent} none · {summary.revoked} revoked · {summary.expired} expired</p></article>
-        <article className="metric-card"><span>Suppressed</span><h2>{summary.suppressed}</h2><p>Your suppression list overrides consent.</p></article>
+        <article className="metric-card"><span>Do-not-send</span><h2>{summary.suppressed}</h2><p>Blocked numbers cannot continue even when consent exists.</p></article>
       </section>
 
       <section className="panel">
         <div className="panel-heading">
-          <div><p className="eyebrow">Live evaluation</p><h2>Current compliance state</h2></div>
-          <div className="recipient-actions"><button className="secondary-button compact-button" type="button" disabled={busy} onClick={() => void refresh()}>Refresh</button>{canCreate ? <button className="primary-button compact-button" type="button" disabled={busy || rows.length === 0} onClick={() => void saveSnapshot()}>{busy ? 'Saving…' : 'Create eligibility snapshot'}</button> : null}</div>
+          <div><p className="eyebrow">Current checks</p><h2>Recipient eligibility</h2></div>
+          <div className="recipient-actions"><button className="secondary-button compact-button" type="button" disabled={busy} onClick={() => void refresh()}>Refresh</button>{canCreate ? <button className="primary-button compact-button" type="button" disabled={busy || rows.length === 0} onClick={() => void saveSnapshot()}>{busy ? 'Saving…' : 'Save eligibility result'}</button> : null}</div>
         </div>
         {rows.length === 0 ? <EmptyState title="No included recipients">The selected recipient preview contains no included candidates.</EmptyState> : (
-          <div className="table-wrap"><table className="data-table eligibility-table"><thead><tr><th>Row</th><th>Name</th><th>Number</th><th>Consent</th><th>Suppression</th><th>Eligibility</th><th /></tr></thead><tbody>{rows.map((row) => (
+          <div className="table-wrap"><table className="data-table eligibility-table"><thead><tr><th>Row</th><th>Name</th><th>Number</th><th>Consent</th><th>Do-not-send</th><th>Eligibility</th><th /></tr></thead><tbody>{rows.map((row) => (
             <tr key={row.previewRowId} className={row.eligibilityState === 'eligible' ? 'recipient-row-included' : ''}>
               <td>{row.sourceRowNumber}</td>
               <td>{row.displayName ?? '—'}</td>
@@ -147,18 +146,18 @@ export function RecipientEligibilityPage() {
       </section>
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Snapshot history</p><h2>Eligibility revisions</h2></div><span className="badge badge-muted">Immutable</span></div>
-        {snapshots.length === 0 ? <EmptyState title="No eligibility snapshots">After consent and suppression records are ready, create a snapshot to freeze the current gate result.</EmptyState> : (
+        <div className="panel-heading"><div><p className="eyebrow">Saved checks</p><h2>Eligibility history</h2></div></div>
+        {snapshots.length === 0 ? <EmptyState title="No saved eligibility checks">When consent and do-not-send records are ready, save the current eligibility result.</EmptyState> : (
           <div className="table-wrap"><table className="data-table eligibility-history-table"><thead><tr><th>Revision</th><th>Eligible</th><th>Blocked breakdown</th><th>Created</th><th /></tr></thead><tbody>{snapshots.map((snapshot) => (
-            <tr key={snapshot.snapshotId}><td><strong>#{snapshot.revision}</strong><small>{snapshot.policyVersion}</small></td><td><span className="badge badge-success">{snapshot.eligibleRows} eligible</span><small>{snapshot.candidateRows} candidates</small></td><td>{snapshot.noConsentRows} no consent · {snapshot.consentRevokedRows} revoked · {snapshot.consentExpiredRows} expired · {snapshot.suppressedRows} suppressed</td><td>{dateTime(snapshot.createdAt)}</td><td><button className="secondary-button compact-button" type="button" disabled={busy} onClick={() => void viewSnapshot(snapshot.snapshotId)}>{activeSnapshotId === snapshot.snapshotId ? 'Viewing' : 'View'}</button></td></tr>
+            <tr key={snapshot.snapshotId}><td><strong>#{snapshot.revision}</strong></td><td><span className="badge badge-success">{snapshot.eligibleRows} eligible</span><small>{snapshot.candidateRows} candidates</small></td><td>{snapshot.noConsentRows} no consent · {snapshot.consentRevokedRows} revoked · {snapshot.consentExpiredRows} expired · {snapshot.suppressedRows} suppressed</td><td>{dateTime(snapshot.createdAt)}</td><td><button className="secondary-button compact-button" type="button" disabled={busy} onClick={() => void viewSnapshot(snapshot.snapshotId)}>{activeSnapshotId === snapshot.snapshotId ? 'Viewing' : 'View'}</button></td></tr>
           ))}</tbody></table></div>
         )}
       </section>
 
       {activeSnapshotId ? (
         <section className="panel">
-          <div className="panel-heading"><div><p className="eyebrow">Stored snapshot</p><h2>Frozen eligibility decisions</h2></div><div className="recipient-actions"><span className="badge badge-success">{storedRows.filter((row) => row.eligibilityState === 'eligible').length} eligible</span><Link className="primary-button compact-button" to={`/composer?snapshot=${encodeURIComponent(activeSnapshotId)}`}>Compose message</Link></div></div>
-          <div className="table-wrap"><table className="data-table stored-eligibility-table"><thead><tr><th>Row</th><th>Name</th><th>Number</th><th>Consent</th><th>Suppression</th><th>Decision</th></tr></thead><tbody>{storedRows.map((row) => (
+          <div className="panel-heading"><div><p className="eyebrow">Saved eligibility</p><h2>Recipient decisions</h2></div><div className="recipient-actions"><span className="badge badge-success">{storedRows.filter((row) => row.eligibilityState === 'eligible').length} eligible</span><Link className="primary-button compact-button" to={`/composer?snapshot=${encodeURIComponent(activeSnapshotId)}`}>Write message</Link></div></div>
+          <div className="table-wrap"><table className="data-table stored-eligibility-table"><thead><tr><th>Row</th><th>Name</th><th>Number</th><th>Consent</th><th>Do-not-send</th><th>Decision</th></tr></thead><tbody>{storedRows.map((row) => (
             <tr key={row.eligibilityRowId}><td>{row.sourceRowNumber}</td><td>{row.displayName ?? '—'}</td><td><code>{row.normalizedE164}</code></td><td>{consentStateLabel(row.consentState)}<small>{row.consentSource?.replaceAll('_', ' ') ?? '—'}</small></td><td>{row.suppressionState}<small>{row.suppressionReason?.replaceAll('_', ' ') ?? '—'}</small></td><td><span className={row.eligibilityState === 'eligible' ? 'badge badge-success' : 'badge badge-warning'}>{row.eligibilityState}</span><small>{blockReasonLabel(row.blockReason)}</small></td></tr>
           ))}</tbody></table></div>
         </section>

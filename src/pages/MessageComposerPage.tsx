@@ -29,10 +29,6 @@ function dateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
 
-function shortId(value: string) {
-  return value.length > 12 ? `${value.slice(0, 8)}…` : value
-}
-
 export function MessageComposerPage() {
   const { workspace } = useWorkspace()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -149,8 +145,8 @@ export function MessageComposerPage() {
       setDraftId(savedId)
       setDrafts(await listMessageComposerDrafts(workspace.id))
       setMessage(hasRecipientProblem
-        ? 'Draft saved. Some eligible recipients still have missing personalization values; review them before later campaign confirmation.'
-        : 'Message draft saved. No SMS was queued or sent.')
+        ? 'Draft saved. Some recipients still have missing personalization values; review them before confirming a campaign.'
+        : 'Message draft saved. Nothing has been sent.')
     } catch (reason) {
       setError(errorMessage(reason, 'Could not save message draft.'))
     } finally {
@@ -160,7 +156,7 @@ export function MessageComposerPage() {
 
   async function removeDraft(id: string) {
     if (!workspace) return
-    if (!window.confirm('Delete this message draft? This does not change recipient or consent snapshots.')) return
+    if (!window.confirm('Delete this message draft? Your prepared recipients and consent records will not change.')) return
     setBusy(true)
     setError(null)
     setMessage(null)
@@ -204,9 +200,9 @@ export function MessageComposerPage() {
     <div className="page-stack">
       <section className="page-heading recipient-heading">
         <div>
-          <p className="eyebrow">Message drafting</p>
-          <h1>Message Composer & Personalization</h1>
-          <p>Draft one message template against an immutable eligible-recipient snapshot, insert recipient variables, and preview exactly where personalization data is missing before campaign confirmation exists.</p>
+          <p className="eyebrow">Message</p>
+          <h1>Write a message</h1>
+          <p>Write and personalize your SMS, preview the final text for recipients and review estimated SMS usage before confirming a campaign.</p>
         </div>
         {canEdit ? <button className="secondary-button compact-button" type="button" onClick={newDraft}>New draft</button> : null}
       </section>
@@ -215,16 +211,16 @@ export function MessageComposerPage() {
       {message ? <div className="notice success-notice">{message}</div> : null}
 
       {sources.length === 0 ? (
-        <EmptyState title="No eligible recipient snapshot yet">Create a recipient preview, record consent/suppression state, then create an eligibility snapshot with at least one eligible recipient before composing a message.</EmptyState>
+        <EmptyState title="No recipients ready yet">Upload recipients and complete validation plus consent/do-not-send checks before writing a message.</EmptyState>
       ) : (
         <>
           <section className="panel">
-            <div className="panel-heading"><div><p className="eyebrow">Recipient source</p><h2>Immutable eligibility snapshot</h2></div><span className="badge badge-muted">bulktext-template-v1</span></div>
+            <div className="panel-heading"><div><p className="eyebrow">Recipients</p><h2>Ready recipient list</h2></div></div>
             <div className="form-grid composer-source-grid">
-              <label className="field"><span>Eligible recipient snapshot</span><select value={selectedSnapshotId} onChange={(event) => chooseSnapshot(event.target.value)}>{sources.map((source) => <option key={source.eligibilitySnapshotId} value={source.eligibilitySnapshotId}>{source.sourceFilename} · eligibility #{source.eligibilityRevision} · {source.eligibleRows} eligible</option>)}</select></label>
-              <div className="definition-card"><span>Source</span><strong>{selectedSource?.sourceFilename ?? '—'}</strong><small>Preview #{selectedSource?.previewRevision ?? '—'} · eligibility #{selectedSource?.eligibilityRevision ?? '—'}</small></div>
-              <div className="definition-card"><span>Recipients</span><strong>{selectedSource?.eligibleRows ?? 0}</strong><small>Only rows frozen as eligible are exposed to the composer.</small></div>
-              <div className="definition-card"><span>Snapshot</span><strong>{selectedSource ? shortId(selectedSource.eligibilitySnapshotId) : '—'}</strong><small>{selectedSource ? dateTime(selectedSource.snapshotCreatedAt) : '—'}</small></div>
+              <label className="field"><span>Recipient list</span><select value={selectedSnapshotId} onChange={(event) => chooseSnapshot(event.target.value)}>{sources.map((source) => <option key={source.eligibilitySnapshotId} value={source.eligibilitySnapshotId}>{source.sourceFilename} · {source.eligibleRows} ready</option>)}</select></label>
+              <div className="definition-card"><span>Source</span><strong>{selectedSource?.sourceFilename ?? '—'}</strong><small>Prepared recipient source</small></div>
+              <div className="definition-card"><span>Recipients</span><strong>{selectedSource?.eligibleRows ?? 0}</strong><small>Only recipients that passed the current checks are included.</small></div>
+              <div className="definition-card"><span>Prepared</span><strong>{selectedSource ? dateTime(selectedSource.snapshotCreatedAt) : '—'}</strong><small>Recipient list ready for drafting</small></div>
             </div>
           </section>
 
@@ -240,7 +236,7 @@ export function MessageComposerPage() {
               </div>
               <div className="composer-token-section">
                 <span className="field-label">Custom import fields</span>
-                {customKeys.length ? <div className="token-list">{customKeys.map((key) => <button key={key} type="button" className="token-button" disabled={!canEdit} onClick={() => insertToken(`custom:${key}`)}>{`{{custom:${key}}}`}</button>)}</div> : <p className="muted-copy">This eligible snapshot has no custom import fields.</p>}
+                {customKeys.length ? <div className="token-list">{customKeys.map((key) => <button key={key} type="button" className="token-button" disabled={!canEdit} onClick={() => insertToken(`custom:${key}`)}>{`{{custom:${key}}}`}</button>)}</div> : <p className="muted-copy">This recipient list has no custom import fields.</p>}
               </div>
 
               {analysis.malformed ? <div className="notice error-notice">Message contains unmatched or malformed <code>{'{{…}}'}</code> braces.</div> : null}
@@ -252,7 +248,7 @@ export function MessageComposerPage() {
             </div>
 
             <aside className="panel composer-summary-panel">
-              <div className="panel-heading"><div><p className="eyebrow">Personalization readiness</p><h2>Live checks</h2></div></div>
+              <div className="panel-heading"><div><p className="eyebrow">Message readiness</p><h2>Live checks</h2></div></div>
               {sourceLoading ? <LoadingState label="Loading recipients…" /> : (
                 <dl className="definition-grid composer-summary-grid">
                   <div><dt>Eligible recipients</dt><dd>{personalizationSummary.recipientCount}</dd></div>
@@ -263,13 +259,13 @@ export function MessageComposerPage() {
                   <div><dt>Estimated SMS units</dt><dd>{smsUsage.estimatedSmsUnits}</dd></div>
                 </dl>
               )}
-              <p className="muted-copy">A saved draft is editable. It is not a confirmed campaign and cannot queue or send SMS.</p>
+              <p className="muted-copy">A saved draft remains editable. Nothing is sent until a campaign is reviewed and confirmed.</p>
             </aside>
           </section>
 
           <section className="panel sms-usage-panel">
             <div className="panel-heading">
-              <div><p className="eyebrow">SMS usage estimate</p><h2>Encoding & package usage</h2></div>
+              <div><p className="eyebrow">SMS usage estimate</p><h2>Estimated SMS usage</h2></div>
               <span className="badge badge-muted">Estimate only</span>
             </div>
             {sourceLoading ? <LoadingState label="Calculating SMS usage…" /> : (
@@ -280,8 +276,8 @@ export function MessageComposerPage() {
                   <article className="metric-card"><span>Average</span><h2>{smsUsage.averageSegments.toFixed(2)} segments</h2><p>Minimum {smsUsage.minimumSegments} · maximum {smsUsage.maximumSegments} segment{smsUsage.maximumSegments === 1 ? '' : 's'} per ready recipient.</p></article>
                   <article className="metric-card"><span>Ready recipients</span><h2>{smsUsage.readyRecipients} / {smsUsage.recipientCount}</h2><p>{smsUsage.blockedRecipients ? `${smsUsage.blockedRecipients} recipient(s) excluded because personalization is incomplete.` : 'Every eligible recipient has a complete rendered message.'}</p></article>
                 </div>
-                {smsUsage.blockedRecipients > 0 ? <div className="notice warning-notice">The total excludes {smsUsage.blockedRecipients} recipient(s) with missing or unsupported personalization. Resolve those values before campaign confirmation.</div> : null}
-                {smsUsage.longMessageRecipients > 0 ? <div className="notice warning-notice">{smsUsage.longMessageRecipients} recipient message(s) are {SMS_LONG_MESSAGE_WARNING_SEGMENTS}+ SMS segments. Review unusually long personalized messages before confirming a campaign.</div> : null}
+                {smsUsage.blockedRecipients > 0 ? <div className="notice warning-notice">The estimate excludes {smsUsage.blockedRecipients} recipient(s) with missing or unsupported personalization. Resolve those values before confirming a campaign.</div> : null}
+                {smsUsage.longMessageRecipients > 0 ? <div className="notice warning-notice">{smsUsage.longMessageRecipients} recipient message(s) are {SMS_LONG_MESSAGE_WARNING_SEGMENTS}+ SMS segments. Review unusually long personalized messages before confirmation.</div> : null}
                 <p className="muted-copy">Estimated SMS usage only. GSM-7 extension characters consume extra encoding units, Unicode/Urdu has shorter segment limits, and your mobile operator determines actual package deduction and charges.</p>
               </>
             )}
@@ -308,12 +304,12 @@ export function MessageComposerPage() {
         <div className="panel-heading"><div><p className="eyebrow">Saved work</p><h2>Message drafts</h2></div><span className="badge badge-muted">Editable</span></div>
         {drafts.length === 0 ? <EmptyState title="No message drafts">Save a personalized message draft to continue it later.</EmptyState> : (
           <div className="table-wrap"><table className="data-table"><thead><tr><th>Draft</th><th>Recipient source</th><th>Variables</th><th>Updated</th><th /></tr></thead><tbody>{drafts.map((draft) => (
-            <tr key={draft.draftId}><td><strong>{draft.title}</strong><small>{draft.messageTemplate.slice(0, 90)}{draft.messageTemplate.length > 90 ? '…' : ''}</small></td><td>{draft.sourceFilename}<small>Eligibility #{draft.eligibilityRevision} · {draft.eligibleRows} eligible</small></td><td>{draft.templateVariables.length ? draft.templateVariables.join(', ') : 'None'}</td><td>{dateTime(draft.updatedAt)}</td><td><div className="recipient-actions"><button className="secondary-button compact-button" type="button" onClick={() => loadDraft(draft)}>Load</button>{canEdit ? <button className="text-button danger-text" type="button" disabled={busy} onClick={() => void removeDraft(draft.draftId)}>Delete</button> : null}</div></td></tr>
+            <tr key={draft.draftId}><td><strong>{draft.title}</strong><small>{draft.messageTemplate.slice(0, 90)}{draft.messageTemplate.length > 90 ? '…' : ''}</small></td><td>{draft.sourceFilename}<small>{draft.eligibleRows} ready recipient{draft.eligibleRows === 1 ? '' : 's'}</small></td><td>{draft.templateVariables.length ? draft.templateVariables.join(', ') : 'None'}</td><td>{dateTime(draft.updatedAt)}</td><td><div className="recipient-actions"><button className="secondary-button compact-button" type="button" onClick={() => loadDraft(draft)}>Load</button>{canEdit ? <button className="text-button danger-text" type="button" disabled={busy} onClick={() => void removeDraft(draft.draftId)}>Delete</button> : null}</div></td></tr>
           ))}</tbody></table></div>
         )}
       </section>
 
-      <section className="notice warning-notice">Message drafts and SMS usage estimates do not confirm a campaign, schedule delivery, create queue jobs, contact the Android gateway, or send messages. Actual package deduction remains controlled by the mobile operator.</section>
+      <section className="notice warning-notice">Nothing will be sent until you review and confirm a campaign. SMS usage is an estimate; your mobile operator determines actual package deduction and charges.</section>
     </div>
   )
 }

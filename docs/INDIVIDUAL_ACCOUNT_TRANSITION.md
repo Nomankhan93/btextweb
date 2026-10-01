@@ -48,7 +48,7 @@ The role is an implementation detail only; it is not shown in the product UI.
 
 ## Migration behavior
 
-`20261001000060_individual_account_transition.sql`:
+`20261001000100_individual_account_foundation.sql` (fresh baseline; the former individual-account transition is merged into this foundation):
 
 1. Adds `profiles.personal_workspace_id`.
 2. Creates `ensure_personal_workspace_for_user(uuid)` as an internal provisioning helper.

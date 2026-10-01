@@ -88,20 +88,20 @@ export function ImportsPage() {
       return
     }
     if (parsed.truncated) {
-      setError(`This file contains more than ${MAX_IMPORT_ROWS.toLocaleString()} rows. Split it into smaller files before staging.`)
+      setError(`This file contains more than ${MAX_IMPORT_ROWS.toLocaleString()} rows. Split it into smaller files before continuing.`)
       return
     }
 
     setBusy(true)
     try {
       await createContactImport(workspace.id, parsed, mapping, preview.rows)
-      setMessage(`${parsed.fileName} was staged successfully. Use Validate & preview to resolve duplicates and create a recipient snapshot.`)
+      setMessage(`${parsed.fileName} is ready for review. Use Validate & preview to resolve invalid or duplicate numbers.`)
       setParsed(null)
       setMapping(emptyMapping)
       if (inputRef.current) inputRef.current.value = ''
       await refreshHistory()
     } catch (reason) {
-      setError(errorMessage(reason, 'Could not stage the import.'))
+      setError(errorMessage(reason, 'Could not prepare the upload.'))
     } finally {
       setBusy(false)
     }
@@ -131,9 +131,9 @@ export function ImportsPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">Recipient import</p>
-          <h1>Excel / CSV Import</h1>
-          <p>Parse CSV or modern XLSX files in the browser, map recipient fields, preview canonical Pakistan mobile numbers, then stage the rows in your account for recipient validation and preview.</p>
+          <p className="eyebrow">Recipients</p>
+          <h1>Upload recipients</h1>
+          <p>Upload a CSV or XLSX file, map recipient fields and review Pakistan mobile numbers before continuing.</p>
         </div>
       </section>
 
@@ -160,7 +160,7 @@ export function ImportsPage() {
         <>
           <section className="metric-grid import-metrics">
             <article className="metric-card"><span>Rows</span><h2>{parsed.sourceRowCount}</h2><p>{parsed.fileName} · {bytesLabel(parsed.fileSizeBytes)}{parsed.sheetName ? ` · ${parsed.sheetName}` : ''}</p></article>
-            <article className="metric-card"><span>Valid phones</span><h2>{preview.summary.validPhoneRows}</h2><p>Canonical +923xxxxxxxxx values according to pk-mobile-v1.</p></article>
+            <article className="metric-card"><span>Valid phones</span><h2>{preview.summary.validPhoneRows}</h2><p>Numbers ready in standard +923 format.</p></article>
             <article className="metric-card"><span>Needs review</span><h2>{preview.summary.invalidPhoneRows}</h2><p>{preview.summary.duplicatePhoneRows} additional valid rows repeat a number already present in this file.</p></article>
           </section>
 
@@ -178,7 +178,7 @@ export function ImportsPage() {
           </section>
 
           <section className="panel">
-            <div className="panel-heading"><div><p className="eyebrow">Step 3</p><h2>Preview first {Math.min(preview.rows.length, 25)} rows</h2></div><button className="primary-button" type="button" disabled={busy || !mapping.phone || parsed.truncated || preview.rows.length === 0} onClick={() => void stageImport()}>{busy ? 'Staging…' : 'Stage import'}</button></div>
+            <div className="panel-heading"><div><p className="eyebrow">Step 3</p><h2>Preview first {Math.min(preview.rows.length, 25)} rows</h2></div><button className="primary-button" type="button" disabled={busy || !mapping.phone || parsed.truncated || preview.rows.length === 0} onClick={() => void stageImport()}>{busy ? 'Preparing…' : 'Prepare recipients'}</button></div>
             {mapping.phone ? (
               <div className="table-wrap">
                 <table className="data-table import-preview-table">
@@ -200,9 +200,9 @@ export function ImportsPage() {
       ) : null}
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Import history</p><h2>Staged files</h2></div><button className="secondary-button compact-button" type="button" disabled={loadingHistory || busy} onClick={() => void refreshHistory()}>Refresh</button></div>
+        <div className="panel-heading"><div><p className="eyebrow">Recent uploads</p><h2>Recipient files</h2></div><button className="secondary-button compact-button" type="button" disabled={loadingHistory || busy} onClick={() => void refreshHistory()}>Refresh</button></div>
         {loadingHistory ? <LoadingState label="Loading staged imports…" /> : imports.length === 0 ? (
-          <EmptyState title="No staged imports">Upload your first CSV or XLSX file. Staging does not create campaign recipients or send messages.</EmptyState>
+          <EmptyState title="No recipient files yet">Upload your first CSV or XLSX file to begin preparing recipients.</EmptyState>
         ) : (
           <div className="table-wrap">
             <table className="data-table import-history-table">
@@ -221,7 +221,7 @@ export function ImportsPage() {
         )}
       </section>
 
-      <section className="notice warning-notice">Import staging stays separate from compliance. Imports with preview history are retained; consent/suppression is evaluated only after an immutable recipient preview is created, and no SMS is sent here.</section>
+      <section className="notice warning-notice">Uploading and reviewing recipients does not send messages. Consent and do-not-send checks happen before a campaign can be confirmed.</section>
     </div>
   )
 }

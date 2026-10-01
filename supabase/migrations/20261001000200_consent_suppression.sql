@@ -1,6 +1,6 @@
 begin;
 
--- BulkText Web 0.11.0 — Consent & Suppression
+-- BulkText Fresh 0.11 — Consent & Suppression
 -- Adds append-only consent/suppression evidence and immutable recipient eligibility snapshots.
 -- Campaign composition, confirmation and sending remain later gates.
 
@@ -11,7 +11,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce(public.org_role(p_organization_id) in ('owner', 'admin', 'campaign_manager'), false);
+  select public.can_manage_org(p_organization_id);
 $$;
 
 create or replace function public.can_lift_contact_suppressions(p_organization_id uuid)
@@ -21,7 +21,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce(public.org_role(p_organization_id) in ('owner', 'admin'), false);
+  select public.can_manage_org(p_organization_id);
 $$;
 
 create table if not exists public.contact_consent_events (
@@ -204,7 +204,7 @@ begin
   end if;
 
   if not public.can_manage_contact_compliance(p_organization_id) then
-    raise exception 'Owner, Admin or Campaign Manager permission required to manage consent' using errcode = '42501';
+    raise exception 'Personal workspace owner permission required to manage consent' using errcode = '42501';
   end if;
 
   if p_event_type is null or p_event_type not in ('granted', 'revoked') then
@@ -302,7 +302,7 @@ begin
   end if;
 
   if not public.can_manage_contact_compliance(p_organization_id) then
-    raise exception 'Owner, Admin or Campaign Manager permission required to manage suppression' using errcode = '42501';
+    raise exception 'Personal workspace owner permission required to manage suppression' using errcode = '42501';
   end if;
 
   if p_event_type is null or p_event_type not in ('suppressed', 'lifted') then
@@ -540,7 +540,7 @@ begin
   end if;
 
   if not public.can_manage_contact_compliance(p_organization_id) then
-    raise exception 'Owner, Admin or Campaign Manager permission required to inspect compliance evidence' using errcode = '42501';
+    raise exception 'Personal workspace owner permission required to inspect compliance evidence' using errcode = '42501';
   end if;
 
   select n.normalized_e164, n.validation_status, n.validation_reason
@@ -767,7 +767,7 @@ begin
   end if;
 
   if not public.can_manage_contact_compliance(p_organization_id) then
-    raise exception 'Owner, Admin or Campaign Manager permission required to create eligibility snapshots' using errcode = '42501';
+    raise exception 'Personal workspace owner permission required to create eligibility snapshots' using errcode = '42501';
   end if;
 
   perform 1
@@ -1037,24 +1037,20 @@ grant execute on function public.create_recipient_eligibility_snapshot(uuid, uui
 grant execute on function public.list_recipient_eligibility_snapshots(uuid, uuid) to authenticated, service_role;
 grant execute on function public.get_recipient_eligibility_snapshot_rows(uuid, uuid) to authenticated, service_role;
 
-insert into public.app_meta (key, value)
-values (
-  'schema',
-  jsonb_build_object(
-    'version', '0.11.0',
-    'phase', 'consent_suppression',
-    'default_country', 'PK',
-    'number_type', 'mobile',
-    'normalization_version', 'pk-mobile-v1',
-    'recipient_validation_version', 'recipient-validation-v1',
-    'consent_suppression_policy_version', 'consent-suppression-v1',
-    'consent_required_for_eligibility', true,
-    'suppression_overrides_consent', true,
-    'campaign_send_enabled', false
-  )
-)
-on conflict (key) do update
-set value = excluded.value,
-    updated_at = now();
+update public.app_meta
+set value = coalesce(value, '{}'::jsonb) || jsonb_build_object(
+      'version', '0.11.0',
+      'phase', 'consent_suppression',
+      'default_country', 'PK',
+      'number_type', 'mobile',
+      'normalization_version', 'pk-mobile-v1',
+      'recipient_validation_version', 'recipient-validation-v1',
+      'consent_suppression_policy_version', 'consent-suppression-v1',
+      'consent_required_for_eligibility', true,
+      'suppression_overrides_consent', true,
+      'campaign_send_enabled', false
+    ),
+    updated_at = now()
+where key = 'schema';
 
 commit;

@@ -1,6 +1,6 @@
 begin;
 
--- BulkText Web 0.10.0 — Recipient Validation & Preview
+-- BulkText Fresh 0.10 — Recipient Validation & Preview
 -- Converts staged import rows into explicit, server-authoritative recipient preview snapshots.
 -- Consent/suppression and campaign confirmation remain later gates.
 
@@ -11,7 +11,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce(public.org_role(p_organization_id) in ('owner', 'admin', 'campaign_manager'), false);
+  select public.can_manage_org(p_organization_id);
 $$;
 
 create table if not exists public.recipient_previews (
@@ -552,21 +552,18 @@ grant execute on function public.create_recipient_preview(uuid, uuid, bigint[]) 
 grant execute on function public.list_recipient_previews(uuid, uuid) to authenticated, service_role;
 grant execute on function public.get_recipient_preview_rows(uuid, uuid) to authenticated, service_role;
 
-insert into public.app_meta (key, value)
-values (
-  'schema',
-  jsonb_build_object(
-    'version', '0.10.0',
-    'phase', 'recipient_validation_preview',
-    'default_country', 'PK',
-    'number_type', 'mobile',
-    'normalization_version', 'pk-mobile-v1',
-    'recipient_validation_version', 'recipient-validation-v1',
-    'consent_suppression_applied', false
-  )
-)
-on conflict (key) do update
-set value = excluded.value,
-    updated_at = now();
+update public.app_meta
+set value = coalesce(value, '{}'::jsonb) || jsonb_build_object(
+      'version', '0.10.0',
+      'phase', 'recipient_validation_preview',
+      'default_country', 'PK',
+      'number_type', 'mobile',
+      'normalization_version', 'pk-mobile-v1',
+      'recipient_validation_version', 'recipient-validation-v1',
+      'max_import_rows', 5000,
+      'campaign_send_enabled', false
+    ),
+    updated_at = now()
+where key = 'schema';
 
 commit;

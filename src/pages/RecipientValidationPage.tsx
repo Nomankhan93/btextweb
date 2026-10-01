@@ -109,7 +109,7 @@ export function RecipientValidationPage() {
       setPreviews(nextPreviews)
       setStoredRows(nextStoredRows)
       setActivePreviewId(previewId)
-      setMessage('Recipient preview snapshot created. Continue to Consent & Suppression Gate to evaluate send eligibility.')
+      setMessage('Recipient list saved. Continue to consent and do-not-send checks.')
     } catch (reason) {
       setError(errorMessage(reason, 'Could not create recipient preview.'))
     } finally {
@@ -138,8 +138,8 @@ export function RecipientValidationPage() {
   if (!rows.length && !error) {
     return (
       <div className="page-stack">
-        <section className="page-heading"><div><p className="eyebrow">Recipient review</p><h1>Recipient Validation & Preview</h1></div></section>
-        <EmptyState title="No staged rows">This import has no staged rows available for validation.</EmptyState>
+        <section className="page-heading"><div><p className="eyebrow">Recipients</p><h1>Review recipients</h1></div></section>
+        <EmptyState title="No recipients to review">This upload has no rows available for review.</EmptyState>
         <Link className="secondary-button compact-button inline-action" to="/imports">Back to imports</Link>
       </div>
     )
@@ -151,9 +151,9 @@ export function RecipientValidationPage() {
     <div className="page-stack">
       <section className="page-heading recipient-heading">
         <div>
-          <p className="eyebrow">Recipient review</p>
-          <h1>Recipient Validation & Preview</h1>
-          <p>Review canonical Pakistan mobile numbers, resolve duplicates by choosing one source row per number, exclude unwanted rows, then create a server-authoritative preview snapshot.</p>
+          <p className="eyebrow">Recipients</p>
+          <h1>Review recipients</h1>
+          <p>Review Pakistan mobile numbers, resolve duplicates, exclude unwanted rows and save the recipient list for consent and do-not-send checks.</p>
         </div>
         <Link className="secondary-button compact-button" to="/imports">Back to imports</Link>
       </section>
@@ -163,15 +163,14 @@ export function RecipientValidationPage() {
 
       <section className="panel">
         <div className="panel-heading">
-          <div><p className="eyebrow">Source import</p><h2>{displayFilename}</h2></div>
-          <span className="badge badge-muted">recipient-validation-v1</span>
+          <div><p className="eyebrow">Source file</p><h2>{displayFilename}</h2></div>
         </div>
-        <p className="muted-copy">A checked row is structurally included in this validation snapshot only. It is not consent-approved, suppression-cleared or send-authorized.</p>
+        <p className="muted-copy">A selected row still needs consent and do-not-send checks before it can continue.</p>
       </section>
 
       <section className="metric-grid recipient-metrics">
-        <article className="metric-card"><span>Source rows</span><h2>{summary.totalRows}</h2><p>All staged rows remain reviewable.</p></article>
-        <article className="metric-card"><span>Included</span><h2>{summary.includedRows}</h2><p>Unique valid numbers selected for this preview.</p></article>
+        <article className="metric-card"><span>Source rows</span><h2>{summary.totalRows}</h2><p>All uploaded rows remain reviewable.</p></article>
+        <article className="metric-card"><span>Included</span><h2>{summary.includedRows}</h2><p>Unique valid numbers currently selected.</p></article>
         <article className="metric-card"><span>Invalid</span><h2>{summary.invalidPhoneRows}</h2><p>Cannot be selected until corrected in a later import.</p></article>
         <article className="metric-card"><span>Excluded</span><h2>{summary.duplicateRows + summary.manuallyExcludedRows}</h2><p>{summary.duplicateRows} duplicate · {summary.manuallyExcludedRows} manual</p></article>
       </section>
@@ -182,7 +181,7 @@ export function RecipientValidationPage() {
           <div className="recipient-actions">
             <button className="secondary-button compact-button" type="button" disabled={busy || !canCreate} onClick={() => setSelected(defaultRecipientSelection(rows))}>Reset defaults</button>
             <button className="secondary-button compact-button" type="button" disabled={busy || !canCreate} onClick={() => setSelected(new Set())}>Clear</button>
-            {canCreate ? <button className="primary-button compact-button" type="button" disabled={busy || selected.size === 0} onClick={() => void savePreview()}>{busy ? 'Saving…' : 'Create preview snapshot'}</button> : null}
+            {canCreate ? <button className="primary-button compact-button" type="button" disabled={busy || selected.size === 0} onClick={() => void savePreview()}>{busy ? 'Saving…' : 'Save recipient list'}</button> : null}
           </div>
         </div>
 
@@ -201,7 +200,7 @@ export function RecipientValidationPage() {
 
         <div className="table-wrap">
           <table className="data-table recipient-validation-table">
-            <thead><tr><th>Use</th><th>Row</th><th>Name</th><th>Raw phone</th><th>Canonical</th><th>Decision</th><th>Why</th></tr></thead>
+            <thead><tr><th>Use</th><th>Row</th><th>Name</th><th>Raw phone</th><th>Standard number</th><th>Decision</th><th>Why</th></tr></thead>
             <tbody>{visibleRows.map((row) => {
               const selectable = row.phoneValidationStatus === 'valid' && Boolean(row.normalizedE164)
               return (
@@ -212,7 +211,7 @@ export function RecipientValidationPage() {
                   <td><code>{row.rawPhone || '—'}</code></td>
                   <td><code>{row.normalizedE164 ?? '—'}</code>{row.duplicateGroupSize > 1 ? <small>Group of {row.duplicateGroupSize}</small> : null}</td>
                   <td><span className={decisionBadge(row.decision)}>{decisionLabel(row.decision)}</span></td>
-                  <td><small>{row.decision === 'invalid_phone' ? row.phoneValidationReason : row.decision === 'duplicate_in_file' ? 'Another row with this canonical number is selected.' : row.decision === 'manually_excluded' ? 'No row for this number is currently selected.' : 'Valid unique selection.'}</small></td>
+                  <td><small>{row.decision === 'invalid_phone' ? row.phoneValidationReason : row.decision === 'duplicate_in_file' ? 'Another row with this number is selected.' : row.decision === 'manually_excluded' ? 'No row for this number is currently selected.' : 'Valid unique selection.'}</small></td>
                 </tr>
               )
             })}</tbody>
@@ -221,18 +220,18 @@ export function RecipientValidationPage() {
       </section>
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Snapshot history</p><h2>Recipient previews</h2></div><span className="badge badge-muted">Immutable revisions</span></div>
-        {previews.length === 0 ? <EmptyState title="No recipient previews">Resolve the staged rows above and create the first validation snapshot.</EmptyState> : (
+        <div className="panel-heading"><div><p className="eyebrow">Saved recipient lists</p><h2>Previous reviews</h2></div></div>
+        {previews.length === 0 ? <EmptyState title="No saved recipient lists">Review the rows above and save the first recipient list.</EmptyState> : (
           <div className="table-wrap">
             <table className="data-table recipient-preview-history-table">
               <thead><tr><th>Revision</th><th>Included</th><th>Excluded breakdown</th><th>Created</th><th>Actions</th></tr></thead>
               <tbody>{previews.map((preview) => (
                 <tr key={preview.previewId}>
-                  <td><strong>#{preview.revision}</strong><small>{preview.validationVersion}</small></td>
+                  <td><strong>#{preview.revision}</strong></td>
                   <td><span className="badge badge-success">{preview.includedRows} included</span></td>
                   <td>{preview.invalidPhoneRows} invalid · {preview.duplicateRows} duplicate · {preview.manuallyExcludedRows} manual</td>
                   <td>{dateTime(preview.createdAt)}</td>
-                  <td><div className="import-row-actions"><button className="secondary-button compact-button" disabled={busy} type="button" onClick={() => void viewPreview(preview.previewId)}>{activePreviewId === preview.previewId ? 'Viewing' : 'View'}</button><Link className="primary-button compact-button" to={`/recipient-previews/${preview.previewId}/eligibility`}>Consent gate</Link></div></td>
+                  <td><div className="import-row-actions"><button className="secondary-button compact-button" disabled={busy} type="button" onClick={() => void viewPreview(preview.previewId)}>{activePreviewId === preview.previewId ? 'Viewing' : 'View'}</button><Link className="primary-button compact-button" to={`/recipient-previews/${preview.previewId}/eligibility`}>Check eligibility</Link></div></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -242,10 +241,10 @@ export function RecipientValidationPage() {
 
       {activePreviewId ? (
         <section className="panel">
-          <div className="panel-heading"><div><p className="eyebrow">Stored snapshot</p><h2>Server-authoritative row decisions</h2></div><span className="badge badge-success">{storedRows.filter((row) => row.decision === 'included').length} included</span></div>
+          <div className="panel-heading"><div><p className="eyebrow">Saved list</p><h2>Recipient decisions</h2></div><span className="badge badge-success">{storedRows.filter((row) => row.decision === 'included').length} included</span></div>
           <div className="table-wrap">
             <table className="data-table stored-preview-table">
-              <thead><tr><th>Row</th><th>Name</th><th>Canonical</th><th>Decision</th><th>Reason</th></tr></thead>
+              <thead><tr><th>Row</th><th>Name</th><th>Standard number</th><th>Decision</th><th>Reason</th></tr></thead>
               <tbody>{storedRows.map((row) => (
                 <tr key={row.previewRowId}>
                   <td>{row.sourceRowNumber}</td>
@@ -260,7 +259,7 @@ export function RecipientValidationPage() {
         </section>
       ) : null}
 
-      <section className="notice warning-notice">Structural recipient validation stays immutable and separate from compliance. Use Consent gate on a saved preview to apply the authoritative consent/suppression policy and create eligibility snapshots.</section>
+      <section className="notice warning-notice">Structural recipient validation stays immutable and separate from compliance. Use Check eligibility on a saved preview to apply the authoritative consent/suppression policy and create eligibility snapshots.</section>
     </div>
   )
 }

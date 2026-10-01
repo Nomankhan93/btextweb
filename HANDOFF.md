@@ -40,7 +40,7 @@ The composer displays these estimates live. A draft still cannot create queue jo
 
 ## Database note
 
-`20261001000070_sms_segment_usage_calculator.sql` adds no campaign tables. It advances capability metadata and restores the full metadata object after the 0.12.1 individual-account transition.
+`20261001000220_sms_segment_usage_calculator.sql` adds no campaign tables. It advances capability metadata and restores the full metadata object after the 0.12.1 individual-account transition.
 
 The hidden `organization_id` tenant architecture remains internal. Do not drop it.
 

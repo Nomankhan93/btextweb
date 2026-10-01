@@ -19,8 +19,8 @@ export function PhoneNumbersPage() {
       <section className="page-heading">
         <div>
           <p className="eyebrow">Phone number check</p>
-          <h1>Phone Number Foundation</h1>
-          <p>Normalize Pakistan mobile numbers into one canonical E.164 format before import, deduplication, suppression and campaign validation. This preview runs locally in the browser and does not save contact data.</p>
+          <h1>Check phone numbers</h1>
+          <p>Check Pakistan mobile numbers and preview the standard +923 format used during recipient preparation. Nothing is saved from this page.</p>
         </div>
       </section>
 
@@ -32,7 +32,7 @@ export function PhoneNumbersPage() {
 
       <section className="panel">
         <div className="panel-heading">
-          <div><p className="eyebrow">Normalization lab</p><h2>Paste one number per line</h2></div>
+          <div><p className="eyebrow">Try numbers</p><h2>Paste one number per line</h2></div>
           <span className={invalid ? 'badge badge-warning' : 'badge badge-success'}>{invalid ? `${invalid} needs review` : 'All valid'}</span>
         </div>
         <div className="phone-lab-grid">
@@ -41,12 +41,12 @@ export function PhoneNumbersPage() {
             <textarea value={input} onChange={(event) => setInput(event.target.value)} rows={12} spellCheck={false} placeholder="03001234567" />
           </label>
           <div className="phone-rules-card">
-            <strong>Current rules</strong>
+            <strong>Supported numbers</strong>
             <ul>
               <li>Current country scope: Pakistan (PK).</li>
               <li>Current number type: mobile only.</li>
               <li>Accepted examples: 03xx, 923xx, +923xx and 00923xx.</li>
-              <li>Canonical storage format: +923xxxxxxxxx.</li>
+              <li>Standard format: +923xxxxxxxxx.</li>
               <li>No carrier is inferred from the prefix.</li>
             </ul>
           </div>
@@ -54,11 +54,11 @@ export function PhoneNumbersPage() {
       </section>
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Preview</p><h2>Canonicalization results</h2></div><span className="badge badge-muted">pk-mobile-v1</span></div>
+        <div className="panel-heading"><div><p className="eyebrow">Preview</p><h2>Results</h2></div></div>
         {rows.length ? (
           <div className="table-wrap">
             <table className="data-table phone-preview-table">
-              <thead><tr><th>Input</th><th>Status</th><th>Canonical E.164</th><th>Reason</th></tr></thead>
+              <thead><tr><th>Input</th><th>Status</th><th>Standard number</th><th>Reason</th></tr></thead>
               <tbody>
                 {rows.map((row, index) => (
                   <tr key={`${row.rawInput}-${index}`}>
@@ -74,9 +74,7 @@ export function PhoneNumbersPage() {
         ) : <p className="muted-copy">Paste numbers above to preview normalization.</p>}
       </section>
 
-      <section className="notice warning-notice">
-        Phone Number Foundation does not create contacts, import files, check consent/suppression, or send messages. Those controls remain gated to later roadmap phases.
-      </section>
+      <section className="notice warning-notice">This checker does not save recipients or send messages.</section>
     </div>
   )
 }

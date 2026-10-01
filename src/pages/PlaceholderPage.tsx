@@ -10,8 +10,8 @@ export function PlaceholderPage({ title, description }: { title: string; descrip
           <p>{description}</p>
         </div>
       </section>
-      <EmptyState title={`${title} is intentionally not active yet`}>
-        This route is present so navigation and responsive layout can be validated without prematurely implementing later-roadmap features.
+      <EmptyState title={`${title} is coming later`}>
+        This feature is not available yet. You can continue using the active campaign preparation tools from the Campaigns page.
       </EmptyState>
     </div>
   )

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { DashboardPage } from './pages/DashboardPage'
+import { CampaignsPage } from './pages/CampaignsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -35,7 +36,7 @@ export default function App() {
           <Route element={<AppShell />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/campaigns" element={<PlaceholderPage title="Campaigns" description="Use Composer to review personalized SMS usage estimates. Immutable campaign confirmation is the next workflow step." />} />
+            <Route path="/campaigns" element={<CampaignsPage />} />
             <Route path="/composer" element={<MessageComposerPage />} />
             <Route path="/contacts" element={<PhoneNumbersPage />} />
             <Route path="/imports" element={<ImportsPage />} />

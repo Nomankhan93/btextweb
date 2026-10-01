@@ -121,7 +121,7 @@ export function ConsentSuppressionPage() {
       setStatus(next)
       setPhone(next.normalizedE164)
       setHistory(await listContactComplianceHistory(workspace.id, next.normalizedE164))
-      setMessage(eventType === 'granted' ? 'Consent grant recorded as immutable evidence.' : 'Consent revocation recorded as immutable evidence.')
+      setMessage(eventType === 'granted' ? 'Consent grant recorded.' : 'Consent revocation recorded.')
       setEvidenceNote('')
       setEvidenceReference('')
       setExpiresAt('')
@@ -155,7 +155,7 @@ export function ConsentSuppressionPage() {
       setStatus(next)
       setPhone(next.normalizedE164)
       setHistory(await listContactComplianceHistory(workspace.id, next.normalizedE164))
-      setMessage(eventType === 'suppressed' ? 'Number added to the your suppression list.' : 'Suppression lifted with an auditable event.')
+      setMessage(eventType === 'suppressed' ? 'Number added to the do-not-send list.' : 'Number removed from the do-not-send list.')
       setSuppressionNote('')
       await refreshRecent()
     } catch (reason) {
@@ -171,11 +171,10 @@ export function ConsentSuppressionPage() {
     <div className="page-stack">
       <section className="page-heading recipient-heading">
         <div>
-          <p className="eyebrow">Consent & suppression</p>
-          <h1>Consent & Suppression</h1>
-          <p>Record append-only consent evidence, maintain an your suppression list and inspect the current send-eligibility state for a canonical Pakistan mobile number.</p>
+          <p className="eyebrow">Recipient eligibility</p>
+          <h1>Consent & do-not-send</h1>
+          <p>Record consent evidence, maintain your do-not-send list and check whether a Pakistan mobile number can continue to campaign preparation.</p>
         </div>
-        <span className="badge badge-muted">consent-suppression-v1</span>
       </section>
 
       {error ? <div className="notice error-notice">{error}</div> : null}
@@ -221,15 +220,15 @@ export function ConsentSuppressionPage() {
               </article>
 
               <article className="panel">
-                <div className="panel-heading"><div><p className="eyebrow">Suppression</p><h2>Block or release this number</h2></div></div>
+                <div className="panel-heading"><div><p className="eyebrow">Do-not-send</p><h2>Block or release this number</h2></div></div>
                 <div className="stacked-form">
                   <label><span>Reason</span><select value={suppressionReason} onChange={(event) => setSuppressionReason(event.target.value as SuppressionReason)}><option value="opt_out">Opt out</option><option value="complaint">Complaint</option><option value="manual">Manual block</option><option value="regulatory">Regulatory</option><option value="other">Other</option></select></label>
                   <label><span>Source</span><select value={suppressionSource} onChange={(event) => setSuppressionSource(event.target.value as SuppressionSource)}><option value="manual">Manual</option><option value="recipient_reply">Recipient reply</option><option value="import">Import</option><option value="api">API</option><option value="other">Other</option></select></label>
                   <label><span>Note</span><textarea value={suppressionNote} onChange={(event) => setSuppressionNote(event.target.value)} placeholder={status.suppressionState === 'suppressed' ? 'Add a note explaining why this suppression is being lifted.' : 'Optional context for the suppression.'} rows={3} /></label>
                   <div className="button-row compliance-buttons">
                     {status.suppressionState === 'suppressed'
-                      ? <button className="secondary-button" type="button" disabled={busy || !canLift} onClick={() => void updateSuppression('lifted')}>Lift suppression</button>
-                      : <button className="danger-button" type="button" disabled={busy} onClick={() => void updateSuppression('suppressed')}>Suppress number</button>}
+                      ? <button className="secondary-button" type="button" disabled={busy || !canLift} onClick={() => void updateSuppression('lifted')}>Remove block</button>
+                      : <button className="danger-button" type="button" disabled={busy} onClick={() => void updateSuppression('suppressed')}>Block number</button>}
                   </div>
                   {status.suppressionState === 'suppressed' && !canLift ? <p className="muted-copy">Suppression changes are available to the signed-in account owner.</p> : null}
                 </div>
@@ -251,7 +250,7 @@ export function ConsentSuppressionPage() {
       ) : null}
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Recent records</p><h2>My compliance registry</h2></div><button className="secondary-button compact-button" type="button" disabled={loadingRecent || busy} onClick={() => void refreshRecent()}>Refresh</button></div>
+        <div className="panel-heading"><div><p className="eyebrow">Recent records</p><h2>Consent & do-not-send records</h2></div><button className="secondary-button compact-button" type="button" disabled={loadingRecent || busy} onClick={() => void refreshRecent()}>Refresh</button></div>
         {loadingRecent ? <LoadingState label="Loading consent/suppression records…" /> : recent.length === 0 ? <EmptyState title="No compliance records">Look up a number and record consent evidence or a suppression event. No consent is assumed when no evidence exists.</EmptyState> : (
           <div className="table-wrap"><table className="data-table compliance-table"><thead><tr><th>Number</th><th>Consent</th><th>Suppression</th><th>Eligibility</th><th /></tr></thead><tbody>{recent.map((row) => (
             <tr key={row.normalizedE164}><td><code>{row.normalizedE164}</code></td><td><strong>{consentStateLabel(row.consentState)}</strong><small>{row.consentSource ? `${row.consentSource.replaceAll('_', ' ')} · ${dateTime(row.consentOccurredAt)}` : 'No evidence'}</small></td><td><strong>{suppressionStateLabel(row.suppressionState)}</strong><small>{row.suppressionReason?.replaceAll('_', ' ') ?? '—'}</small></td><td><span className={row.eligibilityState === 'eligible' ? 'badge badge-success' : 'badge badge-warning'}>{row.eligibilityState}</span><small>{blockReasonLabel(row.blockReason)}</small></td><td><button className="secondary-button compact-button" type="button" onClick={() => { setPhone(row.normalizedE164); void loadStatus(row.normalizedE164) }}>Open</button></td></tr>
@@ -259,7 +258,7 @@ export function ConsentSuppressionPage() {
         )}
       </section>
 
-      <section className="notice warning-notice">Consent & suppression treats active consent plus a clear suppression state as eligibility for the next workflow stage. It does not send SMS, create a campaign, or replace any legal/compliance review required for your use case.</section>
+      <section className="notice warning-notice">A recipient must have valid consent and no active do-not-send block before continuing. This page does not send messages.</section>
     </div>
   )
 }

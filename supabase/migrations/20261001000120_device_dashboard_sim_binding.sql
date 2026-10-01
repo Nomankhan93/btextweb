@@ -1,9 +1,9 @@
 begin;
 
--- BulkText 0.7.0 — Device Dashboard & SIM Binding
--- Extends the 0.6 device identity boundary with authenticated Android inventory
--- reporting and explicit organization-controlled SIM binding. A missing/replaced
--- SIM never causes silent fallback to another subscription.
+-- BulkText Fresh 0.7 — Device Dashboard & Explicit SIM Binding
+-- Extends the gateway identity boundary with authenticated Android inventory
+-- reporting and explicit account-owner SIM binding. A missing/replaced SIM
+-- never causes silent fallback to another subscription.
 
 alter table public.gateway_devices
   add column if not exists manufacturer text,
@@ -583,13 +583,18 @@ revoke all on function public.list_gateway_device_dashboard(uuid) from public, a
 revoke all on function public.bind_gateway_device_sim(uuid, uuid, uuid) from public, anon;
 revoke all on function public.clear_gateway_device_sim_binding(uuid, uuid) from public, anon;
 
-grant execute on function public.report_gateway_device_inventory(uuid, text, jsonb, jsonb) to anon, authenticated;
-grant execute on function public.list_gateway_device_dashboard(uuid) to authenticated;
-grant execute on function public.bind_gateway_device_sim(uuid, uuid, uuid) to authenticated;
-grant execute on function public.clear_gateway_device_sim_binding(uuid, uuid) to authenticated;
+grant execute on function public.report_gateway_device_inventory(uuid, text, jsonb, jsonb) to anon, authenticated, service_role;
+grant execute on function public.list_gateway_device_dashboard(uuid) to authenticated, service_role;
+grant execute on function public.bind_gateway_device_sim(uuid, uuid, uuid) to authenticated, service_role;
+grant execute on function public.clear_gateway_device_sim_binding(uuid, uuid) to authenticated, service_role;
 
 update public.app_meta
-set value = jsonb_build_object('version', '0.7.0', 'phase', 'device_dashboard_sim_binding'),
+set value = coalesce(value, '{}'::jsonb) || jsonb_build_object(
+      'version', '0.7.0',
+      'phase', 'device_dashboard_sim_binding',
+      'explicit_sim_binding_required', true,
+      'silent_sim_fallback', false
+    ),
     updated_at = now()
 where key = 'schema';
 

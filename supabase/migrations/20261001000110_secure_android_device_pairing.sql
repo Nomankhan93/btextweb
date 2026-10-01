@@ -1,6 +1,7 @@
 begin;
 
--- BulkText 0.6.0 — Secure Android Device Pairing
+-- BulkText Fresh 0.6 — Secure Android Device Pairing
+-- Individual-First rule: one active gateway phone per personal workspace.
 -- Pairing codes are short-lived bearer secrets. Raw codes and device credentials
 -- are returned once and only their SHA-256 hashes are persisted.
 
@@ -23,6 +24,11 @@ create table if not exists public.gateway_devices (
 
 create unique index if not exists gateway_devices_one_active_installation
 on public.gateway_devices (installation_fingerprint_hash)
+where status = 'active';
+
+-- Individual MVP: exactly one active gateway phone per hidden personal workspace.
+create unique index if not exists gateway_devices_one_active_per_workspace
+on public.gateway_devices (organization_id)
 where status = 'active';
 
 create index if not exists gateway_devices_org_status_idx
@@ -100,8 +106,24 @@ begin
   end if;
 
   if not public.can_manage_org(p_organization_id) then
-    raise exception 'Insufficient permission' using errcode = '42501';
+    raise exception 'Personal workspace owner permission required' using errcode = '42501';
   end if;
+
+  if exists (
+    select 1 from public.gateway_devices d
+    where d.organization_id = p_organization_id
+      and d.status = 'active'
+  ) then
+    raise exception 'An active gateway phone is already paired. Revoke it before pairing another phone.' using errcode = '23505';
+  end if;
+
+  -- Keep at most one currently-usable pairing session for the personal workspace.
+  update public.gateway_pairing_codes
+  set revoked_at = now()
+  where organization_id = p_organization_id
+    and claimed_at is null
+    and revoked_at is null
+    and expires_at > now();
 
   for v_attempt in 1..5 loop
     v_bytes := gen_random_bytes(12);
@@ -292,6 +314,17 @@ begin
   end if;
 
   v_fingerprint_hash := encode(digest(v_installation_id, 'sha256'), 'hex');
+
+  -- Pairing codes can race. The unique partial index below is the final guard,
+  -- while this check provides a clear product-level error.
+  if exists (
+    select 1
+    from public.gateway_devices d
+    where d.organization_id = v_pair.organization_id
+      and d.status = 'active'
+  ) then
+    raise exception 'An active gateway phone is already paired. Revoke it before pairing another phone.' using errcode = '23505';
+  end if;
 
   if exists (
     select 1
@@ -642,7 +675,7 @@ $$;
 -- Explicit function exposure. Pairing claim and device-auth functions are
 -- intentionally callable by anon because the pairing code/device credential
 -- themselves are scoped bearer secrets. All management operations require an
--- authenticated organization role inside the function.
+-- authenticated personal-workspace owner inside the function.
 revoke all on function public.create_gateway_pairing_code(uuid) from public, anon;
 revoke all on function public.list_gateway_pairing_sessions(uuid) from public, anon;
 revoke all on function public.revoke_gateway_pairing_code(uuid) from public, anon;
@@ -652,17 +685,21 @@ revoke all on function public.rotate_gateway_device_credential(uuid, text) from 
 revoke all on function public.list_gateway_devices(uuid) from public, anon;
 revoke all on function public.revoke_gateway_device(uuid, uuid) from public, anon;
 
-grant execute on function public.create_gateway_pairing_code(uuid) to authenticated;
-grant execute on function public.list_gateway_pairing_sessions(uuid) to authenticated;
-grant execute on function public.revoke_gateway_pairing_code(uuid) to authenticated;
-grant execute on function public.claim_gateway_pairing(text, text, text) to anon, authenticated;
-grant execute on function public.authenticate_gateway_device(uuid, text) to anon, authenticated;
-grant execute on function public.rotate_gateway_device_credential(uuid, text) to anon, authenticated;
-grant execute on function public.list_gateway_devices(uuid) to authenticated;
-grant execute on function public.revoke_gateway_device(uuid, uuid) to authenticated;
+grant execute on function public.create_gateway_pairing_code(uuid) to authenticated, service_role;
+grant execute on function public.list_gateway_pairing_sessions(uuid) to authenticated, service_role;
+grant execute on function public.revoke_gateway_pairing_code(uuid) to authenticated, service_role;
+grant execute on function public.claim_gateway_pairing(text, text, text) to anon, authenticated, service_role;
+grant execute on function public.authenticate_gateway_device(uuid, text) to anon, authenticated, service_role;
+grant execute on function public.rotate_gateway_device_credential(uuid, text) to anon, authenticated, service_role;
+grant execute on function public.list_gateway_devices(uuid) to authenticated, service_role;
+grant execute on function public.revoke_gateway_device(uuid, uuid) to authenticated, service_role;
 
 update public.app_meta
-set value = jsonb_build_object('version', '0.6.0', 'phase', 'secure_android_device_pairing'),
+set value = coalesce(value, '{}'::jsonb) || jsonb_build_object(
+      'version', '0.6.0',
+      'phase', 'secure_android_device_pairing',
+      'active_gateway_limit', 1
+    ),
     updated_at = now()
 where key = 'schema';
 

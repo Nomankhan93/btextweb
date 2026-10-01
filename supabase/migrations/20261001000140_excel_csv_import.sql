@@ -1,7 +1,7 @@
 begin;
 
--- BulkText Web 0.9.0 — Excel / CSV Import
--- Forward-only import staging. Contacts/dedup/suppression remain later phases.
+-- BulkText Fresh 0.9 — Excel / CSV Import
+-- Individual account import staging scoped to the hidden personal workspace.
 
 create or replace function public.can_stage_contact_imports(p_organization_id uuid)
 returns boolean
@@ -10,7 +10,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce(public.org_role(p_organization_id) in ('owner', 'admin', 'campaign_manager'), false);
+  select public.can_manage_org(p_organization_id);
 $$;
 
 create table if not exists public.contact_imports (
@@ -121,7 +121,7 @@ begin
   end if;
 
   if not public.can_stage_contact_imports(p_organization_id) then
-    raise exception 'Owner, Admin or Campaign Manager permission required to stage imports' using errcode = '42501';
+    raise exception 'Personal workspace owner permission required to stage imports' using errcode = '42501';
   end if;
 
   if char_length(v_filename) < 1 or char_length(v_filename) > 255 then
@@ -319,7 +319,7 @@ begin
   end if;
 
   if not public.can_stage_contact_imports(p_organization_id) then
-    raise exception 'Owner, Admin or Campaign Manager permission required to delete staged imports' using errcode = '42501';
+    raise exception 'Personal workspace owner permission required to delete staged imports' using errcode = '42501';
   end if;
 
   select source_filename into v_filename
@@ -363,22 +363,18 @@ grant execute on function public.create_contact_import(uuid, text, text, bigint,
 grant execute on function public.list_contact_imports(uuid) to authenticated, service_role;
 grant execute on function public.delete_contact_import(uuid, uuid) to authenticated, service_role;
 
-insert into public.app_meta (key, value)
-values (
-  'schema',
-  jsonb_build_object(
-    'version', '0.9.0',
-    'phase', 'excel_csv_import',
-    'default_country', 'PK',
-    'number_type', 'mobile',
-    'normalization_version', 'pk-mobile-v1',
-    'import_file_types', jsonb_build_array('csv', 'xlsx'),
-    'max_import_rows', 5000,
-    'max_import_file_bytes', 5242880
-  )
-)
-on conflict (key) do update
-set value = excluded.value,
-    updated_at = now();
+update public.app_meta
+set value = coalesce(value, '{}'::jsonb) || jsonb_build_object(
+      'version', '0.9.0',
+      'phase', 'excel_csv_import',
+      'default_country', 'PK',
+      'number_type', 'mobile',
+      'normalization_version', 'pk-mobile-v1',
+      'import_file_types', jsonb_build_array('csv', 'xlsx'),
+      'max_import_rows', 5000,
+      'max_import_file_bytes', 5242880
+    ),
+    updated_at = now()
+where key = 'schema';
 
 commit;

@@ -129,19 +129,15 @@ revoke all on function public.is_valid_pk_mobile_e164(text) from public, anon, a
 grant execute on function public.normalize_phone_number(text, text) to authenticated, service_role;
 grant execute on function public.is_valid_pk_mobile_e164(text) to service_role;
 
-insert into public.app_meta (key, value)
-values (
-  'schema',
-  jsonb_build_object(
-    'version', '0.8.0',
-    'phase', 'phone_number_foundation',
-    'default_country', 'PK',
-    'number_type', 'mobile',
-    'normalization_version', 'pk-mobile-v1'
-  )
-)
-on conflict (key) do update
-set value = excluded.value,
-    updated_at = now();
+update public.app_meta
+set value = coalesce(value, '{}'::jsonb) || jsonb_build_object(
+      'version', '0.8.0',
+      'phase', 'phone_number_foundation',
+      'default_country', 'PK',
+      'number_type', 'mobile',
+      'normalization_version', 'pk-mobile-v1'
+    ),
+    updated_at = now()
+where key = 'schema';
 
 commit;

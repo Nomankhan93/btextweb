@@ -1,9 +1,8 @@
 begin;
 
--- BulkText Web 0.12.0 — Message Composer & Personalization
--- Adds editable message drafts and live personalization source data backed by immutable
--- eligibility snapshots. SMS encoding/segment calculation, campaign confirmation, queueing
--- and sending remain disabled until later roadmap phases.
+-- BulkText Fresh 0.12 — Message Composer & Personalization
+-- Adds editable message drafts and personalization source data backed by immutable
+-- eligibility snapshots. Campaign confirmation, queueing and sending remain disabled.
 
 create or replace function public.can_manage_message_composer(p_organization_id uuid)
 returns boolean
@@ -12,7 +11,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce(public.org_role(p_organization_id) in ('owner', 'admin', 'campaign_manager'), false);
+  select public.can_manage_org(p_organization_id);
 $$;
 
 create or replace function public.message_template_variables_internal(p_template text)
@@ -307,7 +306,7 @@ begin
   end if;
 
   if not public.can_manage_message_composer(p_organization_id) then
-    raise exception 'Owner, Admin or Campaign Manager permission required to manage message drafts' using errcode = '42501';
+    raise exception 'Personal workspace owner permission required to manage message drafts' using errcode = '42501';
   end if;
 
   if char_length(v_title) < 1 or char_length(v_title) > 120 then
@@ -411,7 +410,7 @@ begin
   end if;
 
   if not public.can_manage_message_composer(p_organization_id) then
-    raise exception 'Owner, Admin or Campaign Manager permission required to delete message drafts' using errcode = '42501';
+    raise exception 'Personal workspace owner permission required to delete message drafts' using errcode = '42501';
   end if;
 
   delete from public.message_composer_drafts d
@@ -457,28 +456,24 @@ grant execute on function public.list_message_composer_drafts(uuid) to authentic
 grant execute on function public.save_message_composer_draft(uuid, uuid, uuid, text, text) to authenticated, service_role;
 grant execute on function public.delete_message_composer_draft(uuid, uuid) to authenticated, service_role;
 
-insert into public.app_meta (key, value)
-values (
-  'schema',
-  jsonb_build_object(
-    'version', '0.12.0',
-    'phase', 'message_composer_personalization',
-    'default_country', 'PK',
-    'number_type', 'mobile',
-    'normalization_version', 'pk-mobile-v1',
-    'recipient_validation_version', 'recipient-validation-v1',
-    'consent_suppression_policy_version', 'consent-suppression-v1',
-    'message_template_syntax_version', 'bulktext-template-v1',
-    'message_template_max_characters', 4000,
-    'consent_required_for_eligibility', true,
-    'suppression_overrides_consent', true,
-    'sms_segment_calculator_enabled', false,
-    'campaign_confirmation_enabled', false,
-    'campaign_send_enabled', false
-  )
-)
-on conflict (key) do update
-set value = excluded.value,
-    updated_at = now();
+update public.app_meta
+set value = coalesce(value, '{}'::jsonb) || jsonb_build_object(
+      'version', '0.12.0',
+      'phase', 'message_composer_personalization',
+      'default_country', 'PK',
+      'number_type', 'mobile',
+      'normalization_version', 'pk-mobile-v1',
+      'recipient_validation_version', 'recipient-validation-v1',
+      'consent_suppression_policy_version', 'consent-suppression-v1',
+      'message_template_syntax_version', 'bulktext-template-v1',
+      'message_template_max_characters', 4000,
+      'consent_required_for_eligibility', true,
+      'suppression_overrides_consent', true,
+      'sms_segment_calculator_enabled', false,
+      'campaign_confirmation_enabled', false,
+      'campaign_send_enabled', false
+    ),
+    updated_at = now()
+where key = 'schema';
 
 commit;

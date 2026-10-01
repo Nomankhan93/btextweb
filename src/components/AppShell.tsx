@@ -1,20 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
-
-const navigation = [
-  ['Dashboard', '/dashboard'],
-  ['Campaigns', '/campaigns'],
-  ['Composer', '/composer'],
-  ['Contacts', '/contacts'],
-  ['Consent & Suppression', '/consent-suppression'],
-  ['Imports', '/imports'],
-  ['Devices', '/devices'],
-  ['Templates', '/templates'],
-  ['Reports', '/reports'],
-  ['Subscription', '/subscription'],
-  ['Settings', '/settings'],
-] as const
+import { primaryNavigation } from '../lib/productNavigation'
 
 export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -46,13 +33,12 @@ export function AppShell() {
       <div className="shell-body">
         <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`} aria-label="Primary navigation">
           <nav>
-            {navigation.map(([label, href]) => (
+            {primaryNavigation.map(({ label, href }) => (
               <NavLink key={href} to={href} onClick={() => setMenuOpen(false)} className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
                 {label}
               </NavLink>
             ))}
           </nav>
-          <div className="sidebar-footer"><span className="status-dot" />Your phone, recipients and drafts stay isolated to your signed-in BulkText account.</div>
         </aside>
 
         <main className="content"><Outlet /></main>

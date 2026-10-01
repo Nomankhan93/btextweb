@@ -38,13 +38,11 @@ export function SettingsPage() {
       <section className="panel">
         <div className="panel-heading"><div><p className="eyebrow">Profile</p><h2>Your account profile</h2></div></div>
         <form className="form-stack narrow-form" onSubmit={saveProfile}>
-          <label>Email<input value={user?.email ?? ''} disabled /></label>
+          <label>Email<input value={user?.email ?? ''} disabled aria-readonly="true" /><small>Your sign-in email is managed by your account authentication.</small></label>
           <label>Display name<input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={100} /></label>
           <button className="primary-button" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save profile'}</button>
         </form>
       </section>
-
-      <section className="notice warning-notice">BulkText sends through the SIM you explicitly select on your paired Android phone. SMS package eligibility, balance deduction and carrier charging remain controlled by your mobile operator.</section>
     </div>
   )
 }

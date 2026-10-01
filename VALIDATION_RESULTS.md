@@ -43,7 +43,7 @@ npx supabase db push --dry-run
 Expected pending migration:
 
 ```text
-20261001000070_sms_segment_usage_calculator.sql
+20261001000220_sms_segment_usage_calculator.sql
 ```
 
 If the dry run shows only that expected migration:

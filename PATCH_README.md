@@ -25,7 +25,7 @@ Add accurate pre-send SMS usage estimation to the existing 0.12.1 individual acc
 New forward migration:
 
 ```text
-20261001000070_sms_segment_usage_calculator.sql
+20261001000220_sms_segment_usage_calculator.sql
 ```
 
 It adds no campaign/send tables. It only advances/restores capability metadata.
@@ -71,7 +71,7 @@ npx supabase db push --dry-run
 Only this migration should be pending:
 
 ```text
-20261001000070_sms_segment_usage_calculator.sql
+20261001000220_sms_segment_usage_calculator.sql
 ```
 
 Then:

@@ -29,7 +29,7 @@ function dateTime(value: string | null) {
 
 function deviceHardware(device: GatewayDeviceSummary) {
   const label = [device.manufacturer, device.model].filter(Boolean).join(' ')
-  return label || 'Android gateway'
+  return label || 'Android phone'
 }
 
 function simLabel(sim: GatewaySimSummary) {
@@ -61,7 +61,7 @@ export function DevicesPage() {
       setDevices(nextDevices)
       setSessions(await listGatewayPairingSessions(workspace.id))
     } catch (reason) {
-      setError(errorMessage(reason, 'Could not load gateway devices.'))
+      setError(errorMessage(reason, 'Could not load your Android phone.'))
     } finally {
       setLoading(false)
     }
@@ -84,7 +84,7 @@ export function DevicesPage() {
       setMessage('Pairing code generated. It expires in 10 minutes and can be used once.')
       await refresh()
     } catch (reason) {
-      setError(errorMessage(reason, 'Could not generate a gateway pairing code.'))
+      setError(errorMessage(reason, 'Could not generate a pairing code.'))
     } finally {
       setBusy(false)
     }
@@ -149,17 +149,17 @@ export function DevicesPage() {
 
   async function revokeDevice(device: GatewayDeviceSummary) {
     if (!workspace || !canManage) return
-    const confirmed = window.confirm(`Revoke ${device.displayName}? The gateway credential will stop working immediately.`)
+    const confirmed = window.confirm(`Disconnect ${device.displayName}? This phone will no longer be able to use BulkText.`)
     if (!confirmed) return
     setBusy(true)
     setError(null)
     setMessage(null)
     try {
       await revokeGatewayDevice(workspace.id, device.deviceId)
-      setMessage(`${device.displayName} revoked.`)
+      setMessage(`${device.displayName} disconnected.`)
       await refresh()
     } catch (reason) {
-      setError(errorMessage(reason, 'Could not revoke the gateway device.'))
+      setError(errorMessage(reason, 'Could not disconnect the phone.'))
     } finally {
       setBusy(false)
     }
@@ -173,7 +173,7 @@ export function DevicesPage() {
         <div>
           <p className="eyebrow">My Android phone</p>
           <h1>Phone &amp; SIM</h1>
-          <p>See paired Android gateway health and explicitly bind the SIM subscription BulkText may use. A missing or replaced SIM never silently falls back to another subscription.</p>
+          <p>Connect your Android phone and explicitly choose the SIM BulkText may use. If that SIM is removed or changed, sending remains blocked until you select a SIM again.</p>
         </div>
         <button className="secondary-button" type="button" disabled={loading || busy} onClick={() => void refresh()}>Refresh</button>
       </section>
@@ -182,18 +182,18 @@ export function DevicesPage() {
       {message ? <div className="notice success-notice">{message}</div> : null}
 
       <section className="metric-grid compact-grid">
-        <article className="metric-card"><span>Gateways</span><h2>{activeDevices.length} active</h2><p>Paired gateway credentials remain isolated to your account.</p></article>
-        <article className="metric-card"><span>SIM inventory</span><h2>{detectedSims} detected</h2><p>Inventory is reported by the authenticated Android gateway.</p></article>
-        <article className="metric-card"><span>Ready</span><h2>{readyDevices.length} bound</h2><p>A ready gateway has an explicit, currently-present SIM selection.</p></article>
+        <article className="metric-card"><span>Phone</span><h2>{activeDevices.length ? 'Connected' : 'Not paired'}</h2><p>{activeDevices.length ? 'Your Android phone is linked to this account.' : 'Pair one Android phone to use as your SMS sender.'}</p></article>
+        <article className="metric-card"><span>SIMs</span><h2>{detectedSims} detected</h2><p>SIMs detected on your paired Android phone.</p></article>
+        <article className="metric-card"><span>Selected SIM</span><h2>{readyDevices.length ? 'Ready' : 'Not ready'}</h2><p>{readyDevices.length ? 'A currently present SIM is selected.' : 'Choose a SIM before sending can be enabled.'}</p></article>
       </section>
 
       {canManage ? (
         <section className="panel">
           <div className="panel-heading">
-            <div><p className="eyebrow">Secure pairing</p><h2>Add Android gateway</h2></div>
+            <div><p className="eyebrow">Pair phone</p><h2>Connect my Android phone</h2></div>
             {!pairing ? <button className="primary-button" type="button" disabled={busy} onClick={() => void generatePairing()}>Generate pairing code</button> : null}
           </div>
-          <p className="muted-copy">Pairing is one-use and device-scoped. After pairing, the Android app reports phone and SIM inventory before you explicitly select the SIM BulkText may use.</p>
+          <p className="muted-copy">The pairing code can be used once. After your phone connects, choose exactly which SIM BulkText may use.</p>
 
           {pairing ? (
             <div className="pairing-layout">
@@ -217,9 +217,9 @@ export function DevicesPage() {
       )}
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Device dashboard</p><h2>My paired phone</h2></div></div>
-        {loading ? <LoadingState label="Loading gateway dashboard…" /> : devices.length === 0 ? (
-          <EmptyState title="No gateway devices yet">Generate a pairing code and connect your Android phone.</EmptyState>
+        <div className="panel-heading"><div><p className="eyebrow">My phone</p><h2>Connected Android phone</h2></div></div>
+        {loading ? <LoadingState label="Loading phone & SIM…" /> : devices.length === 0 ? (
+          <EmptyState title="No phone connected yet">Generate a pairing code and connect your Android phone.</EmptyState>
         ) : (
           <div className="device-dashboard-grid">
             {devices.map((device) => (
@@ -247,7 +247,7 @@ export function DevicesPage() {
                 <div className="sim-section">
                   <div className="sim-section-heading"><strong>Detected SIMs</strong><span>{device.sims.filter((sim) => sim.present).length} present</span></div>
                   {device.sims.length === 0 ? (
-                    <p className="muted-copy sim-empty">Waiting for the Android gateway to report SIM inventory.</p>
+                    <p className="muted-copy sim-empty">Waiting for your Android phone to report its SIMs.</p>
                   ) : (
                     <div className="sim-list">
                       {device.sims.map((sim) => {
@@ -273,7 +273,7 @@ export function DevicesPage() {
                   <span>Paired {dateTime(device.pairedAt)} · Last seen {dateTime(device.lastSeenAt)}</span>
                   <div className="button-row device-actions">
                     {device.boundSimId && canManage ? <button className="secondary-button compact-button" type="button" disabled={busy} onClick={() => void unbindSim(device)}>Clear SIM</button> : null}
-                    {device.status === 'active' && canManage ? <button className="danger-button" type="button" disabled={busy} onClick={() => void revokeDevice(device)}>Revoke gateway</button> : null}
+                    {device.status === 'active' && canManage ? <button className="danger-button" type="button" disabled={busy} onClick={() => void revokeDevice(device)}>Disconnect phone</button> : null}
                   </div>
                 </footer>
               </article>
@@ -284,7 +284,7 @@ export function DevicesPage() {
 
       {canManage ? (
         <section className="panel">
-          <div className="panel-heading"><div><p className="eyebrow">Security ledger</p><h2>Recent pairing sessions</h2></div></div>
+          <div className="panel-heading"><div><p className="eyebrow">Connection history</p><h2>Recent pairing codes</h2></div></div>
           {sessions.length === 0 ? <p className="muted-copy">No pairing sessions have been generated for your account.</p> : (
             <div className="table-wrap">
               <table className="data-table">
@@ -304,13 +304,13 @@ export function DevicesPage() {
       ) : null}
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Sending invariant</p><h2>No silent SIM fallback</h2></div></div>
+        <div className="panel-heading"><div><p className="eyebrow">SIM safety</p><h2>Your selected SIM stays explicit</h2></div></div>
         <div className="definition-grid">
-          <div><dt>Gateway identity</dt><dd>Device-scoped credential</dd></div>
-          <div><dt>SIM identity</dt><dd>Explicit subscription binding</dd></div>
-          <div><dt>Missing selected SIM</dt><dd>Blocked until re-bound</dd></div>
+          <div><dt>Phone</dt><dd>Only your paired phone can connect</dd></div>
+          <div><dt>SIM choice</dt><dd>BulkText uses only the SIM you select</dd></div>
+          <div><dt>If the SIM changes</dt><dd>Sending stays blocked until you select again</dd></div>
         </div>
-        <p className="muted-copy device-security-copy">Selecting a SIM does not send messages by itself. Campaign sending will require an active gateway and a ready SIM binding.</p>
+        <p className="muted-copy device-security-copy">Selecting a SIM does not send messages by itself. Nothing sends until the campaign workflow is enabled and confirmed.</p>
       </section>
     </div>
   )
