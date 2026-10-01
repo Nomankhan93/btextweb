@@ -132,7 +132,7 @@ export function ImportsPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">BulkText 0.10</p>
+          <p className="eyebrow">BulkText 0.11</p>
           <h1>Excel / CSV Import</h1>
           <p>Parse CSV or modern XLSX files in the browser, map recipient fields, preview canonical Pakistan mobile numbers, then stage the rows inside the current organization for recipient validation and preview.</p>
         </div>
@@ -222,7 +222,7 @@ export function ImportsPage() {
         )}
       </section>
 
-      <section className="notice warning-notice">0.10 adds explicit recipient validation and immutable preview revisions. Imports with saved preview history are retained by the app; staging still does not create final contacts, apply consent/suppression rules, or send SMS.</section>
+      <section className="notice warning-notice">0.11 keeps import staging separate from compliance. Imports with preview history are retained; consent/suppression is evaluated only after an immutable recipient preview is created, and no SMS is sent here.</section>
     </div>
   )
 }

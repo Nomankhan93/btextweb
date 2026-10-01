@@ -1,31 +1,42 @@
-# BulkText Web 0.10.0 — Validation Results
+# BulkText Web 0.11.0 — Validation Results
 
-## Patch scope
+## Artifact/build-time checks
 
-Recipient Validation & Preview on top of the 0.9 staged import foundation.
+- [x] 0.10.0 source baseline used for development
+- [x] forward migration added; migrations through `20261001000030` remain immutable
+- [x] `npm run preflight` PASS
+- [x] `npm run check` PASS
+- [x] all local integration scripts pass `node --check`
+- [x] consent/suppression helper smoke test PASS
+- [x] no new runtime dependency required
+- [x] package dependency and devDependency sets unchanged
+- [x] package-lock dependency graph unchanged apart from version metadata in the development baseline
+- [x] installer compatibility/apply tested against a clean 0.10.0 baseline
+- [x] installer preserves `@supabase/supabase-js ^2.117.2`
+- [x] installer regenerates `SHA256SUMS.txt`
+- [x] patch excludes `.env`, Supabase runtime state, `node_modules`, `dist` and local backups
 
-## Artifact validation performed while building the patch
+## Local Supabase acceptance implemented
 
-- [x] existing migrations through `20261001000020_excel_csv_import.sql` retained unchanged
-- [x] forward migration added as `20261001000030_recipient_validation_preview.sql`
-- [x] package dependencies preserved; `@supabase/supabase-js` remains whatever compatible version is already installed
-- [x] all 48 TypeScript/TSX source files passed TypeScript transpile syntax validation
-- [x] `src/lib/recipientPreview.ts` passed strict standalone TypeScript checking
-- [x] recipient selection/dedup helper smoke test passed
-- [x] 0.10 preflight passed
-- [x] every `scripts/test-*-local.mjs` file passed `node --check`
-- [x] preview fixture covers duplicate choice, invalid row, manual exclusion, immutable revision and source-import delete protection
-- [x] tenant-isolation and RPC-only write assertions included
-- [x] installer compatibility check passed against the exact 0.9 baseline
-- [x] installer apply test passed and preserved `@supabase/supabase-js ^2.117.2` in the analyzed baseline
-- [x] regenerated `SHA256SUMS.txt` verified successfully after apply
-- [x] payload excludes `.env`, Supabase runtime secrets, node_modules and build output
+`npm run test:consent-suppression-local` covers:
 
-The build container could not complete a fresh dependency install within its network/time limit, so the full Vitest/Vite `npm run validate` suite remains an environment gate in the user's WSL project.
+- no-consent default block;
+- consent evidence requirement;
+- Owner/Admin/Campaign Manager write permissions;
+- Analyst read-only current-state access;
+- manager-only detailed evidence history;
+- grant, revoke and expiry states;
+- suppression override;
+- Campaign Manager suppression / Owner-Admin-only lift;
+- cross-tenant isolation;
+- raw-table browser write blocking;
+- immutable eligibility snapshot revisions;
+- later compliance events not mutating older snapshots;
+- audit events.
 
-## Final environment gates
+## Environment-dependent final gates
 
-Run after applying the patch:
+The build environment could type-check the source but did not complete a fresh dependency installation for Vitest/Vite. Run the normal project gates after applying the patch:
 
 ```bash
 npm install
@@ -33,26 +44,10 @@ npm run validate
 npm audit
 ```
 
-For the isolated local Supabase stack:
+For a local Supabase acceptance environment:
 
 ```bash
-npx supabase migration up --local
 npm run validate:local
 ```
 
-For hosted development, verify the linked project before `npx supabase db push`.
-
-## Functional acceptance
-
-- [ ] staged import opens `/imports/:importId/validate`
-- [ ] default selection keeps one row per valid canonical number
-- [ ] selecting a different duplicate deselects the previous row in that group
-- [ ] invalid phone rows cannot be selected
-- [ ] valid unique rows can be manually excluded
-- [ ] server rejects duplicate canonical selections even if the browser is bypassed
-- [ ] snapshot summary equals its complete row decision ledger
-- [ ] subsequent review creates revision 2 instead of mutating revision 1
-- [ ] source import cannot be deleted after recipient preview history exists
-- [ ] Analyst can view but cannot create preview snapshots
-- [ ] outside tenant cannot read preview data
-- [ ] UI states clearly that consent/suppression is not yet applied
+For hosted Supabase, verify the linked BulkText project and then apply only the forward migration with the normal `supabase db push` workflow. Do not run `db reset` against the hosted project.

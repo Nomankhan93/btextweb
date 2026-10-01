@@ -11,7 +11,8 @@ const modules = [
   ['SIM Binding', 'Active', 'Owner/Admin explicitly selects a present subscription with no silent fallback.'],
   ['Phone Number Foundation', 'Active', 'Pakistan mobile inputs normalize deterministically to canonical E.164 before import.'],
   ['Excel / CSV Import', 'Active', 'CSV/XLSX files can be mapped, previewed and staged per organization without creating final recipients.'],
-  ['Recipient Validation & Preview', 'Active', 'Valid unique recipients can be selected into immutable server-authoritative preview revisions before consent/suppression.'],
+  ['Recipient Validation & Preview', 'Active', 'Valid unique recipients can be selected into immutable server-authoritative preview revisions.'],
+  ['Consent & Suppression', 'Active', 'Append-only consent evidence and organization suppression events feed an authoritative recipient eligibility gate.'],
 ]
 
 export function DashboardPage() {
@@ -23,9 +24,9 @@ export function DashboardPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">BulkText 0.10</p>
-          <h1>Recipient Validation & Preview</h1>
-          <p>Staged CSV/XLSX rows can now be reviewed, deduplicated by canonical phone number and saved as immutable recipient preview revisions. Consent, suppression and sending remain gated to later phases.</p>
+          <p className="eyebrow">BulkText 0.11</p>
+          <h1>Consent & Suppression</h1>
+          <p>Validated recipient previews can now be evaluated against active consent evidence and the organization suppression list, then frozen as immutable eligibility revisions. Message composition and sending remain gated to later phases.</p>
         </div>
       </section>
 
@@ -55,7 +56,7 @@ export function DashboardPage() {
         <dl className="definition-grid">
           <div><dt>App environment</dt><dd>{config.appEnvironment}</dd></div>
           <div><dt>Supabase URL</dt><dd>{config.supabaseUrl ?? 'Set VITE_SUPABASE_URL'}</dd></div>
-          <div><dt>Schema phase</dt><dd>0.10 Recipient validation & preview</dd></div>
+          <div><dt>Schema phase</dt><dd>0.11 Consent & suppression</dd></div>
         </dl>
       </section>
     </div>

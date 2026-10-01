@@ -9,6 +9,8 @@ import { DevicesPage } from './pages/DevicesPage'
 import { PhoneNumbersPage } from './pages/PhoneNumbersPage'
 import { ImportsPage } from './pages/ImportsPage'
 import { RecipientValidationPage } from './pages/RecipientValidationPage'
+import { ConsentSuppressionPage } from './pages/ConsentSuppressionPage'
+import { RecipientEligibilityPage } from './pages/RecipientEligibilityPage'
 import { LoginPage } from './auth/LoginPage'
 import { SignupPage } from './auth/SignupPage'
 import { ForgotPasswordPage } from './auth/ForgotPasswordPage'
@@ -41,6 +43,8 @@ export default function App() {
             <Route path="/contacts" element={<PhoneNumbersPage />} />
             <Route path="/imports" element={<ImportsPage />} />
             <Route path="/imports/:importId/validate" element={<RecipientValidationPage />} />
+            <Route path="/recipient-previews/:previewId/eligibility" element={<RecipientEligibilityPage />} />
+            <Route path="/consent-suppression" element={<ConsentSuppressionPage />} />
             <Route path="/devices" element={<DevicesPage />} />
             <Route path="/templates" element={<PlaceholderPage title="Templates" description="Reusable templates arrive later in the customer MVP phase." />} />
             <Route path="/reports" element={<PlaceholderPage title="Reports" description="Recipient-level reports follow cloud-to-device execution and status sync." />} />

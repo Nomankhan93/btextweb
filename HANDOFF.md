@@ -1,28 +1,52 @@
-# BulkText — 0.10 Development Handoff
+# BulkText 0.11.0 Handoff
 
-## Current baseline
+## Current state
 
-- Android Gateway: 0.3 physical-device feasibility validated
-- Web/Cloud: 0.10.0 Recipient Validation & Preview
-- Current source path: `/home/noman/projects/bulktext-web-0.4.0` (folder name is historical)
-- Supabase may be hosted for active development; always verify the linked project before pushing migrations
+Android 0.3 feasibility is validated on a physical device. Web/cloud is now at **0.11.0 — Consent & Suppression**.
 
-## 0.10 authoritative behavior
+## Authoritative recipient flow
 
-0.9 staged imports remain source evidence. 0.10 does not destructively deduplicate or edit those rows. A reviewer opens a staged import, chooses at most one row for each valid canonical E.164 number, may exclude valid recipients, and creates an immutable recipient preview revision.
+```text
+CSV/XLSX import
+→ server phone normalization
+→ recipient validation / duplicate resolution
+→ immutable recipient preview
+→ consent + suppression evaluation
+→ immutable eligibility snapshot
+→ message composer (next)
+→ later confirmation / preflight / queue / Android send
+```
 
-Server RPCs re-normalize the phone values and enforce uniqueness independently of browser state. Snapshot rows retain source names/custom fields and explicit exclusion reasons.
+## 0.11 rules
 
-An `included` 0.10 row is **not send-authorized**. Consent and suppression are deliberately absent and become the next phase.
+- no consent is assumed;
+- latest active consent grant is required;
+- expired or revoked consent blocks eligibility;
+- active suppression overrides consent;
+- Owner/Admin/Campaign Manager can record consent and suppress numbers;
+- only Owner/Admin can lift suppression;
+- consent and suppression evidence is append-only;
+- eligibility snapshots are immutable revisions;
+- 0.11 does not send SMS.
 
-## New migration
+## New schema
 
-`20261001000030_recipient_validation_preview.sql`
+- `contact_consent_events`
+- `contact_suppression_events`
+- `recipient_eligibility_snapshots`
+- `recipient_eligibility_rows`
 
-Do not modify previously applied migrations.
+Forward migration:
+
+`20261001000040_consent_suppression.sql`
+
+## New routes
+
+- `/consent-suppression`
+- `/recipient-previews/:previewId/eligibility`
 
 ## Next roadmap phase
 
-**0.11 — Consent & Suppression**
+**0.12 — Message Composer & Personalization**
 
-Expected next gate: consent evidence/policy, organization suppression list, recipient suppression evaluation and authoritative exclusion before message composition/campaign confirmation.
+Do not skip the 0.11 migration or apply 0.12 directly to an older source baseline.

@@ -1,7 +1,7 @@
 {
   "name": "bulktext-web",
   "private": true,
-  "version": "0.10.0",
+  "version": "0.11.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,12 +12,13 @@
     "preflight": "node scripts/preflight.mjs",
     "validate": "npm run preflight && npm run check && npm run test && npm run build",
     "test:rbac-local": "node scripts/test-rbac-local.mjs",
-    "validate:local": "npm run validate && npm run test:rbac-local && npm run test:pairing-local && npm run test:device-dashboard-local && npm run test:phone-number-local && npm run test:import-local && npm run test:recipient-preview-local",
+    "validate:local": "npm run validate && npm run test:rbac-local && npm run test:pairing-local && npm run test:device-dashboard-local && npm run test:phone-number-local && npm run test:import-local && npm run test:recipient-preview-local && npm run test:consent-suppression-local",
     "test:pairing-local": "node scripts/test-pairing-local.mjs",
     "test:device-dashboard-local": "node scripts/test-device-dashboard-local.mjs",
     "test:phone-number-local": "node scripts/test-phone-number-local.mjs",
     "test:import-local": "node scripts/test-import-local.mjs",
-    "test:recipient-preview-local": "node scripts/test-recipient-preview-local.mjs"
+    "test:recipient-preview-local": "node scripts/test-recipient-preview-local.mjs",
+    "test:consent-suppression-local": "node scripts/test-consent-suppression-local.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

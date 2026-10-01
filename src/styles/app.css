@@ -272,3 +272,28 @@ a { color: inherit; }
 .inline-action { width: fit-content; }
 @media (max-width: 980px) { .recipient-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 700px) { .recipient-metrics { grid-template-columns: 1fr; } .recipient-actions { justify-content: flex-start; } }
+
+/* 0.11 Consent & Suppression */
+.compliance-lookup { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; align-items: end; margin-top: 18px; }
+.compliance-lookup label, .stacked-form label { display: grid; gap: 7px; color: #385057; font-size: .84rem; font-weight: 750; }
+.compliance-lookup input, .stacked-form input, .stacked-form select, .stacked-form textarea { width: 100%; border: 1px solid #cbd8d8; border-radius: 10px; background: white; color: var(--ink); padding: 10px 11px; font: inherit; }
+.stacked-form textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
+.compliance-metrics, .eligibility-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.compliance-definition-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.compliance-editor-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
+.stacked-form { display: grid; gap: 13px; margin-top: 16px; }
+.compliance-buttons { margin-bottom: 0; }
+.compliance-table { min-width: 980px; }
+.compliance-table code, .eligibility-table code, .stored-eligibility-table code { font-size: .81rem; }
+.compliance-table small, .eligibility-table small, .stored-eligibility-table small, .eligibility-history-table small { display: block; margin-top: 4px; color: var(--muted); line-height: 1.35; }
+.eligibility-table { min-width: 1120px; }
+.eligibility-history-table { min-width: 920px; }
+.stored-eligibility-table { min-width: 980px; }
+@media (max-width: 1000px) {
+  .compliance-metrics, .eligibility-metrics, .compliance-definition-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .compliance-editor-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .compliance-lookup { grid-template-columns: 1fr; }
+  .compliance-metrics, .eligibility-metrics, .compliance-definition-grid { grid-template-columns: 1fr; }
+}

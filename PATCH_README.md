@@ -1,68 +1,53 @@
-# BulkText Web 0.10.0 Patch — Recipient Validation & Preview
+# BulkText Web 0.11.0 — Consent & Suppression
 
-Forward patch for the completed 0.9 Excel / CSV Import baseline.
+This is a forward-only patch for a validated **0.10.0** source baseline.
 
-## What it adds
+## Adds
 
-- `/imports/:importId/validate` review workflow
-- current server-side phone re-normalization for every staged row
-- duplicate groups by canonical E.164
-- one selected source row per canonical phone number
-- explicit manual exclusion
-- immutable recipient preview revisions and source-import delete protection once history exists
-- full row-level snapshot with names and custom fields preserved
-- tenant-scoped preview history/read APIs
-- Owner/Admin/Campaign Manager snapshot creation; member read access
-- direct authenticated preview-table writes blocked
-- audit event `contacts.recipient_preview_created`
-- regression/unit/local integration coverage
-- migration `20261001000030_recipient_validation_preview.sql`
+- append-only consent evidence events;
+- append-only suppression/lift events;
+- current organization-scoped compliance status lookup;
+- manager-only evidence history;
+- suppression override over consent;
+- optional consent expiry;
+- immutable recipient eligibility snapshots;
+- `/consent-suppression` management screen;
+- `/recipient-previews/:previewId/eligibility` gate screen;
+- recipient-preview links into the consent gate;
+- local Supabase regression/acceptance coverage.
 
-0.10 intentionally does **not** perform consent or suppression checks. An included row is not send-authorized.
+## New migration
+
+`supabase/migrations/20261001000040_consent_suppression.sql`
+
+Existing migrations are immutable and must not be edited.
 
 ## Apply
 
 ```bash
-cd /home/noman/projects/bulktext-web-0.10.0-patch
 ./apply.sh --check /home/noman/projects/bulktext-web-0.4.0
 ./apply.sh /home/noman/projects/bulktext-web-0.4.0
 ```
 
-The installer preserves dependency versions, writes backups outside the source tree, and does not execute database migrations.
+The installer does not run database migrations.
 
-## Validate source
+## Validation
+
+Local full gate:
 
 ```bash
-cd /home/noman/projects/bulktext-web-0.4.0
-nvm use || nvm install
-npm install
+npm run validate:local
+```
+
+Source/build gate for a hosted/cloud workflow:
+
+```bash
 npm run validate
 npm audit
 ```
 
-## Cloud Supabase
+For Cloud Supabase, verify the linked project before `npx supabase db push`. Do not use `db reset` against the hosted project.
 
-Verify the linked BulkText project first:
+## Boundary
 
-```bash
-npx supabase projects list
-npx supabase migration list
-npx supabase db push
-```
-
-Do not run a cloud database reset.
-
-## Local integration gate
-
-With the isolated BulkText local stack on API port `56321`:
-
-```bash
-npx supabase migration up --local
-npm run validate:local
-```
-
-Expected new marker:
-
-```text
-BulkText 0.10.0 RECIPIENT VALIDATION & PREVIEW LOCAL PASS
-```
+0.11 records and freezes compliance eligibility. It does not compose messages, create/send campaigns or queue the Android gateway. The next roadmap phase is **0.12 — Message Composer & Personalization**.

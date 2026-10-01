@@ -110,7 +110,7 @@ export function RecipientValidationPage() {
       setPreviews(nextPreviews)
       setStoredRows(nextStoredRows)
       setActivePreviewId(previewId)
-      setMessage('Recipient preview snapshot created. Consent and suppression have not been evaluated yet.')
+      setMessage('Recipient preview snapshot created. Continue to Consent & Suppression Gate to evaluate send eligibility.')
     } catch (reason) {
       setError(errorMessage(reason, 'Could not create recipient preview.'))
     } finally {
@@ -139,7 +139,7 @@ export function RecipientValidationPage() {
   if (!rows.length && !error) {
     return (
       <div className="page-stack">
-        <section className="page-heading"><div><p className="eyebrow">BulkText 0.10</p><h1>Recipient Validation & Preview</h1></div></section>
+        <section className="page-heading"><div><p className="eyebrow">BulkText 0.11</p><h1>Recipient Validation & Preview</h1></div></section>
         <EmptyState title="No staged rows">This import has no staged rows available for validation.</EmptyState>
         <Link className="secondary-button compact-button inline-action" to="/imports">Back to imports</Link>
       </div>
@@ -152,7 +152,7 @@ export function RecipientValidationPage() {
     <div className="page-stack">
       <section className="page-heading recipient-heading">
         <div>
-          <p className="eyebrow">BulkText 0.10</p>
+          <p className="eyebrow">BulkText 0.11</p>
           <h1>Recipient Validation & Preview</h1>
           <p>Review canonical Pakistan mobile numbers, resolve duplicates by choosing one source row per number, exclude unwanted rows, then create a server-authoritative preview snapshot.</p>
         </div>
@@ -227,14 +227,14 @@ export function RecipientValidationPage() {
         {previews.length === 0 ? <EmptyState title="No recipient previews">Resolve the staged rows above and create the first validation snapshot.</EmptyState> : (
           <div className="table-wrap">
             <table className="data-table recipient-preview-history-table">
-              <thead><tr><th>Revision</th><th>Included</th><th>Excluded breakdown</th><th>Created</th><th /></tr></thead>
+              <thead><tr><th>Revision</th><th>Included</th><th>Excluded breakdown</th><th>Created</th><th>Actions</th></tr></thead>
               <tbody>{previews.map((preview) => (
                 <tr key={preview.previewId}>
                   <td><strong>#{preview.revision}</strong><small>{preview.validationVersion}</small></td>
                   <td><span className="badge badge-success">{preview.includedRows} included</span></td>
                   <td>{preview.invalidPhoneRows} invalid · {preview.duplicateRows} duplicate · {preview.manuallyExcludedRows} manual</td>
                   <td>{dateTime(preview.createdAt)}</td>
-                  <td><button className="secondary-button compact-button" disabled={busy} type="button" onClick={() => void viewPreview(preview.previewId)}>{activePreviewId === preview.previewId ? 'Viewing' : 'View'}</button></td>
+                  <td><div className="import-row-actions"><button className="secondary-button compact-button" disabled={busy} type="button" onClick={() => void viewPreview(preview.previewId)}>{activePreviewId === preview.previewId ? 'Viewing' : 'View'}</button><Link className="primary-button compact-button" to={`/recipient-previews/${preview.previewId}/eligibility`}>Consent gate</Link></div></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -262,7 +262,7 @@ export function RecipientValidationPage() {
         </section>
       ) : null}
 
-      <section className="notice warning-notice">0.10 validates structure, canonical phone numbers and duplicate selection only. Consent and suppression checks are deliberately not applied here; those become the authoritative gate in 0.11.</section>
+      <section className="notice warning-notice">0.11 keeps structural recipient validation immutable and separate from compliance. Use Consent gate on a saved preview to apply the authoritative consent/suppression policy and create eligibility snapshots.</section>
     </div>
   )
 }
