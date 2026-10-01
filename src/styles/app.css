@@ -297,3 +297,73 @@ a { color: inherit; }
   .compliance-lookup { grid-template-columns: 1fr; }
   .compliance-metrics, .eligibility-metrics, .compliance-definition-grid { grid-template-columns: 1fr; }
 }
+
+/* 0.12 — Message Composer & Personalization */
+.composer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.composer-source-grid {
+  grid-template-columns: minmax(260px, 2fr) repeat(3, minmax(150px, 1fr));
+  align-items: end;
+}
+
+.definition-card {
+  min-height: 88px;
+  padding: .9rem 1rem;
+  border: 1px solid var(--border-color, #d8dee8);
+  border-radius: 12px;
+  background: var(--panel-muted, rgba(15, 23, 42, .025));
+  display: grid;
+  gap: .25rem;
+}
+
+.definition-card span,
+.field-label {
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted-color, #64748b);
+}
+
+.definition-card strong { font-size: 1rem; }
+.definition-card small { color: var(--muted-color, #64748b); }
+
+.composer-token-section { display: grid; gap: .55rem; margin-top: .85rem; }
+.token-list { display: flex; flex-wrap: wrap; gap: .5rem; }
+.token-button {
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 999px;
+  background: transparent;
+  padding: .4rem .65rem;
+  font: inherit;
+  font-size: .82rem;
+  cursor: pointer;
+}
+.token-button:hover:not(:disabled) { background: rgba(15, 23, 42, .05); }
+.token-button:disabled { opacity: .55; cursor: not-allowed; }
+
+.composer-summary-grid { grid-template-columns: 1fr 1fr; }
+.message-preview-list { display: grid; gap: .8rem; }
+.message-preview-card {
+  border: 1px solid var(--border-color, #d8dee8);
+  border-radius: 12px;
+  padding: .9rem 1rem;
+  display: grid;
+  gap: .55rem;
+  background: rgba(255, 255, 255, .45);
+}
+.message-preview-card p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.message-preview-card small { color: var(--warning-text, #92400e); }
+.message-preview-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; }
+.message-preview-meta code { color: var(--muted-color, #64748b); }
+.danger-text { color: #b42318; }
+
+@media (max-width: 980px) {
+  .composer-grid,
+  .composer-source-grid { grid-template-columns: 1fr; }
+}

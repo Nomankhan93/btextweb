@@ -11,6 +11,7 @@ import { ImportsPage } from './pages/ImportsPage'
 import { RecipientValidationPage } from './pages/RecipientValidationPage'
 import { ConsentSuppressionPage } from './pages/ConsentSuppressionPage'
 import { RecipientEligibilityPage } from './pages/RecipientEligibilityPage'
+import { MessageComposerPage } from './pages/MessageComposerPage'
 import { LoginPage } from './auth/LoginPage'
 import { SignupPage } from './auth/SignupPage'
 import { ForgotPasswordPage } from './auth/ForgotPasswordPage'
@@ -39,7 +40,8 @@ export default function App() {
           <Route element={<AppShell />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/campaigns" element={<PlaceholderPage title="Campaigns" description="Campaign execution remains intentionally unavailable until the device/cloud queue phases." />} />
+            <Route path="/campaigns" element={<PlaceholderPage title="Campaigns" description="Immutable campaign drafts and confirmation arrive in 0.14. Use Composer for the editable 0.12 message workflow." />} />
+            <Route path="/composer" element={<MessageComposerPage />} />
             <Route path="/contacts" element={<PhoneNumbersPage />} />
             <Route path="/imports" element={<ImportsPage />} />
             <Route path="/imports/:importId/validate" element={<RecipientValidationPage />} />

@@ -117,12 +117,12 @@ async function cleanup() {
 }
 
 try {
-  console.log('BulkText 0.11.0 RBAC regression acceptance')
+  console.log('BulkText 0.12.0 RBAC regression acceptance')
   console.log(`Target: ${parsedUrl.origin}`)
 
   const schemaMeta = assertNoError(await admin.from('app_meta').select('value').eq('key', 'schema').single(), 'read schema metadata')
-  assert(schemaMeta?.value?.version === '0.11.0', `Expected schema version 0.11.0, received ${JSON.stringify(schemaMeta?.value)}`)
-  console.log('✓ 0.11.0 migration metadata present')
+  assert(schemaMeta?.value?.version === '0.12.0', `Expected schema version 0.12.0, received ${JSON.stringify(schemaMeta?.value)}`)
+  console.log('✓ 0.12.0 migration metadata present')
 
   const [userA, userB, userC] = await Promise.all([
     createConfirmedUser(emails.a, 'RBAC User A'),
@@ -261,7 +261,7 @@ try {
   const cOrganizations = assertNoError(await clientC.rpc('list_my_organizations'), 'C organization list')
   assert(cOrganizations.length === 0, 'User C unexpectedly belongs to an organization')
 
-  console.log('\nBulkText 0.11.0 RBAC REGRESSION PASS')
+  console.log('\nBulkText 0.12.0 RBAC REGRESSION PASS')
 } finally {
   await cleanup()
 }

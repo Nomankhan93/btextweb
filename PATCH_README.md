@@ -1,24 +1,26 @@
-# BulkText Web 0.11.0 — Consent & Suppression
+# BulkText Web 0.12.0 — Message Composer & Personalization
 
-This is a forward-only patch for a validated **0.10.0** source baseline.
+This is a forward-only patch for a validated **0.11.0** source baseline.
 
 ## Adds
 
-- append-only consent evidence events;
-- append-only suppression/lift events;
-- current organization-scoped compliance status lookup;
-- manager-only evidence history;
-- suppression override over consent;
-- optional consent expiry;
-- immutable recipient eligibility snapshots;
-- `/consent-suppression` management screen;
-- `/recipient-previews/:previewId/eligibility` gate screen;
-- recipient-preview links into the consent gate;
+- eligibility-snapshot selector for message composition;
+- editable organization-scoped message drafts;
+- `bulktext-template-v1` personalization grammar;
+- built-in variables: name, first name, last name and canonical phone;
+- dynamic custom import-field variables;
+- server-derived/stored template-variable list;
+- server rejection of malformed or unsupported `{{...}}` tokens;
+- full eligible-recipient personalization source RPC;
+- live recipient rendering with explicit missing-value markers;
+- composer draft history/load/update/delete UI;
+- direct link from stored eligibility snapshot to composer;
+- tenant/RBAC and RPC-only write protections;
 - local Supabase regression/acceptance coverage.
 
 ## New migration
 
-`supabase/migrations/20261001000040_consent_suppression.sql`
+`supabase/migrations/20261001000050_message_composer_personalization.sql`
 
 Existing migrations are immutable and must not be edited.
 
@@ -50,4 +52,6 @@ For Cloud Supabase, verify the linked project before `npx supabase db push`. Do 
 
 ## Boundary
 
-0.11 records and freezes compliance eligibility. It does not compose messages, create/send campaigns or queue the Android gateway. The next roadmap phase is **0.12 — Message Composer & Personalization**.
+0.12 drafts text and previews personalization only. It does not calculate SMS encoding/segments, estimate package usage, create immutable campaign confirmation, schedule, queue or send SMS.
+
+The next roadmap phase is **0.13 — SMS Segment & Package Usage Calculator**.

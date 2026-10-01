@@ -159,14 +159,14 @@ export function RecipientEligibilityPage() {
 
       {activeSnapshotId ? (
         <section className="panel">
-          <div className="panel-heading"><div><p className="eyebrow">Stored snapshot</p><h2>Frozen eligibility decisions</h2></div><span className="badge badge-success">{storedRows.filter((row) => row.eligibilityState === 'eligible').length} eligible</span></div>
+          <div className="panel-heading"><div><p className="eyebrow">Stored snapshot</p><h2>Frozen eligibility decisions</h2></div><div className="recipient-actions"><span className="badge badge-success">{storedRows.filter((row) => row.eligibilityState === 'eligible').length} eligible</span><Link className="primary-button compact-button" to={`/composer?snapshot=${encodeURIComponent(activeSnapshotId)}`}>Compose message</Link></div></div>
           <div className="table-wrap"><table className="data-table stored-eligibility-table"><thead><tr><th>Row</th><th>Name</th><th>Number</th><th>Consent</th><th>Suppression</th><th>Decision</th></tr></thead><tbody>{storedRows.map((row) => (
             <tr key={row.eligibilityRowId}><td>{row.sourceRowNumber}</td><td>{row.displayName ?? '—'}</td><td><code>{row.normalizedE164}</code></td><td>{consentStateLabel(row.consentState)}<small>{row.consentSource?.replaceAll('_', ' ') ?? '—'}</small></td><td>{row.suppressionState}<small>{row.suppressionReason?.replaceAll('_', ' ') ?? '—'}</small></td><td><span className={row.eligibilityState === 'eligible' ? 'badge badge-success' : 'badge badge-warning'}>{row.eligibilityState}</span><small>{blockReasonLabel(row.blockReason)}</small></td></tr>
           ))}</tbody></table></div>
         </section>
       ) : null}
 
-      <section className="notice warning-notice">Eligibility snapshots are a compliance gate only. 0.11 does not compose a message, confirm a campaign, queue work to Android, or send SMS.</section>
+      <section className="notice warning-notice">Eligibility snapshots are a compliance gate. 0.12 can now draft and preview personalized text from a stored snapshot, but campaign confirmation, queueing and sending remain disabled.</section>
     </div>
   )
 }

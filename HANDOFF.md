@@ -1,10 +1,10 @@
-# BulkText 0.11.0 Handoff
+# BulkText 0.12.0 Handoff
 
 ## Current state
 
-Android 0.3 feasibility is validated on a physical device. Web/cloud is now at **0.11.0 — Consent & Suppression**.
+Android 0.3 feasibility is validated on a physical device. Web/cloud is now at **0.12.0 — Message Composer & Personalization**.
 
-## Authoritative recipient flow
+## Authoritative workflow
 
 ```text
 CSV/XLSX import
@@ -13,40 +13,42 @@ CSV/XLSX import
 → immutable recipient preview
 → consent + suppression evaluation
 → immutable eligibility snapshot
-→ message composer (next)
-→ later confirmation / preflight / queue / Android send
+→ editable message draft + personalization preview
+→ SMS segment/package calculation (next)
+→ immutable campaign confirmation
+→ later preflight / queue / Android send
 ```
 
-## 0.11 rules
+## 0.12 rules
 
-- no consent is assumed;
-- latest active consent grant is required;
-- expired or revoked consent blocks eligibility;
-- active suppression overrides consent;
-- Owner/Admin/Campaign Manager can record consent and suppress numbers;
-- only Owner/Admin can lift suppression;
-- consent and suppression evidence is append-only;
-- eligibility snapshots are immutable revisions;
-- 0.11 does not send SMS.
+- composer sources must be immutable eligibility snapshots with at least one `eligible` row;
+- blocked eligibility rows never enter composer source data;
+- drafts are editable working records, not campaign confirmation;
+- Owner/Admin/Campaign Manager can create, update and delete drafts;
+- organization members can read drafts and personalization previews;
+- direct authenticated table writes remain blocked;
+- built-in tokens: `{{name}}`, `{{first_name}}`, `{{last_name}}`, `{{phone}}`;
+- custom fields use `{{custom:Field Name}}`;
+- unsupported/malformed tokens are rejected server-side;
+- missing per-recipient values are shown explicitly in preview rather than silently erased;
+- 0.12 does not calculate SMS segments, queue work or send SMS.
 
 ## New schema
 
-- `contact_consent_events`
-- `contact_suppression_events`
-- `recipient_eligibility_snapshots`
-- `recipient_eligibility_rows`
+- `message_composer_drafts`
 
 Forward migration:
 
-`20261001000040_consent_suppression.sql`
+`20261001000050_message_composer_personalization.sql`
 
-## New routes
+## New route
 
-- `/consent-suppression`
-- `/recipient-previews/:previewId/eligibility`
+- `/composer`
+
+Stored eligibility snapshots link directly into the composer.
 
 ## Next roadmap phase
 
-**0.12 — Message Composer & Personalization**
+**0.13 — SMS Segment & Package Usage Calculator**
 
-Do not skip the 0.11 migration or apply 0.12 directly to an older source baseline.
+Do not skip the 0.12 migration or apply a later patch directly to an older source baseline.

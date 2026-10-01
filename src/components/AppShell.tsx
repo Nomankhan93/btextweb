@@ -7,6 +7,7 @@ import { useOrganizations } from '../organizations/OrganizationProvider'
 const navigation = [
   ['Dashboard', '/dashboard'],
   ['Campaigns', '/campaigns'],
+  ['Composer', '/composer'],
   ['Contacts', '/contacts'],
   ['Consent & Suppression', '/consent-suppression'],
   ['Imports', '/imports'],
@@ -47,7 +48,7 @@ export function AppShell() {
               </select>
             </label>
           ) : null}
-          <span className="environment-pill">Consent Gate 0.11</span>
+          <span className="environment-pill">Composer 0.12</span>
           <div className="account-menu">
             <span title={user?.email ?? ''}>{user?.email ?? 'Account'}</span>
             <button className="text-button" type="button" onClick={() => void logout()}>Sign out</button>
@@ -64,7 +65,7 @@ export function AppShell() {
               </NavLink>
             ))}
           </nav>
-          <div className="sidebar-footer"><span className="status-dot" />Tenant isolation active. Consent evidence, suppression state and immutable recipient eligibility snapshots are enabled; campaign sending remains gated.</div>
+          <div className="sidebar-footer"><span className="status-dot" />Tenant isolation active. Eligible snapshots now feed an editable personalized message composer; segment calculation, campaign confirmation and sending remain gated.</div>
         </aside>
 
         <main className="content"><Outlet /></main>

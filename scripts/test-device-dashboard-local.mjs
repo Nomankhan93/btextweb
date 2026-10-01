@@ -103,12 +103,12 @@ async function cleanup() {
 }
 
 try {
-  console.log('BulkText 0.11.0 local device-dashboard/SIM-binding acceptance')
+  console.log('BulkText 0.12.0 local device-dashboard/SIM-binding acceptance')
   console.log(`Target: ${parsedUrl.origin}`)
 
   const schemaMeta = assertNoError(await admin.from('app_meta').select('value').eq('key', 'schema').single(), 'read schema metadata')
-  assert(schemaMeta?.value?.version === '0.11.0', `Expected schema version 0.11.0, received ${JSON.stringify(schemaMeta?.value)}`)
-  console.log('✓ 0.11.0 migration metadata present')
+  assert(schemaMeta?.value?.version === '0.12.0', `Expected schema version 0.12.0, received ${JSON.stringify(schemaMeta?.value)}`)
+  console.log('✓ 0.12.0 migration metadata present')
 
   const [ownerUser, otherUser, analystUser] = await Promise.all([
     createConfirmedUser(emails.owner, 'Device Owner'),
@@ -240,7 +240,7 @@ try {
   assert(orgBDashboard.length === 0, 'Other tenant unexpectedly contains gateway state')
   assert(ownerUser.id && otherUser.id, 'User fixtures were not created')
 
-  console.log('\nBulkText 0.11.0 DEVICE DASHBOARD & SIM BINDING REGRESSION PASS')
+  console.log('\nBulkText 0.12.0 DEVICE DASHBOARD & SIM BINDING REGRESSION PASS')
 } finally {
   await cleanup()
 }

@@ -50,6 +50,13 @@ const requiredFiles = [
   'docs/EXCEL_CSV_IMPORT.md',
   'docs/RECIPIENT_VALIDATION_PREVIEW.md',
   'docs/CONSENT_SUPPRESSION.md',
+  'src/lib/messageComposer.ts',
+  'src/lib/messageComposerApi.ts',
+  'src/pages/MessageComposerPage.tsx',
+  'src/test/messageComposer.test.ts',
+  'supabase/migrations/20261001000050_message_composer_personalization.sql',
+  'scripts/test-composer-local.mjs',
+  'docs/MESSAGE_COMPOSER_PERSONALIZATION.md',
 ]
 
 const missing = []
@@ -66,4 +73,4 @@ if (missing.length) {
   process.exit(1)
 }
 
-console.log('BulkText 0.11.0 preflight PASS')
+console.log('BulkText 0.12.0 preflight PASS')

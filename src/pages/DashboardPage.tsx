@@ -13,6 +13,7 @@ const modules = [
   ['Excel / CSV Import', 'Active', 'CSV/XLSX files can be mapped, previewed and staged per organization without creating final recipients.'],
   ['Recipient Validation & Preview', 'Active', 'Valid unique recipients can be selected into immutable server-authoritative preview revisions.'],
   ['Consent & Suppression', 'Active', 'Append-only consent evidence and organization suppression events feed an authoritative recipient eligibility gate.'],
+  ['Message Composer & Personalization', 'Active', 'Eligible snapshots can be drafted with built-in/custom variables and recipient-specific missing-value previews.'],
 ]
 
 export function DashboardPage() {
@@ -24,9 +25,9 @@ export function DashboardPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">BulkText 0.11</p>
-          <h1>Consent & Suppression</h1>
-          <p>Validated recipient previews can now be evaluated against active consent evidence and the organization suppression list, then frozen as immutable eligibility revisions. Message composition and sending remain gated to later phases.</p>
+          <p className="eyebrow">BulkText 0.12</p>
+          <h1>Message Composer & Personalization</h1>
+          <p>Immutable eligibility snapshots can now feed editable message drafts with built-in and custom personalization variables plus live recipient rendering. SMS segment calculation, campaign confirmation and sending remain gated to later phases.</p>
         </div>
       </section>
 
@@ -56,7 +57,7 @@ export function DashboardPage() {
         <dl className="definition-grid">
           <div><dt>App environment</dt><dd>{config.appEnvironment}</dd></div>
           <div><dt>Supabase URL</dt><dd>{config.supabaseUrl ?? 'Set VITE_SUPABASE_URL'}</dd></div>
-          <div><dt>Schema phase</dt><dd>0.11 Consent & suppression</dd></div>
+          <div><dt>Schema phase</dt><dd>0.12 Message composer & personalization</dd></div>
         </dl>
       </section>
     </div>
