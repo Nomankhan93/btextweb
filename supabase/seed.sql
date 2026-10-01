@@ -1,0 +1,2 @@
+-- BulkText 0.5 intentionally has no shared user/organization seed data.
+-- Create local test users through Supabase Auth so RLS and invitation flows are exercised realistically.
