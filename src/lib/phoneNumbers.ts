@@ -62,7 +62,7 @@ export function normalizePakistanMobile(raw: string): PhoneNumberNormalization {
       return {
         ...base,
         validationStatus: 'unsupported_country',
-        validationReason: 'BulkText 0.8 currently supports Pakistan mobile numbers only.',
+        validationReason: 'BulkText currently supports Pakistan mobile numbers only.',
       }
     }
     national = compact.slice(3)

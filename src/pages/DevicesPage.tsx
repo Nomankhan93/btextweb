@@ -4,7 +4,6 @@ import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { errorMessage } from '../lib/errors'
 import {
   bindGatewaySim,
-  canManageGatewayDevices,
   clearGatewaySimBinding,
   createGatewayPairing,
   gatewayBindingLabel,
@@ -19,7 +18,7 @@ import {
   type GatewaySimSummary,
 } from '../lib/gatewayDevices'
 import { formatPairingCode } from '../lib/pairingQr'
-import { useOrganizations } from '../organizations/OrganizationProvider'
+import { useWorkspace } from '../workspace/WorkspaceProvider'
 
 function dateTime(value: string | null) {
   if (!value) return 'Never'
@@ -39,7 +38,7 @@ function simLabel(sim: GatewaySimSummary) {
 }
 
 export function DevicesPage() {
-  const { currentOrganization } = useOrganizations()
+  const { workspace } = useWorkspace()
   const [devices, setDevices] = useState<GatewayDeviceSummary[]>([])
   const [sessions, setSessions] = useState<GatewayPairingSession[]>([])
   const [pairing, setPairing] = useState<CreatedGatewayPairing | null>(null)
@@ -48,29 +47,25 @@ export function DevicesPage() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  const canManage = canManageGatewayDevices(currentOrganization?.role)
+  const canManage = true
   const activeDevices = useMemo(() => devices.filter((device) => device.status === 'active'), [devices])
   const readyDevices = useMemo(() => activeDevices.filter((device) => device.bindingStatus === 'ready'), [activeDevices])
   const detectedSims = useMemo(() => activeDevices.reduce((total, device) => total + device.sims.filter((sim) => sim.present).length, 0), [activeDevices])
 
   const refresh = useCallback(async () => {
-    if (!currentOrganization) return
+    if (!workspace) return
     setLoading(true)
     setError(null)
     try {
-      const nextDevices = await listGatewayDevices(currentOrganization.id)
+      const nextDevices = await listGatewayDevices(workspace.id)
       setDevices(nextDevices)
-      if (canManageGatewayDevices(currentOrganization.role)) {
-        setSessions(await listGatewayPairingSessions(currentOrganization.id))
-      } else {
-        setSessions([])
-      }
+      setSessions(await listGatewayPairingSessions(workspace.id))
     } catch (reason) {
       setError(errorMessage(reason, 'Could not load gateway devices.'))
     } finally {
       setLoading(false)
     }
-  }, [currentOrganization])
+  }, [workspace])
 
   useEffect(() => {
     setPairing(null)
@@ -79,12 +74,12 @@ export function DevicesPage() {
   }, [refresh])
 
   async function generatePairing() {
-    if (!currentOrganization || !canManage) return
+    if (!workspace || !canManage) return
     setBusy(true)
     setError(null)
     setMessage(null)
     try {
-      const created = await createGatewayPairing(currentOrganization.id)
+      const created = await createGatewayPairing(workspace.id)
       setPairing(created)
       setMessage('Pairing code generated. It expires in 10 minutes and can be used once.')
       await refresh()
@@ -121,12 +116,12 @@ export function DevicesPage() {
   }
 
   async function bindSim(device: GatewayDeviceSummary, sim: GatewaySimSummary) {
-    if (!currentOrganization || !canManage || !sim.present) return
+    if (!workspace || !canManage || !sim.present) return
     setBusy(true)
     setError(null)
     setMessage(null)
     try {
-      await bindGatewaySim(currentOrganization.id, device.deviceId, sim.simId)
+      await bindGatewaySim(workspace.id, device.deviceId, sim.simId)
       setMessage(`${simLabel(sim)} is now the selected SIM for ${device.displayName}.`)
       await refresh()
     } catch (reason) {
@@ -137,12 +132,12 @@ export function DevicesPage() {
   }
 
   async function unbindSim(device: GatewayDeviceSummary) {
-    if (!currentOrganization || !canManage || !device.boundSimId) return
+    if (!workspace || !canManage || !device.boundSimId) return
     setBusy(true)
     setError(null)
     setMessage(null)
     try {
-      await clearGatewaySimBinding(currentOrganization.id, device.deviceId)
+      await clearGatewaySimBinding(workspace.id, device.deviceId)
       setMessage(`SIM selection cleared for ${device.displayName}.`)
       await refresh()
     } catch (reason) {
@@ -153,14 +148,14 @@ export function DevicesPage() {
   }
 
   async function revokeDevice(device: GatewayDeviceSummary) {
-    if (!currentOrganization || !canManage) return
+    if (!workspace || !canManage) return
     const confirmed = window.confirm(`Revoke ${device.displayName}? The gateway credential will stop working immediately.`)
     if (!confirmed) return
     setBusy(true)
     setError(null)
     setMessage(null)
     try {
-      await revokeGatewayDevice(currentOrganization.id, device.deviceId)
+      await revokeGatewayDevice(workspace.id, device.deviceId)
       setMessage(`${device.displayName} revoked.`)
       await refresh()
     } catch (reason) {
@@ -170,14 +165,14 @@ export function DevicesPage() {
     }
   }
 
-  if (!currentOrganization) return null
+  if (!workspace) return null
 
   return (
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">Gateway control plane · 0.7</p>
-          <h1>Devices &amp; SIM binding</h1>
+          <p className="eyebrow">My Android phone</p>
+          <h1>Phone &amp; SIM</h1>
           <p>See paired Android gateway health and explicitly bind the SIM subscription BulkText may use. A missing or replaced SIM never silently falls back to another subscription.</p>
         </div>
         <button className="secondary-button" type="button" disabled={loading || busy} onClick={() => void refresh()}>Refresh</button>
@@ -187,7 +182,7 @@ export function DevicesPage() {
       {message ? <div className="notice success-notice">{message}</div> : null}
 
       <section className="metric-grid compact-grid">
-        <article className="metric-card"><span>Gateways</span><h2>{activeDevices.length} active</h2><p>Paired device credentials remain isolated to a single organization.</p></article>
+        <article className="metric-card"><span>Gateways</span><h2>{activeDevices.length} active</h2><p>Paired gateway credentials remain isolated to your account.</p></article>
         <article className="metric-card"><span>SIM inventory</span><h2>{detectedSims} detected</h2><p>Inventory is reported by the authenticated Android gateway.</p></article>
         <article className="metric-card"><span>Ready</span><h2>{readyDevices.length} bound</h2><p>A ready gateway has an explicit, currently-present SIM selection.</p></article>
       </section>
@@ -198,7 +193,7 @@ export function DevicesPage() {
             <div><p className="eyebrow">Secure pairing</p><h2>Add Android gateway</h2></div>
             {!pairing ? <button className="primary-button" type="button" disabled={busy} onClick={() => void generatePairing()}>Generate pairing code</button> : null}
           </div>
-          <p className="muted-copy">Pairing remains one-use and device-scoped. After pairing, the Android app should report device/SIM inventory before a SIM can be selected here.</p>
+          <p className="muted-copy">Pairing is one-use and device-scoped. After pairing, the Android app reports phone and SIM inventory before you explicitly select the SIM BulkText may use.</p>
 
           {pairing ? (
             <div className="pairing-layout">
@@ -218,13 +213,13 @@ export function DevicesPage() {
           ) : null}
         </section>
       ) : (
-        <div className="notice warning-notice">All organization members can view gateway health. Only Owners and Admins can pair/revoke gateways or change the selected SIM.</div>
+        <div className="notice warning-notice"></div>
       )}
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Device dashboard</p><h2>Paired gateways</h2></div></div>
+        <div className="panel-heading"><div><p className="eyebrow">Device dashboard</p><h2>My paired phone</h2></div></div>
         {loading ? <LoadingState label="Loading gateway dashboard…" /> : devices.length === 0 ? (
-          <EmptyState title="No gateway devices yet">Generate a pairing code and connect the first Android gateway for {currentOrganization.name}.</EmptyState>
+          <EmptyState title="No gateway devices yet">Generate a pairing code and connect your Android phone.</EmptyState>
         ) : (
           <div className="device-dashboard-grid">
             {devices.map((device) => (
@@ -290,7 +285,7 @@ export function DevicesPage() {
       {canManage ? (
         <section className="panel">
           <div className="panel-heading"><div><p className="eyebrow">Security ledger</p><h2>Recent pairing sessions</h2></div></div>
-          {sessions.length === 0 ? <p className="muted-copy">No pairing sessions have been generated for this organization.</p> : (
+          {sessions.length === 0 ? <p className="muted-copy">No pairing sessions have been generated for your account.</p> : (
             <div className="table-wrap">
               <table className="data-table">
                 <thead><tr><th>Created</th><th>Status</th><th>Expires</th><th>Device</th></tr></thead>
@@ -315,7 +310,7 @@ export function DevicesPage() {
           <div><dt>SIM identity</dt><dd>Explicit subscription binding</dd></div>
           <div><dt>Missing selected SIM</dt><dd>Blocked until re-bound</dd></div>
         </div>
-        <p className="muted-copy device-security-copy">0.7 records the selected SIM but does not enable campaign sending yet. Later preflight/queue phases must require an active gateway with a ready SIM binding.</p>
+        <p className="muted-copy device-security-copy">Selecting a SIM does not send messages by itself. Campaign sending will require an active gateway and a ready SIM binding.</p>
       </section>
     </div>
   )

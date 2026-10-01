@@ -1,57 +1,62 @@
-# BulkText Web 0.12.0 — Message Composer & Personalization
+# Patch 0.12.1 — Individual Account Transition
 
-This is a forward-only patch for a validated **0.11.0** source baseline.
+## Purpose
 
-## Adds
+Convert the existing multi-organization web experience into an individual-first MVP **without destructively rewriting the working 0.6–0.12 backend data model**.
 
-- eligibility-snapshot selector for message composition;
-- editable organization-scoped message drafts;
-- `bulktext-template-v1` personalization grammar;
-- built-in variables: name, first name, last name and canonical phone;
-- dynamic custom import-field variables;
-- server-derived/stored template-variable list;
-- server rejection of malformed or unsupported `{{...}}` tokens;
-- full eligible-recipient personalization source RPC;
-- live recipient rendering with explicit missing-value markers;
-- composer draft history/load/update/delete UI;
-- direct link from stored eligibility snapshot to composer;
-- tenant/RBAC and RPC-only write protections;
-- local Supabase regression/acceptance coverage.
+## Main changes
 
-## New migration
+- auto-create/adopt one hidden personal workspace per authenticated user
+- existing owned workspace is adopted so current data remains in place
+- remove Create Organization onboarding
+- remove organization switcher
+- remove Team/invitation UI and routes
+- replace `OrganizationProvider` with `WorkspaceProvider`
+- remove frontend RBAC gates
+- simplify Settings to account profile only
+- make profiles self-readable only
+- hide internal organization/member/invitation tables from normal web clients
+- revoke old organization/team RPCs for authenticated users
+- update local regression scripts to use `get_my_personal_workspace()`
+- add `test:account-local`
 
-`supabase/migrations/20261001000050_message_composer_personalization.sql`
+## Intentionally retained
 
-Existing migrations are immutable and must not be edited.
+These remain in PostgreSQL for compatibility and possible future organization support:
+
+```text
+organizations
+organization_members
+organization_invitations
+organization_id foreign keys
+is_org_member()
+org_role()
+can_manage_org()
+```
+
+They are implementation details, not user-facing MVP concepts.
 
 ## Apply
 
-```bash
-./apply.sh --check /home/noman/projects/bulktext-web-0.4.0
-./apply.sh /home/noman/projects/bulktext-web-0.4.0
-```
+Use the supplied patch ZIP and `apply.sh`. The installer stores backups **outside the target repo** under the target's parent directory so Vitest does not discover backup tests.
 
-The installer does not run database migrations.
-
-## Validation
-
-Local full gate:
+Then run:
 
 ```bash
+cd /home/noman/projects/bulktext-web-0.4.0
+npm install
+npx supabase start
+npx supabase migration up --local
 npm run validate:local
-```
-
-Source/build gate for a hosted/cloud workflow:
-
-```bash
-npm run validate
 npm audit
 ```
 
-For Cloud Supabase, verify the linked project before `npx supabase db push`. Do not use `db reset` against the hosted project.
+Expected schema metadata after migration:
 
-## Boundary
-
-0.12 drafts text and previews personalization only. It does not calculate SMS encoding/segments, estimate package usage, create immutable campaign confirmation, schedule, queue or send SMS.
-
-The next roadmap phase is **0.13 — SMS Segment & Package Usage Calculator**.
+```json
+{
+  "version": "0.12.1",
+  "phase": "individual_account_transition",
+  "tenant_model": "hidden_personal_workspace"
+}
+```

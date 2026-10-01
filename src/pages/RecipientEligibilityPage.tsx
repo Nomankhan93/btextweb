@@ -12,8 +12,7 @@ import {
   type StoredEligibilityRow,
 } from '../lib/consentSuppressionApi'
 import { errorMessage } from '../lib/errors'
-import { canManageCampaigns } from '../lib/rbac'
-import { useOrganizations } from '../organizations/OrganizationProvider'
+import { useWorkspace } from '../workspace/WorkspaceProvider'
 
 function dateTime(value: string | null) {
   if (!value) return '—'
@@ -22,7 +21,7 @@ function dateTime(value: string | null) {
 
 export function RecipientEligibilityPage() {
   const { previewId = '' } = useParams()
-  const { currentOrganization } = useOrganizations()
+  const { workspace } = useWorkspace()
   const [rows, setRows] = useState<RecipientEligibilityRow[]>([])
   const [snapshots, setSnapshots] = useState<RecipientEligibilitySnapshotSummary[]>([])
   const [storedRows, setStoredRows] = useState<StoredEligibilityRow[]>([])
@@ -31,18 +30,18 @@ export function RecipientEligibilityPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const canCreate = canManageCampaigns(currentOrganization?.role)
+  const canCreate = true
 
   const summary = useMemo(() => summarizeEligibility(rows), [rows])
 
   const refresh = useCallback(async () => {
-    if (!currentOrganization || !previewId) return
+    if (!workspace || !previewId) return
     setLoading(true)
     setError(null)
     try {
       const [nextRows, nextSnapshots] = await Promise.all([
-        listRecipientEligibilityRows(currentOrganization.id, previewId),
-        listRecipientEligibilitySnapshots(currentOrganization.id, previewId),
+        listRecipientEligibilityRows(workspace.id, previewId),
+        listRecipientEligibilitySnapshots(workspace.id, previewId),
       ])
       setRows(nextRows)
       setSnapshots(nextSnapshots)
@@ -53,21 +52,21 @@ export function RecipientEligibilityPage() {
     } finally {
       setLoading(false)
     }
-  }, [currentOrganization, previewId])
+  }, [workspace, previewId])
 
   useEffect(() => { void refresh() }, [refresh])
 
   async function saveSnapshot() {
-    if (!currentOrganization || !previewId) return
+    if (!workspace || !previewId) return
     setBusy(true)
     setError(null)
     setMessage(null)
     try {
-      const snapshotId = await createRecipientEligibilitySnapshot(currentOrganization.id, previewId)
+      const snapshotId = await createRecipientEligibilitySnapshot(workspace.id, previewId)
       const [nextRows, nextSnapshots, nextStored] = await Promise.all([
-        listRecipientEligibilityRows(currentOrganization.id, previewId),
-        listRecipientEligibilitySnapshots(currentOrganization.id, previewId),
-        getRecipientEligibilitySnapshotRows(currentOrganization.id, snapshotId),
+        listRecipientEligibilityRows(workspace.id, previewId),
+        listRecipientEligibilitySnapshots(workspace.id, previewId),
+        getRecipientEligibilitySnapshotRows(workspace.id, snapshotId),
       ])
       setRows(nextRows)
       setSnapshots(nextSnapshots)
@@ -82,11 +81,11 @@ export function RecipientEligibilityPage() {
   }
 
   async function viewSnapshot(snapshotId: string) {
-    if (!currentOrganization) return
+    if (!workspace) return
     setBusy(true)
     setError(null)
     try {
-      setStoredRows(await getRecipientEligibilitySnapshotRows(currentOrganization.id, snapshotId))
+      setStoredRows(await getRecipientEligibilitySnapshotRows(workspace.id, snapshotId))
       setActiveSnapshotId(snapshotId)
     } catch (reason) {
       setError(errorMessage(reason, 'Could not load eligibility snapshot rows.'))
@@ -95,7 +94,7 @@ export function RecipientEligibilityPage() {
     }
   }
 
-  if (!currentOrganization) return null
+  if (!workspace) return null
   if (loading) return <LoadingState label="Evaluating consent and suppression…" />
 
   const sourceFilename = rows[0]?.sourceFilename ?? 'Recipient preview'
@@ -105,9 +104,9 @@ export function RecipientEligibilityPage() {
     <div className="page-stack">
       <section className="page-heading recipient-heading">
         <div>
-          <p className="eyebrow">BulkText 0.11</p>
+          <p className="eyebrow">Consent gate</p>
           <h1>Consent & Suppression Gate</h1>
-          <p>Evaluate structurally included recipients against current consent evidence and the organization suppression list, then freeze the result as an immutable eligibility snapshot.</p>
+          <p>Evaluate structurally included recipients against current consent evidence and your suppression list, then freeze the result as an immutable eligibility snapshot.</p>
         </div>
         <Link className="secondary-button compact-button" to="/imports">Back to imports</Link>
       </section>
@@ -124,7 +123,7 @@ export function RecipientEligibilityPage() {
         <article className="metric-card"><span>Candidates</span><h2>{summary.total}</h2><p>Included rows from the immutable recipient preview.</p></article>
         <article className="metric-card"><span>Eligible</span><h2>{summary.eligible}</h2><p>Active consent and no suppression.</p></article>
         <article className="metric-card"><span>Consent blocked</span><h2>{summary.noConsent + summary.revoked + summary.expired}</h2><p>{summary.noConsent} none · {summary.revoked} revoked · {summary.expired} expired</p></article>
-        <article className="metric-card"><span>Suppressed</span><h2>{summary.suppressed}</h2><p>Organization suppression list overrides consent.</p></article>
+        <article className="metric-card"><span>Suppressed</span><h2>{summary.suppressed}</h2><p>Your suppression list overrides consent.</p></article>
       </section>
 
       <section className="panel">
@@ -132,7 +131,6 @@ export function RecipientEligibilityPage() {
           <div><p className="eyebrow">Live evaluation</p><h2>Current compliance state</h2></div>
           <div className="recipient-actions"><button className="secondary-button compact-button" type="button" disabled={busy} onClick={() => void refresh()}>Refresh</button>{canCreate ? <button className="primary-button compact-button" type="button" disabled={busy || rows.length === 0} onClick={() => void saveSnapshot()}>{busy ? 'Saving…' : 'Create eligibility snapshot'}</button> : null}</div>
         </div>
-        {!canCreate ? <div className="notice warning-notice">Your role can inspect eligibility and stored snapshots, but only Owner, Admin and Campaign Manager can create a new eligibility snapshot.</div> : null}
         {rows.length === 0 ? <EmptyState title="No included recipients">The selected recipient preview contains no included candidates.</EmptyState> : (
           <div className="table-wrap"><table className="data-table eligibility-table"><thead><tr><th>Row</th><th>Name</th><th>Number</th><th>Consent</th><th>Suppression</th><th>Eligibility</th><th /></tr></thead><tbody>{rows.map((row) => (
             <tr key={row.previewRowId} className={row.eligibilityState === 'eligible' ? 'recipient-row-included' : ''}>
@@ -166,7 +164,7 @@ export function RecipientEligibilityPage() {
         </section>
       ) : null}
 
-      <section className="notice warning-notice">Eligibility snapshots are a compliance gate. 0.12 can now draft and preview personalized text from a stored snapshot, but campaign confirmation, queueing and sending remain disabled.</section>
+      <section className="notice warning-notice">Eligibility snapshots are a compliance gate. You can draft and preview personalized text from a stored snapshot, but campaign confirmation, queueing and sending remain disabled.</section>
     </div>
   )
 }

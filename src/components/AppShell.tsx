@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
-import { roleLabels } from '../lib/rbac'
-import { useOrganizations } from '../organizations/OrganizationProvider'
 
 const navigation = [
   ['Dashboard', '/dashboard'],
@@ -15,14 +13,12 @@ const navigation = [
   ['Templates', '/templates'],
   ['Reports', '/reports'],
   ['Subscription', '/subscription'],
-  ['Team', '/team'],
   ['Settings', '/settings'],
 ] as const
 
 export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { user, signOut } = useAuth()
-  const { organizations, currentOrganization, switchOrganization } = useOrganizations()
   const navigate = useNavigate()
 
   async function logout() {
@@ -40,15 +36,6 @@ export function AppShell() {
         </div>
 
         <div className="topbar-actions">
-          {currentOrganization ? (
-            <label className="organization-switcher">
-              <span className="sr-only">Current organization</span>
-              <select value={currentOrganization.id} onChange={(e) => switchOrganization(e.target.value)}>
-                {organizations.map((org) => <option key={org.id} value={org.id}>{org.name} · {roleLabels[org.role]}</option>)}
-              </select>
-            </label>
-          ) : null}
-          <span className="environment-pill">Composer 0.12</span>
           <div className="account-menu">
             <span title={user?.email ?? ''}>{user?.email ?? 'Account'}</span>
             <button className="text-button" type="button" onClick={() => void logout()}>Sign out</button>
@@ -65,7 +52,7 @@ export function AppShell() {
               </NavLink>
             ))}
           </nav>
-          <div className="sidebar-footer"><span className="status-dot" />Tenant isolation active. Eligible snapshots now feed an editable personalized message composer; segment calculation, campaign confirmation and sending remain gated.</div>
+          <div className="sidebar-footer"><span className="status-dot" />Your phone, recipients and drafts stay isolated to your signed-in BulkText account.</div>
         </aside>
 
         <main className="content"><Outlet /></main>

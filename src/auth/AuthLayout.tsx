@@ -10,7 +10,7 @@ export function AuthLayout({ title, subtitle, children, footer }: PropsWithChild
           <span><strong>BulkText</strong><small>SIM-powered business messaging</small></span>
         </Link>
         <div className="auth-heading">
-          <p className="eyebrow">BulkText 0.7</p>
+          <p className="eyebrow">BulkText</p>
           <h1>{title}</h1>
           <p>{subtitle}</p>
         </div>

@@ -18,7 +18,7 @@ export function SignupPage() {
     setError(null)
     try {
       const result = await signUp({ email, password, displayName })
-      navigate(result.emailConfirmationRequired ? `/auth/verify?email=${encodeURIComponent(email)}` : '/onboarding', { replace: true })
+      navigate(result.emailConfirmationRequired ? `/auth/verify?email=${encodeURIComponent(email)}` : '/dashboard', { replace: true })
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Account creation failed.')
     } finally {
@@ -29,7 +29,7 @@ export function SignupPage() {
   return (
     <AuthLayout
       title="Create your account"
-      subtitle="Start with a private organization workspace. Android device pairing arrives in patch 0.6."
+      subtitle="Create your BulkText account, pair your Android phone and use your own selected SIM for messaging."
       footer={<>Already have an account? <Link to="/auth/login">Sign in</Link>.</>}
     >
       <form className="form-stack" onSubmit={submit}>

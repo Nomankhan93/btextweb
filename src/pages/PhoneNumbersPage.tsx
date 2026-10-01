@@ -18,7 +18,7 @@ export function PhoneNumbersPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">BulkText 0.8</p>
+          <p className="eyebrow">Phone number check</p>
           <h1>Phone Number Foundation</h1>
           <p>Normalize Pakistan mobile numbers into one canonical E.164 format before import, deduplication, suppression and campaign validation. This preview runs locally in the browser and does not save contact data.</p>
         </div>
@@ -41,7 +41,7 @@ export function PhoneNumbersPage() {
             <textarea value={input} onChange={(event) => setInput(event.target.value)} rows={12} spellCheck={false} placeholder="03001234567" />
           </label>
           <div className="phone-rules-card">
-            <strong>0.8 rules</strong>
+            <strong>Current rules</strong>
             <ul>
               <li>Current country scope: Pakistan (PK).</li>
               <li>Current number type: mobile only.</li>

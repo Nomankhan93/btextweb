@@ -5,8 +5,7 @@ import { MAX_IMPORT_ROWS, parseSpreadsheetFile, type ParsedImportFile } from '..
 import { autoDetectImportMapping, buildImportPreview, type ImportColumnMapping } from '../lib/importMapping'
 import { createContactImport, deleteContactImport, listContactImports, type ContactImportSummary } from '../lib/importsApi'
 import { errorMessage } from '../lib/errors'
-import { canManageCampaigns } from '../lib/rbac'
-import { useOrganizations } from '../organizations/OrganizationProvider'
+import { useWorkspace } from '../workspace/WorkspaceProvider'
 
 const emptyMapping: ImportColumnMapping = { phone: '', firstName: null, lastName: null, displayName: null }
 
@@ -25,7 +24,7 @@ function optionalHeader(value: string): string | null {
 }
 
 export function ImportsPage() {
-  const { currentOrganization } = useOrganizations()
+  const { workspace } = useWorkspace()
   const [parsed, setParsed] = useState<ParsedImportFile | null>(null)
   const [mapping, setMapping] = useState<ImportColumnMapping>(emptyMapping)
   const [imports, setImports] = useState<ContactImportSummary[]>([])
@@ -34,23 +33,23 @@ export function ImportsPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const canImport = canManageCampaigns(currentOrganization?.role)
+  const canImport = true
 
   const preview = useMemo(() => parsed ? buildImportPreview(parsed, mapping) : null, [mapping, parsed])
 
   const refreshHistory = useCallback(async () => {
-    if (!currentOrganization) {
+    if (!workspace) {
       setImports([])
       setLoadingHistory(false)
       return
     }
     setLoadingHistory(true)
     try {
-      setImports(await listContactImports(currentOrganization.id))
+      setImports(await listContactImports(workspace.id))
     } finally {
       setLoadingHistory(false)
     }
-  }, [currentOrganization])
+  }, [workspace])
 
   useEffect(() => {
     setParsed(null)
@@ -81,7 +80,7 @@ export function ImportsPage() {
   }
 
   async function stageImport() {
-    if (!currentOrganization || !parsed || !preview) return
+    if (!workspace || !parsed || !preview) return
     setError(null)
     setMessage(null)
     if (!mapping.phone) {
@@ -95,7 +94,7 @@ export function ImportsPage() {
 
     setBusy(true)
     try {
-      await createContactImport(currentOrganization.id, parsed, mapping, preview.rows)
+      await createContactImport(workspace.id, parsed, mapping, preview.rows)
       setMessage(`${parsed.fileName} was staged successfully. Use Validate & preview to resolve duplicates and create a recipient snapshot.`)
       setParsed(null)
       setMapping(emptyMapping)
@@ -109,14 +108,14 @@ export function ImportsPage() {
   }
 
   async function removeImport(item: ContactImportSummary) {
-    if (!currentOrganization) return
+    if (!workspace) return
     const confirmed = window.confirm(`Delete staged import “${item.sourceFilename}”? This removes its staged rows only; no messages have been sent.`)
     if (!confirmed) return
     setBusy(true)
     setError(null)
     setMessage(null)
     try {
-      await deleteContactImport(currentOrganization.id, item.importId)
+      await deleteContactImport(workspace.id, item.importId)
       setMessage(`${item.sourceFilename} was deleted.`)
       await refreshHistory()
     } catch (reason) {
@@ -126,15 +125,15 @@ export function ImportsPage() {
     }
   }
 
-  if (!currentOrganization) return null
+  if (!workspace) return null
 
   return (
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">BulkText 0.11</p>
+          <p className="eyebrow">Recipient import</p>
           <h1>Excel / CSV Import</h1>
-          <p>Parse CSV or modern XLSX files in the browser, map recipient fields, preview canonical Pakistan mobile numbers, then stage the rows inside the current organization for recipient validation and preview.</p>
+          <p>Parse CSV or modern XLSX files in the browser, map recipient fields, preview canonical Pakistan mobile numbers, then stage the rows in your account for recipient validation and preview.</p>
         </div>
       </section>
 
@@ -154,7 +153,7 @@ export function ImportsPage() {
               <input ref={inputRef} type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} onChange={(event) => void selectFile(event.target.files?.[0] ?? null)} />
             </label>
           </div>
-        ) : <div className="notice warning-notice">Your role can view staged import history, but only Owner, Admin and Campaign Manager roles can upload or delete imports.</div>}
+        ) : null}
       </section>
 
       {parsed && preview ? (
@@ -203,7 +202,7 @@ export function ImportsPage() {
       <section className="panel">
         <div className="panel-heading"><div><p className="eyebrow">Import history</p><h2>Staged files</h2></div><button className="secondary-button compact-button" type="button" disabled={loadingHistory || busy} onClick={() => void refreshHistory()}>Refresh</button></div>
         {loadingHistory ? <LoadingState label="Loading staged imports…" /> : imports.length === 0 ? (
-          <EmptyState title="No staged imports">Upload the first CSV or XLSX file for {currentOrganization.name}. Staging does not create campaign recipients or send messages.</EmptyState>
+          <EmptyState title="No staged imports">Upload your first CSV or XLSX file. Staging does not create campaign recipients or send messages.</EmptyState>
         ) : (
           <div className="table-wrap">
             <table className="data-table import-history-table">
@@ -222,7 +221,7 @@ export function ImportsPage() {
         )}
       </section>
 
-      <section className="notice warning-notice">0.11 keeps import staging separate from compliance. Imports with preview history are retained; consent/suppression is evaluated only after an immutable recipient preview is created, and no SMS is sent here.</section>
+      <section className="notice warning-notice">Import staging stays separate from compliance. Imports with preview history are retained; consent/suppression is evaluated only after an immutable recipient preview is created, and no SMS is sent here.</section>
     </div>
   )
 }

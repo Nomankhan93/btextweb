@@ -1,5 +1,4 @@
 import { errorMessage } from './errors'
-import type { OrganizationRole } from './rbac'
 import { supabase } from './supabase'
 
 export type GatewayHealthStatus = 'recent' | 'stale' | 'offline' | 'never_seen' | 'revoked'
@@ -185,10 +184,6 @@ function mapDeviceRow(row: GatewayDeviceDashboardRow): GatewayDeviceSummary {
     bindingStatus: row.binding_status,
     sims: parseSims(row.sims),
   }
-}
-
-export function canManageGatewayDevices(role: OrganizationRole | null | undefined) {
-  return role === 'owner' || role === 'admin'
 }
 
 export function gatewayHealthLabel(status: GatewayHealthStatus) {

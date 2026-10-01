@@ -78,8 +78,9 @@ async function signIn(email) {
 }
 
 async function createOrganization(client, name) {
-  const id = assertNoError(await client.rpc('create_organization', { p_name: name }), `create ${name}`)
-  assert(typeof id === 'string' && id.length > 0, `${name} did not return an organization UUID`)
+  const rows = assertNoError(await client.rpc('get_my_personal_workspace'), `get personal workspace for ${name}`)
+  const id = rows?.[0]?.workspace_id
+  assert(typeof id === 'string' && id.length > 0, `${name} did not return a personal workspace UUID`)
   createdOrganizationIds.push(id)
   return id
 }
@@ -103,12 +104,12 @@ async function cleanup() {
 }
 
 try {
-  console.log('BulkText 0.12.0 local device-dashboard/SIM-binding acceptance')
+  console.log('BulkText 0.12.1 local device-dashboard/SIM-binding acceptance')
   console.log(`Target: ${parsedUrl.origin}`)
 
   const schemaMeta = assertNoError(await admin.from('app_meta').select('value').eq('key', 'schema').single(), 'read schema metadata')
-  assert(schemaMeta?.value?.version === '0.12.0', `Expected schema version 0.12.0, received ${JSON.stringify(schemaMeta?.value)}`)
-  console.log('✓ 0.12.0 migration metadata present')
+  assert(schemaMeta?.value?.version === '0.12.1', `Expected schema version 0.12.1, received ${JSON.stringify(schemaMeta?.value)}`)
+  console.log('✓ 0.12.1 migration metadata present')
 
   const [ownerUser, otherUser, analystUser] = await Promise.all([
     createConfirmedUser(emails.owner, 'Device Owner'),
@@ -240,7 +241,7 @@ try {
   assert(orgBDashboard.length === 0, 'Other tenant unexpectedly contains gateway state')
   assert(ownerUser.id && otherUser.id, 'User fixtures were not created')
 
-  console.log('\nBulkText 0.12.0 DEVICE DASHBOARD & SIM BINDING REGRESSION PASS')
+  console.log('\nBulkText 0.12.1 DEVICE DASHBOARD & SIM BINDING REGRESSION PASS')
 } finally {
   await cleanup()
 }

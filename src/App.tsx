@@ -3,7 +3,6 @@ import { AppShell } from './components/AppShell'
 import { DashboardPage } from './pages/DashboardPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { TeamPage } from './pages/TeamPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { DevicesPage } from './pages/DevicesPage'
 import { PhoneNumbersPage } from './pages/PhoneNumbersPage'
@@ -19,9 +18,7 @@ import { ResetPasswordPage } from './auth/ResetPasswordPage'
 import { VerifyEmailPage } from './auth/VerifyEmailPage'
 import { AuthCallbackPage } from './auth/AuthCallbackPage'
 import { RequireAuth } from './auth/RequireAuth'
-import { OnboardingPage } from './organizations/OnboardingPage'
-import { InviteAcceptancePage } from './organizations/InviteAcceptancePage'
-import { RequireOrganization } from './organizations/RequireOrganization'
+import { RequireWorkspace } from './workspace/RequireWorkspace'
 
 export default function App() {
   return (
@@ -34,13 +31,11 @@ export default function App() {
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
       <Route element={<RequireAuth />}>
-        <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route path="/invite/:token" element={<InviteAcceptancePage />} />
-        <Route element={<RequireOrganization />}>
+        <Route element={<RequireWorkspace />}>
           <Route element={<AppShell />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/campaigns" element={<PlaceholderPage title="Campaigns" description="Immutable campaign drafts and confirmation arrive in 0.14. Use Composer for the editable 0.12 message workflow." />} />
+            <Route path="/campaigns" element={<PlaceholderPage title="Campaigns" description="Campaign confirmation becomes available after SMS usage estimation. Use Composer for your editable message workflow." />} />
             <Route path="/composer" element={<MessageComposerPage />} />
             <Route path="/contacts" element={<PhoneNumbersPage />} />
             <Route path="/imports" element={<ImportsPage />} />
@@ -48,10 +43,9 @@ export default function App() {
             <Route path="/recipient-previews/:previewId/eligibility" element={<RecipientEligibilityPage />} />
             <Route path="/consent-suppression" element={<ConsentSuppressionPage />} />
             <Route path="/devices" element={<DevicesPage />} />
-            <Route path="/templates" element={<PlaceholderPage title="Templates" description="Reusable templates arrive later in the customer MVP phase." />} />
-            <Route path="/reports" element={<PlaceholderPage title="Reports" description="Recipient-level reports follow cloud-to-device execution and status sync." />} />
-            <Route path="/subscription" element={<PlaceholderPage title="Subscription" description="Platform subscriptions are introduced after the controlled real-device pilot." />} />
-            <Route path="/team" element={<TeamPage />} />
+            <Route path="/templates" element={<PlaceholderPage title="Templates" description="Reusable templates are planned after the core send workflow is complete." />} />
+            <Route path="/reports" element={<PlaceholderPage title="Reports" description="Recipient-level reports follow cloud-to-phone execution and status synchronization." />} />
+            <Route path="/subscription" element={<PlaceholderPage title="Subscription" description="BulkText subscriptions will manage access to the platform while SMS charges remain with your mobile operator." />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>

@@ -66,7 +66,9 @@ async function signIn(email) {
   return client
 }
 async function createOrganization(client, name) {
-  const id = assertNoError(await client.rpc('create_organization', { p_name: name }), `create ${name}`)
+  const rows = assertNoError(await client.rpc('get_my_personal_workspace'), `get personal workspace for ${name}`)
+  const id = rows?.[0]?.workspace_id
+  assert(typeof id === 'string' && id.length > 0, `${name} did not return a personal workspace UUID`)
   createdOrganizationIds.push(id)
   return id
 }
@@ -89,17 +91,17 @@ const sourceRows = [
 ]
 
 try {
-  console.log('BulkText 0.12.0 local Message Composer & Personalization acceptance')
+  console.log('BulkText 0.12.1 local Message Composer & Personalization acceptance')
   console.log(`Target: ${parsedUrl.origin}`)
 
   const schemaMeta = assertNoError(await admin.from('app_meta').select('value').eq('key', 'schema').single(), 'read schema metadata')
-  assert(schemaMeta?.value?.version === '0.12.0', `Expected schema version 0.12.0, received ${JSON.stringify(schemaMeta?.value)}`)
+  assert(schemaMeta?.value?.version === '0.12.1', `Expected schema version 0.12.1, received ${JSON.stringify(schemaMeta?.value)}`)
   assert(schemaMeta?.value?.phase === 'message_composer_personalization', 'Message composer phase metadata missing')
   assert(schemaMeta?.value?.message_template_syntax_version === 'bulktext-template-v1', 'Template syntax metadata missing')
   assert(schemaMeta?.value?.sms_segment_calculator_enabled === false, '0.12 must not enable segment calculator')
   assert(schemaMeta?.value?.campaign_confirmation_enabled === false, '0.12 must not enable campaign confirmation')
   assert(schemaMeta?.value?.campaign_send_enabled === false, '0.12 must not enable sending')
-  console.log('✓ 0.12.0 metadata present and downstream execution gates remain disabled')
+  console.log('✓ 0.12.1 metadata present and downstream execution gates remain disabled')
 
   const anonymousList = await anonymous.rpc('list_message_composer_sources', { p_organization_id: crypto.randomUUID() })
   assert(anonymousList.error, 'Anonymous client unexpectedly listed composer sources')
@@ -253,7 +255,7 @@ try {
   assert((deleted.data ?? []).length === 0, 'Message draft still exists after delete')
   console.log('✓ Managers can delete editable drafts without touching eligibility snapshots')
 
-  console.log('\nBulkText 0.12.0 MESSAGE COMPOSER LOCAL PASS')
+  console.log('\nBulkText 0.12.1 MESSAGE COMPOSER LOCAL PASS')
 } finally {
   await cleanup()
 }

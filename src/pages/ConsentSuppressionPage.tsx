@@ -19,8 +19,7 @@ import {
   type SuppressionSource,
 } from '../lib/consentSuppressionApi'
 import { errorMessage } from '../lib/errors'
-import { canManageCampaigns, canManageOrganization } from '../lib/rbac'
-import { useOrganizations } from '../organizations/OrganizationProvider'
+import { useWorkspace } from '../workspace/WorkspaceProvider'
 
 function dateTime(value: string | null) {
   if (!value) return '—'
@@ -32,7 +31,7 @@ function toIso(value: string) {
 }
 
 export function ConsentSuppressionPage() {
-  const { currentOrganization } = useOrganizations()
+  const { workspace } = useWorkspace()
   const [searchParams, setSearchParams] = useSearchParams()
   const [phone, setPhone] = useState(searchParams.get('phone') ?? '')
   const [status, setStatus] = useState<ContactComplianceStatus | null>(null)
@@ -52,37 +51,37 @@ export function ConsentSuppressionPage() {
   const [suppressionSource, setSuppressionSource] = useState<SuppressionSource>('manual')
   const [suppressionNote, setSuppressionNote] = useState('')
 
-  const canManage = canManageCampaigns(currentOrganization?.role)
-  const canLift = canManageOrganization(currentOrganization?.role)
+  const canManage = true
+  const canLift = true
 
   const refreshRecent = useCallback(async () => {
-    if (!currentOrganization) return
+    if (!workspace) return
     setLoadingRecent(true)
     try {
-      setRecent(await listContactComplianceStatuses(currentOrganization.id, 100))
+      setRecent(await listContactComplianceStatuses(workspace.id, 100))
     } finally {
       setLoadingRecent(false)
     }
-  }, [currentOrganization])
+  }, [workspace])
 
   const loadStatus = useCallback(async (value: string) => {
-    if (!currentOrganization || !value.trim()) return
+    if (!workspace || !value.trim()) return
     setBusy(true)
     setError(null)
     setMessage(null)
     try {
-      const next = await getContactComplianceStatus(currentOrganization.id, value.trim())
+      const next = await getContactComplianceStatus(workspace.id, value.trim())
       setStatus(next)
       setPhone(next.normalizedE164)
       setSearchParams({ phone: next.normalizedE164 }, { replace: true })
-      setHistory(canManage ? await listContactComplianceHistory(currentOrganization.id, next.normalizedE164) : [])
+      setHistory(canManage ? await listContactComplianceHistory(workspace.id, next.normalizedE164) : [])
     } catch (reason) {
       setStatus(null)
       setError(errorMessage(reason, 'Could not look up this number.'))
     } finally {
       setBusy(false)
     }
-  }, [canManage, currentOrganization, setSearchParams])
+  }, [canManage, workspace, setSearchParams])
 
   useEffect(() => {
     setStatus(null)
@@ -94,13 +93,13 @@ export function ConsentSuppressionPage() {
 
   useEffect(() => {
     const value = searchParams.get('phone')
-    if (value && currentOrganization) void loadStatus(value)
-  }, [currentOrganization]) // intentionally runs when tenant changes; query-param edits are handled by lookup actions
+    if (value && workspace) void loadStatus(value)
+  }, [workspace]) // reload when the signed-in workspace changes
 
   const statusTone = useMemo(() => status?.eligibilityState === 'eligible' ? 'badge badge-success' : 'badge badge-warning', [status])
 
   async function recordConsent(eventType: 'granted' | 'revoked') {
-    if (!currentOrganization || !phone.trim()) return
+    if (!workspace || !phone.trim()) return
     if (!evidenceNote.trim() && !evidenceReference.trim()) {
       setError('Add an evidence note or evidence reference before recording a consent event.')
       return
@@ -110,7 +109,7 @@ export function ConsentSuppressionPage() {
     setMessage(null)
     try {
       await recordContactConsent({
-        organizationId: currentOrganization.id,
+        organizationId: workspace.id,
         phone,
         eventType,
         source: consentSource,
@@ -118,10 +117,10 @@ export function ConsentSuppressionPage() {
         evidenceReference: evidenceReference.trim() || null,
         expiresAt: eventType === 'granted' ? toIso(expiresAt) : null,
       })
-      const next = await getContactComplianceStatus(currentOrganization.id, phone)
+      const next = await getContactComplianceStatus(workspace.id, phone)
       setStatus(next)
       setPhone(next.normalizedE164)
-      setHistory(await listContactComplianceHistory(currentOrganization.id, next.normalizedE164))
+      setHistory(await listContactComplianceHistory(workspace.id, next.normalizedE164))
       setMessage(eventType === 'granted' ? 'Consent grant recorded as immutable evidence.' : 'Consent revocation recorded as immutable evidence.')
       setEvidenceNote('')
       setEvidenceReference('')
@@ -135,7 +134,7 @@ export function ConsentSuppressionPage() {
   }
 
   async function updateSuppression(eventType: 'suppressed' | 'lifted') {
-    if (!currentOrganization || !phone.trim()) return
+    if (!workspace || !phone.trim()) return
     if (eventType === 'lifted' && !suppressionNote.trim()) {
       setError('Add a note explaining why this suppression is being lifted.')
       return
@@ -145,18 +144,18 @@ export function ConsentSuppressionPage() {
     setMessage(null)
     try {
       await recordContactSuppression({
-        organizationId: currentOrganization.id,
+        organizationId: workspace.id,
         phone,
         eventType,
         reason: eventType === 'suppressed' ? suppressionReason : null,
         source: suppressionSource,
         note: suppressionNote.trim() || null,
       })
-      const next = await getContactComplianceStatus(currentOrganization.id, phone)
+      const next = await getContactComplianceStatus(workspace.id, phone)
       setStatus(next)
       setPhone(next.normalizedE164)
-      setHistory(await listContactComplianceHistory(currentOrganization.id, next.normalizedE164))
-      setMessage(eventType === 'suppressed' ? 'Number added to the organization suppression list.' : 'Suppression lifted with an auditable event.')
+      setHistory(await listContactComplianceHistory(workspace.id, next.normalizedE164))
+      setMessage(eventType === 'suppressed' ? 'Number added to the your suppression list.' : 'Suppression lifted with an auditable event.')
       setSuppressionNote('')
       await refreshRecent()
     } catch (reason) {
@@ -166,15 +165,15 @@ export function ConsentSuppressionPage() {
     }
   }
 
-  if (!currentOrganization) return null
+  if (!workspace) return null
 
   return (
     <div className="page-stack">
       <section className="page-heading recipient-heading">
         <div>
-          <p className="eyebrow">BulkText 0.11</p>
+          <p className="eyebrow">Consent & suppression</p>
           <h1>Consent & Suppression</h1>
-          <p>Record append-only consent evidence, maintain an organization suppression list and inspect the current send-eligibility state for a canonical Pakistan mobile number.</p>
+          <p>Record append-only consent evidence, maintain an your suppression list and inspect the current send-eligibility state for a canonical Pakistan mobile number.</p>
         </div>
         <span className="badge badge-muted">consent-suppression-v1</span>
       </section>
@@ -226,17 +225,17 @@ export function ConsentSuppressionPage() {
                 <div className="stacked-form">
                   <label><span>Reason</span><select value={suppressionReason} onChange={(event) => setSuppressionReason(event.target.value as SuppressionReason)}><option value="opt_out">Opt out</option><option value="complaint">Complaint</option><option value="manual">Manual block</option><option value="regulatory">Regulatory</option><option value="other">Other</option></select></label>
                   <label><span>Source</span><select value={suppressionSource} onChange={(event) => setSuppressionSource(event.target.value as SuppressionSource)}><option value="manual">Manual</option><option value="recipient_reply">Recipient reply</option><option value="import">Import</option><option value="api">API</option><option value="other">Other</option></select></label>
-                  <label><span>Note</span><textarea value={suppressionNote} onChange={(event) => setSuppressionNote(event.target.value)} placeholder={status.suppressionState === 'suppressed' ? 'A note is required if Owner/Admin lifts this suppression.' : 'Optional context for the suppression.'} rows={3} /></label>
+                  <label><span>Note</span><textarea value={suppressionNote} onChange={(event) => setSuppressionNote(event.target.value)} placeholder={status.suppressionState === 'suppressed' ? 'Add a note explaining why this suppression is being lifted.' : 'Optional context for the suppression.'} rows={3} /></label>
                   <div className="button-row compliance-buttons">
                     {status.suppressionState === 'suppressed'
                       ? <button className="secondary-button" type="button" disabled={busy || !canLift} onClick={() => void updateSuppression('lifted')}>Lift suppression</button>
                       : <button className="danger-button" type="button" disabled={busy} onClick={() => void updateSuppression('suppressed')}>Suppress number</button>}
                   </div>
-                  {status.suppressionState === 'suppressed' && !canLift ? <p className="muted-copy">Campaign Manager can add suppressions, but only Owner or Admin can lift an active suppression.</p> : null}
+                  {status.suppressionState === 'suppressed' && !canLift ? <p className="muted-copy">Suppression changes are available to the signed-in account owner.</p> : null}
                 </div>
               </article>
             </section>
-          ) : <div className="notice warning-notice">Your role can inspect consent and suppression status, but only Owner, Admin and Campaign Manager can append compliance events.</div>}
+          ) : null}
         </>
       ) : null}
 
@@ -252,7 +251,7 @@ export function ConsentSuppressionPage() {
       ) : null}
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Recent records</p><h2>Organization compliance registry</h2></div><button className="secondary-button compact-button" type="button" disabled={loadingRecent || busy} onClick={() => void refreshRecent()}>Refresh</button></div>
+        <div className="panel-heading"><div><p className="eyebrow">Recent records</p><h2>My compliance registry</h2></div><button className="secondary-button compact-button" type="button" disabled={loadingRecent || busy} onClick={() => void refreshRecent()}>Refresh</button></div>
         {loadingRecent ? <LoadingState label="Loading consent/suppression records…" /> : recent.length === 0 ? <EmptyState title="No compliance records">Look up a number and record consent evidence or a suppression event. No consent is assumed when no evidence exists.</EmptyState> : (
           <div className="table-wrap"><table className="data-table compliance-table"><thead><tr><th>Number</th><th>Consent</th><th>Suppression</th><th>Eligibility</th><th /></tr></thead><tbody>{recent.map((row) => (
             <tr key={row.normalizedE164}><td><code>{row.normalizedE164}</code></td><td><strong>{consentStateLabel(row.consentState)}</strong><small>{row.consentSource ? `${row.consentSource.replaceAll('_', ' ')} · ${dateTime(row.consentOccurredAt)}` : 'No evidence'}</small></td><td><strong>{suppressionStateLabel(row.suppressionState)}</strong><small>{row.suppressionReason?.replaceAll('_', ' ') ?? '—'}</small></td><td><span className={row.eligibilityState === 'eligible' ? 'badge badge-success' : 'badge badge-warning'}>{row.eligibilityState}</span><small>{blockReasonLabel(row.blockReason)}</small></td><td><button className="secondary-button compact-button" type="button" onClick={() => { setPhone(row.normalizedE164); void loadStatus(row.normalizedE164) }}>Open</button></td></tr>
@@ -260,7 +259,7 @@ export function ConsentSuppressionPage() {
         )}
       </section>
 
-      <section className="notice warning-notice">BulkText 0.11 treats active consent plus a clear suppression state as eligibility for the next workflow stage. It does not send SMS, create a campaign, or replace any legal/compliance review required for your use case.</section>
+      <section className="notice warning-notice">Consent & suppression treats active consent plus a clear suppression state as eligibility for the next workflow stage. It does not send SMS, create a campaign, or replace any legal/compliance review required for your use case.</section>
     </div>
   )
 }

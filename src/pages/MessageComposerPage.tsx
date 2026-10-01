@@ -20,8 +20,7 @@ import {
   type MessageComposerDraft,
   type MessageComposerSource,
 } from '../lib/messageComposerApi'
-import { canManageCampaigns } from '../lib/rbac'
-import { useOrganizations } from '../organizations/OrganizationProvider'
+import { useWorkspace } from '../workspace/WorkspaceProvider'
 
 function dateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -32,7 +31,7 @@ function shortId(value: string) {
 }
 
 export function MessageComposerPage() {
-  const { currentOrganization } = useOrganizations()
+  const { workspace } = useWorkspace()
   const [searchParams, setSearchParams] = useSearchParams()
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [sources, setSources] = useState<MessageComposerSource[]>([])
@@ -47,16 +46,16 @@ export function MessageComposerPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const canEdit = canManageCampaigns(currentOrganization?.role)
+  const canEdit = true
 
   const refresh = useCallback(async () => {
-    if (!currentOrganization) return
+    if (!workspace) return
     setLoading(true)
     setError(null)
     try {
       const [nextSources, nextDrafts] = await Promise.all([
-        listMessageComposerSources(currentOrganization.id),
-        listMessageComposerDrafts(currentOrganization.id),
+        listMessageComposerSources(workspace.id),
+        listMessageComposerDrafts(workspace.id),
       ])
       setSources(nextSources)
       setDrafts(nextDrafts)
@@ -73,24 +72,24 @@ export function MessageComposerPage() {
     } finally {
       setLoading(false)
     }
-  }, [currentOrganization, searchParams, selectedSnapshotId])
+  }, [workspace, searchParams, selectedSnapshotId])
 
-  useEffect(() => { void refresh() }, [currentOrganization?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void refresh() }, [workspace?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!currentOrganization || !selectedSnapshotId) {
+    if (!workspace || !selectedSnapshotId) {
       setRows([])
       return
     }
     let cancelled = false
     setSourceLoading(true)
     setError(null)
-    void getMessagePersonalizationSourceRows(currentOrganization.id, selectedSnapshotId)
+    void getMessagePersonalizationSourceRows(workspace.id, selectedSnapshotId)
       .then((nextRows) => { if (!cancelled) setRows(nextRows) })
       .catch((reason) => { if (!cancelled) setError(errorMessage(reason, 'Could not load personalization recipients.')) })
       .finally(() => { if (!cancelled) setSourceLoading(false) })
     return () => { cancelled = true }
-  }, [currentOrganization, selectedSnapshotId])
+  }, [workspace, selectedSnapshotId])
 
   const selectedSource = useMemo(
     () => sources.find((source) => source.eligibilitySnapshotId === selectedSnapshotId) ?? null,
@@ -134,20 +133,20 @@ export function MessageComposerPage() {
   }
 
   async function saveDraft() {
-    if (!currentOrganization || !selectedSnapshotId) return
+    if (!workspace || !selectedSnapshotId) return
     setBusy(true)
     setError(null)
     setMessage(null)
     try {
       const savedId = await saveMessageComposerDraft({
-        organizationId: currentOrganization.id,
+        organizationId: workspace.id,
         draftId,
         eligibilitySnapshotId: selectedSnapshotId,
         title,
         messageTemplate,
       })
       setDraftId(savedId)
-      setDrafts(await listMessageComposerDrafts(currentOrganization.id))
+      setDrafts(await listMessageComposerDrafts(workspace.id))
       setMessage(hasRecipientProblem
         ? 'Draft saved. Some eligible recipients still have missing personalization values; review them before later campaign confirmation.'
         : 'Message draft saved. No SMS was queued or sent.')
@@ -159,19 +158,19 @@ export function MessageComposerPage() {
   }
 
   async function removeDraft(id: string) {
-    if (!currentOrganization) return
+    if (!workspace) return
     if (!window.confirm('Delete this message draft? This does not change recipient or consent snapshots.')) return
     setBusy(true)
     setError(null)
     setMessage(null)
     try {
-      await deleteMessageComposerDraft(currentOrganization.id, id)
+      await deleteMessageComposerDraft(workspace.id, id)
       if (draftId === id) {
         setDraftId(null)
         setTitle('')
         setMessageTemplate('Hello {{name}}, ')
       }
-      setDrafts(await listMessageComposerDrafts(currentOrganization.id))
+      setDrafts(await listMessageComposerDrafts(workspace.id))
       setMessage('Message draft deleted.')
     } catch (reason) {
       setError(errorMessage(reason, 'Could not delete message draft.'))
@@ -197,14 +196,14 @@ export function MessageComposerPage() {
     setMessage('Started a new unsaved draft.')
   }
 
-  if (!currentOrganization) return null
+  if (!workspace) return null
   if (loading) return <LoadingState label="Loading message composer…" />
 
   return (
     <div className="page-stack">
       <section className="page-heading recipient-heading">
         <div>
-          <p className="eyebrow">BulkText 0.12</p>
+          <p className="eyebrow">Message drafting</p>
           <h1>Message Composer & Personalization</h1>
           <p>Draft one message template against an immutable eligible-recipient snapshot, insert recipient variables, and preview exactly where personalization data is missing before campaign confirmation exists.</p>
         </div>
@@ -231,9 +230,8 @@ export function MessageComposerPage() {
           <section className="composer-grid">
             <div className="panel composer-editor-panel">
               <div className="panel-heading"><div><p className="eyebrow">Draft editor</p><h2>{draftId ? 'Edit message draft' : 'New message draft'}</h2></div>{draftId ? <span className="badge badge-success">Saved draft</span> : <span className="badge badge-muted">Unsaved</span>}</div>
-              {!canEdit ? <div className="notice warning-notice">Your role can inspect message drafts and personalization previews, but only Owner, Admin and Campaign Manager can save or delete drafts.</div> : null}
               <label className="field"><span>Draft title</span><input maxLength={120} value={title} disabled={!canEdit} onChange={(event) => setTitle(event.target.value)} placeholder="October service reminder" /></label>
-              <label className="field"><span>Message</span><textarea ref={textareaRef} rows={9} maxLength={MESSAGE_TEMPLATE_MAX_CHARACTERS} value={messageTemplate} disabled={!canEdit} onChange={(event) => setMessageTemplate(event.target.value)} placeholder="Hello {{name}}, your appointment is…" /><small>{messageTemplate.length} / {MESSAGE_TEMPLATE_MAX_CHARACTERS} template characters. SMS encoding and segment count arrive in 0.13.</small></label>
+              <label className="field"><span>Message</span><textarea ref={textareaRef} rows={9} maxLength={MESSAGE_TEMPLATE_MAX_CHARACTERS} value={messageTemplate} disabled={!canEdit} onChange={(event) => setMessageTemplate(event.target.value)} placeholder="Hello {{name}}, your appointment is…" /><small>{messageTemplate.length} / {MESSAGE_TEMPLATE_MAX_CHARACTERS} template characters. SMS encoding and segment count are handled in the next campaign step.</small></label>
 
               <div className="composer-token-section">
                 <span className="field-label">Built-in variables</span>
@@ -261,10 +259,10 @@ export function MessageComposerPage() {
                   <div><dt>Missing values</dt><dd>{personalizationSummary.recipientsWithMissingValues}</dd></div>
                   <div><dt>Tokens used</dt><dd>{analysis.tokens.length}</dd></div>
                   <div><dt>Longest rendered text</dt><dd>{personalizationSummary.longestRenderedCharacters} chars</dd></div>
-                  <div><dt>Segment estimate</dt><dd>0.13</dd></div>
+                  <div><dt>Segment estimate</dt><dd>Next step</dd></div>
                 </dl>
               )}
-              <p className="muted-copy">A saved 0.12 draft is editable. It is not an immutable campaign confirmation and cannot queue or send SMS.</p>
+              <p className="muted-copy">A saved draft is editable. It is not a confirmed campaign and cannot queue or send SMS.</p>
             </aside>
           </section>
 
@@ -293,7 +291,7 @@ export function MessageComposerPage() {
         )}
       </section>
 
-      <section className="notice warning-notice">0.12 drafts and personalization previews do not calculate SMS units, confirm a campaign, schedule delivery, create queue jobs, contact the Android gateway, or send messages.</section>
+      <section className="notice warning-notice">Message drafts and personalization previews do not calculate SMS units, confirm a campaign, schedule delivery, create queue jobs, contact the Android gateway, or send messages.</section>
     </div>
   )
 }

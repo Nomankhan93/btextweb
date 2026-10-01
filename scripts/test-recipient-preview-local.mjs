@@ -69,7 +69,9 @@ async function signIn(email) {
   return client
 }
 async function createOrganization(client, name) {
-  const id = assertNoError(await client.rpc('create_organization', { p_name: name }), `create ${name}`)
+  const rows = assertNoError(await client.rpc('get_my_personal_workspace'), `get personal workspace for ${name}`)
+  const id = rows?.[0]?.workspace_id
+  assert(typeof id === 'string' && id.length > 0, `${name} did not return a personal workspace UUID`)
   createdOrganizationIds.push(id)
   return id
 }
@@ -95,14 +97,14 @@ const rows = [
 ]
 
 try {
-  console.log('BulkText 0.12.0 local Recipient Validation & Preview acceptance')
+  console.log('BulkText 0.12.1 local Recipient Validation & Preview acceptance')
   console.log(`Target: ${parsedUrl.origin}`)
 
   const schemaMeta = assertNoError(await admin.from('app_meta').select('value').eq('key', 'schema').single(), 'read schema metadata')
-  assert(schemaMeta?.value?.version === '0.12.0', `Expected schema version 0.12.0, received ${JSON.stringify(schemaMeta?.value)}`)
+  assert(schemaMeta?.value?.version === '0.12.1', `Expected schema version 0.12.1, received ${JSON.stringify(schemaMeta?.value)}`)
   assert(schemaMeta?.value?.recipient_validation_version === 'recipient-validation-v1', 'Recipient validation version metadata missing')
   assert(schemaMeta?.value?.consent_suppression_policy_version === 'consent-suppression-v1', 'Consent/suppression policy metadata missing')
-  console.log('✓ 0.12.0 migration metadata present and the consent/suppression policy is present')
+  console.log('✓ 0.12.1 migration metadata present and the consent/suppression policy is present')
 
   const [ownerUser, analystUser, managerUser] = await Promise.all([
     createConfirmedUser(emails.owner, 'Preview Owner'),
@@ -221,7 +223,7 @@ try {
   assert(auditRows.some((row) => row.target_id === previewId) && auditRows.some((row) => row.target_id === secondPreviewId), 'Recipient preview audit events missing')
   console.log('✓ Recipient preview audit trail recorded')
 
-  console.log('\nBulkText 0.12.0 RECIPIENT VALIDATION & PREVIEW LOCAL PASS')
+  console.log('\nBulkText 0.12.1 RECIPIENT VALIDATION & PREVIEW LOCAL PASS')
 } finally {
   await cleanup()
 }

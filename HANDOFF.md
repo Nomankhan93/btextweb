@@ -1,54 +1,48 @@
-# BulkText 0.12.0 Handoff
+# BulkText 0.12.1 Handoff
 
 ## Current state
 
-Android 0.3 feasibility is validated on a physical device. Web/cloud is now at **0.12.0 — Message Composer & Personalization**.
+BulkText has pivoted from organization/team-first UX to an **individual-first account model**.
 
-## Authoritative workflow
+Current user journey:
 
 ```text
-CSV/XLSX import
-→ server phone normalization
-→ recipient validation / duplicate resolution
-→ immutable recipient preview
-→ consent + suppression evaluation
-→ immutable eligibility snapshot
-→ editable message draft + personalization preview
-→ SMS segment/package calculation (next)
-→ immutable campaign confirmation
-→ later preflight / queue / Android send
+Sign up
+→ account automatically prepared
+→ pair Android phone
+→ select SIM
+→ upload recipients
+→ validate / consent / suppression
+→ compose personalized message
 ```
 
-## 0.12 rules
+The existing organization schema is retained only as a hidden tenant container to preserve all already-built 0.6–0.12 data and RLS/RPC behavior.
 
-- composer sources must be immutable eligibility snapshots with at least one `eligible` row;
-- blocked eligibility rows never enter composer source data;
-- drafts are editable working records, not campaign confirmation;
-- Owner/Admin/Campaign Manager can create, update and delete drafts;
-- organization members can read drafts and personalization previews;
-- direct authenticated table writes remain blocked;
-- built-in tokens: `{{name}}`, `{{first_name}}`, `{{last_name}}`, `{{phone}}`;
-- custom fields use `{{custom:Field Name}}`;
-- unsupported/malformed tokens are rejected server-side;
-- missing per-recipient values are shown explicitly in preview rather than silently erased;
-- 0.12 does not calculate SMS segments, queue work or send SMS.
+## Important implementation detail
 
-## New schema
+Do **not** drop `organizations`, `organization_members`, or `organization_id` fields in later patches unless a separate, fully tested ownership migration is intentionally designed.
 
-- `message_composer_drafts`
+Use `useWorkspace()` in frontend pages. The returned `workspace.id` is passed to existing backend RPC parameters named `p_organization_id`.
 
-Forward migration:
+Do not reintroduce:
 
-`20261001000050_message_composer_personalization.sql`
+- organization onboarding
+- organization switching
+- team invitations
+- role management UI
 
-## New route
+unless a future Organizations feature is explicitly started.
 
-- `/composer`
+## Next development
 
-Stored eligibility snapshots link directly into the composer.
+After local validation passes:
 
-## Next roadmap phase
+```text
+0.13 SMS Segment & Usage Calculator
+0.14 Campaign Confirmation Snapshot
+0.15 Gateway Preflight
+0.16 Durable Cloud Queue
+0.17 Android Cloud Sending
+```
 
-**0.13 — SMS Segment & Package Usage Calculator**
-
-Do not skip the 0.12 migration or apply a later patch directly to an older source baseline.
+Actual SMS sending remains Android-only and must use the user's explicitly selected SIM. The carrier determines actual package/balance charging.

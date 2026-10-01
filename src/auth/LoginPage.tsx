@@ -29,7 +29,7 @@ export function LoginPage() {
   return (
     <AuthLayout
       title="Welcome back"
-      subtitle="Sign in to manage your organizations and BulkText gateway workspace."
+      subtitle="Sign in to manage your phone, recipients and BulkText messaging workflow."
       footer={<>New to BulkText? <Link to="/auth/signup">Create an account</Link>.</>}
     >
       <form className="form-stack" onSubmit={submit}>

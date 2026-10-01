@@ -19,8 +19,7 @@ import {
   type RecipientPreviewSummary,
   type StoredRecipientPreviewRow,
 } from '../lib/recipientPreviewApi'
-import { canManageCampaigns } from '../lib/rbac'
-import { useOrganizations } from '../organizations/OrganizationProvider'
+import { useWorkspace } from '../workspace/WorkspaceProvider'
 
 type Filter = 'all' | RecipientDecision
 
@@ -44,7 +43,7 @@ function decisionBadge(decision: RecipientDecision) {
 
 export function RecipientValidationPage() {
   const { importId = '' } = useParams()
-  const { currentOrganization } = useOrganizations()
+  const { workspace } = useWorkspace()
   const [rows, setRows] = useState<RecipientValidationRow[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [previews, setPreviews] = useState<RecipientPreviewSummary[]>([])
@@ -56,7 +55,7 @@ export function RecipientValidationPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const canCreate = canManageCampaigns(currentOrganization?.role)
+  const canCreate = true
 
   const decisions = useMemo(() => classifyRecipientRows(rows, selected), [rows, selected])
   const summary = useMemo(() => summarizeRecipientDecisions(decisions), [decisions])
@@ -66,14 +65,14 @@ export function RecipientValidationPage() {
   )
 
   const refresh = useCallback(async () => {
-    if (!currentOrganization || !importId) return
+    if (!workspace || !importId) return
     setLoading(true)
     setError(null)
     try {
       const [nextRows, nextPreviews, imports] = await Promise.all([
-        listImportValidationRows(currentOrganization.id, importId),
-        listRecipientPreviews(currentOrganization.id, importId),
-        listContactImports(currentOrganization.id),
+        listImportValidationRows(workspace.id, importId),
+        listRecipientPreviews(workspace.id, importId),
+        listContactImports(workspace.id),
       ])
       setRows(nextRows)
       setSourceFilename(imports.find((item) => item.importId === importId)?.sourceFilename ?? '')
@@ -86,14 +85,14 @@ export function RecipientValidationPage() {
     } finally {
       setLoading(false)
     }
-  }, [currentOrganization, importId])
+  }, [workspace, importId])
 
   useEffect(() => {
     void refresh()
   }, [refresh])
 
   async function savePreview() {
-    if (!currentOrganization || !importId) return
+    if (!workspace || !importId) return
     if (selected.size === 0) {
       setError('Select at least one valid recipient before creating a preview snapshot.')
       return
@@ -102,10 +101,10 @@ export function RecipientValidationPage() {
     setError(null)
     setMessage(null)
     try {
-      const previewId = await createRecipientPreview(currentOrganization.id, importId, [...selected].sort((a, b) => a - b))
+      const previewId = await createRecipientPreview(workspace.id, importId, [...selected].sort((a, b) => a - b))
       const [nextPreviews, nextStoredRows] = await Promise.all([
-        listRecipientPreviews(currentOrganization.id, importId),
-        getRecipientPreviewRows(currentOrganization.id, previewId),
+        listRecipientPreviews(workspace.id, importId),
+        getRecipientPreviewRows(workspace.id, previewId),
       ])
       setPreviews(nextPreviews)
       setStoredRows(nextStoredRows)
@@ -119,11 +118,11 @@ export function RecipientValidationPage() {
   }
 
   async function viewPreview(previewId: string) {
-    if (!currentOrganization) return
+    if (!workspace) return
     setBusy(true)
     setError(null)
     try {
-      setStoredRows(await getRecipientPreviewRows(currentOrganization.id, previewId))
+      setStoredRows(await getRecipientPreviewRows(workspace.id, previewId))
       setActivePreviewId(previewId)
     } catch (reason) {
       setError(errorMessage(reason, 'Could not load recipient preview rows.'))
@@ -132,14 +131,14 @@ export function RecipientValidationPage() {
     }
   }
 
-  if (!currentOrganization) return null
+  if (!workspace) return null
 
   if (loading) return <LoadingState label="Loading recipient validation…" />
 
   if (!rows.length && !error) {
     return (
       <div className="page-stack">
-        <section className="page-heading"><div><p className="eyebrow">BulkText 0.11</p><h1>Recipient Validation & Preview</h1></div></section>
+        <section className="page-heading"><div><p className="eyebrow">Recipient review</p><h1>Recipient Validation & Preview</h1></div></section>
         <EmptyState title="No staged rows">This import has no staged rows available for validation.</EmptyState>
         <Link className="secondary-button compact-button inline-action" to="/imports">Back to imports</Link>
       </div>
@@ -152,7 +151,7 @@ export function RecipientValidationPage() {
     <div className="page-stack">
       <section className="page-heading recipient-heading">
         <div>
-          <p className="eyebrow">BulkText 0.11</p>
+          <p className="eyebrow">Recipient review</p>
           <h1>Recipient Validation & Preview</h1>
           <p>Review canonical Pakistan mobile numbers, resolve duplicates by choosing one source row per number, exclude unwanted rows, then create a server-authoritative preview snapshot.</p>
         </div>
@@ -187,7 +186,6 @@ export function RecipientValidationPage() {
           </div>
         </div>
 
-        {!canCreate ? <div className="notice warning-notice">Your role can review recipient validation and existing snapshots, but only Owner, Admin and Campaign Manager roles can create a new preview.</div> : null}
 
         <div className="recipient-filter-row" role="group" aria-label="Recipient filters">
           {([
@@ -262,7 +260,7 @@ export function RecipientValidationPage() {
         </section>
       ) : null}
 
-      <section className="notice warning-notice">0.11 keeps structural recipient validation immutable and separate from compliance. Use Consent gate on a saved preview to apply the authoritative consent/suppression policy and create eligibility snapshots.</section>
+      <section className="notice warning-notice">Structural recipient validation stays immutable and separate from compliance. Use Consent gate on a saved preview to apply the authoritative consent/suppression policy and create eligibility snapshots.</section>
     </div>
   )
 }
