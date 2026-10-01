@@ -1,57 +1,31 @@
-# Development handoff — BulkText Web 0.7.0
+# BulkText Web 0.9.0 — Development Handoff
 
-## Current phase
+Current web/cloud version: **0.9.0 — Excel / CSV Import**.
 
-0.7.0 implements **Device Dashboard & SIM Binding** on top of the 0.6 secure Android pairing trust boundary.
+## Completed foundation
 
-## Built in 0.7.0
+- 0.4 Web & Cloud Foundation
+- 0.5 Authentication, Organizations & RBAC
+- 0.5.1 Organization & RBAC Stabilization
+- 0.6 Secure Android Device Pairing
+- 0.7 Device Dashboard & SIM Binding
+- 0.8 Phone Number Foundation
+- 0.9 Excel / CSV Import
 
-- Forward migration: `20260930000230_device_dashboard_sim_binding.sql`.
-- Gateway metadata columns for manufacturer/model, Android/app version, battery and inventory freshness.
-- New tables:
-  - `gateway_device_sims`
-  - `gateway_device_sim_bindings`
-- Device-authenticated inventory RPC: `report_gateway_device_inventory`.
-- Tenant-scoped dashboard RPC: `list_gateway_device_dashboard`.
-- Owner/Admin binding RPCs:
-  - `bind_gateway_device_sim`
-  - `clear_gateway_device_sim_binding`
-- Devices UI upgraded from pairing-only inventory to health + SIM management.
-- Explicit no-silent-fallback invariant: a missing selected SIM remains selected-but-missing until an Owner/Admin re-binds or clears it.
-- Audit actions: `gateway.sim_bound`, `gateway.sim_unbound`.
-- Android contract: `docs/ANDROID_DEVICE_INVENTORY_CONTRACT.md`.
-- Local acceptance: `npm run test:device-dashboard-local`.
-- 0.5/0.6 RBAC and pairing suites remain regression gates under schema 0.7.
+## 0.9 delivered
 
-## Important boundary
+The Imports workspace accepts CSV and modern XLSX files, parses them locally in the browser, maps phone/name columns, preserves unmapped custom fields, previews `pk-mobile-v1` normalization, and stages source rows per organization through backend RPCs.
 
-Web/Cloud 0.7 is not sufficient for physical-device completion. The Android gateway must implement the 0.6 pairing contract and then call `report_gateway_device_inventory` with its real detected subscription IDs/slots.
+Database staging re-runs phone normalization and calculates duplicate-in-file flags server-side. Invalid phone rows remain staged for the next validation phase instead of being silently dropped.
 
-Do not enable campaign sending yet. Later preflight/queue phases must require an active gateway with `binding_status = ready`.
+Owner/Admin/Campaign Manager can stage/delete imports. Analyst/Billing can view organization import history. RLS prevents cross-tenant reads and direct client writes are blocked.
 
-## Completion gate
+## Deliberately not built yet
 
-```bash
-npm run validate:local
-npm audit
-```
+0.9 does not create final contacts, remove duplicates, apply suppression/consent, compose messages, create campaigns, queue SMS, or send through Android.
 
-Expected integration markers:
+## Next roadmap phase
 
-```text
-BulkText 0.7.0 RBAC REGRESSION PASS
-BulkText 0.7.0 SECURE PAIRING REGRESSION PASS
-BulkText 0.7.0 DEVICE DASHBOARD & SIM BINDING LOCAL PASS
-```
+**0.10 — Recipient Validation & Preview**
 
-Then perform Android physical-device validation:
-
-- pair a real gateway;
-- report real SIM 1/SIM 2 inventory;
-- bind one SIM in Web;
-- verify Android receives `binding_status=ready` and the exact subscription ID;
-- remove/disable the bound SIM and verify status becomes `missing` with no fallback.
-
-## Next roadmap
-
-After 0.7 Web/Cloud + physical Android SIM reporting/binding is proven, proceed to **0.8 — Phone Number Foundation**. Do not jump to cloud queue or campaign sending.
+Use staged import rows as the input. Add deterministic validation/dedup decisions and an explicit recipient preview before consent/suppression phases.

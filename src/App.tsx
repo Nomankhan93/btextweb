@@ -6,6 +6,8 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { TeamPage } from './pages/TeamPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { DevicesPage } from './pages/DevicesPage'
+import { PhoneNumbersPage } from './pages/PhoneNumbersPage'
+import { ImportsPage } from './pages/ImportsPage'
 import { LoginPage } from './auth/LoginPage'
 import { SignupPage } from './auth/SignupPage'
 import { ForgotPasswordPage } from './auth/ForgotPasswordPage'
@@ -35,8 +37,8 @@ export default function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/campaigns" element={<PlaceholderPage title="Campaigns" description="Campaign execution remains intentionally unavailable until the device/cloud queue phases." />} />
-            <Route path="/contacts" element={<PlaceholderPage title="Contacts" description="Persistent contacts are deferred to patch 0.27; one-time Excel recipients arrive earlier." />} />
-            <Route path="/imports" element={<PlaceholderPage title="Imports" description="Excel/CSV import begins after device pairing and phone-number foundations." />} />
+            <Route path="/contacts" element={<PhoneNumbersPage />} />
+            <Route path="/imports" element={<ImportsPage />} />
             <Route path="/devices" element={<DevicesPage />} />
             <Route path="/templates" element={<PlaceholderPage title="Templates" description="Reusable templates arrive later in the customer MVP phase." />} />
             <Route path="/reports" element={<PlaceholderPage title="Reports" description="Recipient-level reports follow cloud-to-device execution and status sync." />} />

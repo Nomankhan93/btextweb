@@ -1,7 +1,7 @@
 {
   "name": "bulktext-web",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.9.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,9 +12,11 @@
     "preflight": "node scripts/preflight.mjs",
     "validate": "npm run preflight && npm run check && npm run test && npm run build",
     "test:rbac-local": "node scripts/test-rbac-local.mjs",
-    "validate:local": "npm run validate && npm run test:rbac-local && npm run test:pairing-local && npm run test:device-dashboard-local",
+    "validate:local": "npm run validate && npm run test:rbac-local && npm run test:pairing-local && npm run test:device-dashboard-local && npm run test:phone-number-local && npm run test:import-local",
     "test:pairing-local": "node scripts/test-pairing-local.mjs",
-    "test:device-dashboard-local": "node scripts/test-device-dashboard-local.mjs"
+    "test:device-dashboard-local": "node scripts/test-device-dashboard-local.mjs",
+    "test:phone-number-local": "node scripts/test-phone-number-local.mjs",
+    "test:import-local": "node scripts/test-import-local.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

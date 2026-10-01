@@ -1,44 +1,65 @@
-# BulkText Web 0.7.0 Patch
+# BulkText Web 0.9.0 Patch — Excel / CSV Import
 
-Target baseline: **BulkText Web 0.6.0**.
+This is a forward patch for the completed 0.8 Phone Number Foundation baseline.
 
-Target project path used by the current development environment:
+## What it adds
 
-```text
-/home/noman/projects/bulktext-web-0.4.0
-```
-
-The folder name may remain `0.4.0`; `package.json` is the version authority.
+- CSV parser with delimiter detection and quoted-field support
+- modern XLSX first-sheet parser without third-party upload/parsing services
+- automatic/common column mapping with explicit phone mapping
+- import preview using `pk-mobile-v1`
+- custom-field preservation
+- tenant-scoped `contact_imports` / `contact_import_rows`
+- server-authoritative phone normalization during staging
+- duplicate-in-file flagging without removal
+- import history and staged-import deletion
+- Owner/Admin/Campaign Manager write permissions; member read permissions
+- RLS/RPC regression coverage
+- migration `20261001000020_excel_csv_import.sql`
 
 ## Apply
 
 ```bash
+cd /home/noman/projects/bulktext-web-0.9.0-patch
 ./apply.sh --check /home/noman/projects/bulktext-web-0.4.0
 ./apply.sh /home/noman/projects/bulktext-web-0.4.0
 ```
 
-The installer checks the expected 0.6.0 source baseline and puts overwritten-file backups outside the source tree.
+The installer does not run database migrations and writes backups outside the source tree.
 
-## Migration
-
-New forward migration only:
-
-```text
-20260930000230_device_dashboard_sim_binding.sql
-```
-
-Do not edit previous applied migrations and do not reset a database just to apply this patch.
-
-## Validate locally
+## Validate source
 
 ```bash
 cd /home/noman/projects/bulktext-web-0.4.0
 nvm use || nvm install
 npm install
-npx supabase start
-npx supabase migration up --local
-npm run validate:local
+npm run validate
 npm audit
 ```
 
-If the working app now points at hosted Supabase, local acceptance can still be run in a disposable local environment; the test scripts intentionally reject non-local targets.
+## Cloud Supabase
+
+Verify the linked BulkText project before pushing:
+
+```bash
+npx supabase projects list
+npx supabase migration list
+npx supabase db push
+```
+
+Do not run a cloud database reset.
+
+## Local integration gate
+
+When using the isolated BulkText local stack (`56321` API) apply migrations and run:
+
+```bash
+npx supabase migration up --local
+npm run validate:local
+```
+
+Expected new marker:
+
+```text
+BulkText 0.9.0 EXCEL / CSV IMPORT LOCAL PASS
+```

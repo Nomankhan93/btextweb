@@ -219,3 +219,38 @@ a { color: inherit; }
   .device-card-header, .sim-row { align-items: flex-start; flex-direction: column; }
   .sim-row-actions { width: 100%; justify-content: space-between; }
 }
+
+
+/* 0.8 phone number foundation */
+.phone-lab-grid { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .8fr); gap: 18px; align-items: stretch; }
+.phone-input-label { display: grid; gap: 8px; color: var(--ink); font-weight: 750; }
+.phone-input-label textarea { width: 100%; resize: vertical; min-height: 250px; border: 1px solid var(--border); border-radius: 12px; background: white; color: var(--ink); padding: 13px 14px; outline: none; line-height: 1.55; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.phone-input-label textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(15,118,110,.12); }
+.phone-rules-card { border: 1px solid var(--border); border-radius: 14px; background: #f8fbfb; padding: 18px; }
+.phone-rules-card strong { display: block; margin-bottom: 10px; }
+.phone-rules-card ul { margin: 0; padding-left: 20px; color: var(--muted); line-height: 1.65; font-size: .9rem; }
+.phone-preview-table { min-width: 820px; }
+.phone-preview-table code { font-size: .82rem; overflow-wrap: anywhere; }
+.muted-copy { color: var(--muted); line-height: 1.55; }
+@media (max-width: 820px) { .phone-lab-grid { grid-template-columns: 1fr; } }
+
+/* 0.9 Excel / CSV import */
+.import-upload-zone { margin-top: 18px; }
+.import-file-label { display: grid; gap: 7px; padding: 28px; border: 1.5px dashed #9fc9c6; border-radius: 16px; background: #f7fbfb; cursor: pointer; }
+.import-file-label strong { color: var(--ink); font-size: 1.02rem; }
+.import-file-label span { color: var(--muted); font-size: .86rem; line-height: 1.5; }
+.import-file-label input { margin-top: 8px; max-width: 100%; }
+.import-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.import-mapping-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
+.import-mapping-grid label { display: grid; gap: 7px; color: #385057; font-size: .84rem; font-weight: 750; }
+.import-mapping-grid select { width: 100%; border: 1px solid #cbd8d8; border-radius: 10px; background: white; color: var(--ink); padding: 10px 11px; }
+.import-custom-note { margin: 14px 0 0; }
+.import-preview-table { min-width: 820px; }
+.import-preview-table code { font-size: .81rem; }
+.import-preview-empty { margin-top: 18px; }
+.import-history-table { min-width: 900px; }
+.error-notice { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.success-notice { background: #ecfdf5; color: #166534; border: 1px solid #bbf7d0; }
+.notice { border-radius: 12px; padding: 12px 14px; line-height: 1.5; }
+@media (max-width: 980px) { .import-mapping-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 700px) { .import-metrics, .import-mapping-grid { grid-template-columns: 1fr; } }
