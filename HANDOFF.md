@@ -1,31 +1,28 @@
-# BulkText Web 0.9.0 — Development Handoff
+# BulkText — 0.10 Development Handoff
 
-Current web/cloud version: **0.9.0 — Excel / CSV Import**.
+## Current baseline
 
-## Completed foundation
+- Android Gateway: 0.3 physical-device feasibility validated
+- Web/Cloud: 0.10.0 Recipient Validation & Preview
+- Current source path: `/home/noman/projects/bulktext-web-0.4.0` (folder name is historical)
+- Supabase may be hosted for active development; always verify the linked project before pushing migrations
 
-- 0.4 Web & Cloud Foundation
-- 0.5 Authentication, Organizations & RBAC
-- 0.5.1 Organization & RBAC Stabilization
-- 0.6 Secure Android Device Pairing
-- 0.7 Device Dashboard & SIM Binding
-- 0.8 Phone Number Foundation
-- 0.9 Excel / CSV Import
+## 0.10 authoritative behavior
 
-## 0.9 delivered
+0.9 staged imports remain source evidence. 0.10 does not destructively deduplicate or edit those rows. A reviewer opens a staged import, chooses at most one row for each valid canonical E.164 number, may exclude valid recipients, and creates an immutable recipient preview revision.
 
-The Imports workspace accepts CSV and modern XLSX files, parses them locally in the browser, maps phone/name columns, preserves unmapped custom fields, previews `pk-mobile-v1` normalization, and stages source rows per organization through backend RPCs.
+Server RPCs re-normalize the phone values and enforce uniqueness independently of browser state. Snapshot rows retain source names/custom fields and explicit exclusion reasons.
 
-Database staging re-runs phone normalization and calculates duplicate-in-file flags server-side. Invalid phone rows remain staged for the next validation phase instead of being silently dropped.
+An `included` 0.10 row is **not send-authorized**. Consent and suppression are deliberately absent and become the next phase.
 
-Owner/Admin/Campaign Manager can stage/delete imports. Analyst/Billing can view organization import history. RLS prevents cross-tenant reads and direct client writes are blocked.
+## New migration
 
-## Deliberately not built yet
+`20261001000030_recipient_validation_preview.sql`
 
-0.9 does not create final contacts, remove duplicates, apply suppression/consent, compose messages, create campaigns, queue SMS, or send through Android.
+Do not modify previously applied migrations.
 
 ## Next roadmap phase
 
-**0.10 — Recipient Validation & Preview**
+**0.11 — Consent & Suppression**
 
-Use staged import rows as the input. Add deterministic validation/dedup decisions and an explicit recipient preview before consent/suppression phases.
+Expected next gate: consent evidence/policy, organization suppression list, recipient suppression evaluation and authoritative exclusion before message composition/campaign confirmation.

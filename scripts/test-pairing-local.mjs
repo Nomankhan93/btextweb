@@ -113,12 +113,12 @@ async function cleanup() {
 }
 
 try {
-  console.log('BulkText 0.9.0 secure-pairing regression acceptance')
+  console.log('BulkText 0.10.0 secure-pairing regression acceptance')
   console.log(`Target: ${parsedUrl.origin}`)
 
   const schemaMeta = assertNoError(await admin.from('app_meta').select('value').eq('key', 'schema').single(), 'read schema metadata')
-  assert(schemaMeta?.value?.version === '0.9.0', `Expected schema version 0.9.0, received ${JSON.stringify(schemaMeta?.value)}`)
-  console.log('✓ 0.9.0 migration metadata present')
+  assert(schemaMeta?.value?.version === '0.10.0', `Expected schema version 0.10.0, received ${JSON.stringify(schemaMeta?.value)}`)
+  console.log('✓ 0.10.0 migration metadata present')
 
   await Promise.all([
     createConfirmedUser(emails.a, 'Pairing Owner A'),
@@ -257,7 +257,7 @@ try {
   const orgBDevices = assertNoError(await clientB.rpc('list_gateway_devices', { p_organization_id: orgB }), 'Owner B lists own empty gateway inventory')
   assert(orgBDevices.length === 0, 'Organization B unexpectedly contains gateway devices')
 
-  console.log('\nBulkText 0.9.0 SECURE PAIRING REGRESSION PASS')
+  console.log('\nBulkText 0.10.0 SECURE PAIRING REGRESSION PASS')
 } finally {
   await cleanup()
 }

@@ -1,32 +1,19 @@
 # BulkText Web
 
-BulkText is a SIM-powered bulk SMS platform where the customer uses their own Android gateway and mobile SIM/package while BulkText provides campaign workflow, cloud coordination, controls and reporting.
+Current source version: **0.10.0 — Recipient Validation & Preview**.
 
-## Current version
+BulkText is a SIM-powered bulk SMS platform. The web/cloud application prepares campaigns and the Android gateway sends through the user's selected SIM/package.
 
-**0.9.0 — Excel / CSV Import**
+## Current completed web/cloud phases
 
-Current web/cloud capabilities include authentication and tenant RBAC, secure Android pairing, device/SIM inventory and explicit SIM binding, Pakistan mobile-number normalization, and tenant-scoped CSV/XLSX import staging.
+- 0.4 Web & Cloud Foundation
+- 0.5 Authentication, Organizations & RBAC
+- 0.6 Secure Android Device Pairing
+- 0.7 Device Dashboard & SIM Binding
+- 0.8 Phone Number Foundation
+- 0.9 Excel / CSV Import
+- 0.10 Recipient Validation & Preview
 
-Import staging is intentionally separate from recipient authorization. No import row can be sent in 0.9.
+0.10 turns staged rows into explicit immutable preview revisions. It validates current phone normalization, lets reviewers choose one source row per canonical duplicate group, records manual exclusions and preserves row metadata. **Included does not mean consent/suppression-cleared or send-authorized.**
 
-## Local validation
-
-```bash
-npm install
-npm run validate
-```
-
-With BulkText local Supabase running on API port `56321` and all migrations applied:
-
-```bash
-npm run validate:local
-```
-
-0.9 adds:
-
-```bash
-npm run test:import-local
-```
-
-See `docs/EXCEL_CSV_IMPORT.md` for the import trust boundary and supported formats.
+See `docs/RECIPIENT_VALIDATION_PREVIEW.md` and `PATCH_README.md`.

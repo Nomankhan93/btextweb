@@ -11,6 +11,7 @@ const modules = [
   ['SIM Binding', 'Active', 'Owner/Admin explicitly selects a present subscription with no silent fallback.'],
   ['Phone Number Foundation', 'Active', 'Pakistan mobile inputs normalize deterministically to canonical E.164 before import.'],
   ['Excel / CSV Import', 'Active', 'CSV/XLSX files can be mapped, previewed and staged per organization without creating final recipients.'],
+  ['Recipient Validation & Preview', 'Active', 'Valid unique recipients can be selected into immutable server-authoritative preview revisions before consent/suppression.'],
 ]
 
 export function DashboardPage() {
@@ -22,9 +23,9 @@ export function DashboardPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">BulkText 0.9</p>
-          <h1>Excel / CSV Import</h1>
-          <p>CSV and XLSX source files can now be parsed, mapped and staged inside the current organization. Final recipient validation, deduplication, consent, suppression and sending remain gated to later phases.</p>
+          <p className="eyebrow">BulkText 0.10</p>
+          <h1>Recipient Validation & Preview</h1>
+          <p>Staged CSV/XLSX rows can now be reviewed, deduplicated by canonical phone number and saved as immutable recipient preview revisions. Consent, suppression and sending remain gated to later phases.</p>
         </div>
       </section>
 
@@ -54,7 +55,7 @@ export function DashboardPage() {
         <dl className="definition-grid">
           <div><dt>App environment</dt><dd>{config.appEnvironment}</dd></div>
           <div><dt>Supabase URL</dt><dd>{config.supabaseUrl ?? 'Set VITE_SUPABASE_URL'}</dd></div>
-          <div><dt>Schema phase</dt><dd>0.9 Excel / CSV import</dd></div>
+          <div><dt>Schema phase</dt><dd>0.10 Recipient validation & preview</dd></div>
         </dl>
       </section>
     </div>

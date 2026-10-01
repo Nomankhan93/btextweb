@@ -105,13 +105,13 @@ const rows = [
 ]
 
 try {
-  console.log('BulkText 0.9.0 local Excel / CSV import acceptance')
+  console.log('BulkText 0.10.0 local Excel / CSV import acceptance')
   console.log(`Target: ${parsedUrl.origin}`)
 
   const schemaMeta = assertNoError(await admin.from('app_meta').select('value').eq('key', 'schema').single(), 'read schema metadata')
-  assert(schemaMeta?.value?.version === '0.9.0', `Expected schema version 0.9.0, received ${JSON.stringify(schemaMeta?.value)}`)
+  assert(schemaMeta?.value?.version === '0.10.0', `Expected schema version 0.10.0, received ${JSON.stringify(schemaMeta?.value)}`)
   assert(schemaMeta?.value?.phase === 'excel_csv_import', 'Import phase metadata missing')
-  console.log('✓ 0.9.0 migration metadata present')
+  console.log('✓ 0.10.0 migration metadata present')
 
   const [ownerUser, analystUser, managerUser] = await Promise.all([
     createConfirmedUser(emails.owner, 'Import Owner'),
@@ -209,7 +209,7 @@ try {
   assert(auditRows.some((row) => row.action === 'contacts.import_deleted' && row.target_id === importId), 'Import deletion audit event missing')
   console.log('✓ Import audit trail recorded')
 
-  console.log('\nBulkText 0.9.0 EXCEL / CSV IMPORT LOCAL PASS')
+  console.log('\nBulkText 0.10.0 EXCEL / CSV IMPORT LOCAL PASS')
 } finally {
   await cleanup()
 }

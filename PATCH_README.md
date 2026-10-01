@@ -1,31 +1,34 @@
-# BulkText Web 0.9.0 Patch — Excel / CSV Import
+# BulkText Web 0.10.0 Patch — Recipient Validation & Preview
 
-This is a forward patch for the completed 0.8 Phone Number Foundation baseline.
+Forward patch for the completed 0.9 Excel / CSV Import baseline.
 
 ## What it adds
 
-- CSV parser with delimiter detection and quoted-field support
-- modern XLSX first-sheet parser without third-party upload/parsing services
-- automatic/common column mapping with explicit phone mapping
-- import preview using `pk-mobile-v1`
-- custom-field preservation
-- tenant-scoped `contact_imports` / `contact_import_rows`
-- server-authoritative phone normalization during staging
-- duplicate-in-file flagging without removal
-- import history and staged-import deletion
-- Owner/Admin/Campaign Manager write permissions; member read permissions
-- RLS/RPC regression coverage
-- migration `20261001000020_excel_csv_import.sql`
+- `/imports/:importId/validate` review workflow
+- current server-side phone re-normalization for every staged row
+- duplicate groups by canonical E.164
+- one selected source row per canonical phone number
+- explicit manual exclusion
+- immutable recipient preview revisions and source-import delete protection once history exists
+- full row-level snapshot with names and custom fields preserved
+- tenant-scoped preview history/read APIs
+- Owner/Admin/Campaign Manager snapshot creation; member read access
+- direct authenticated preview-table writes blocked
+- audit event `contacts.recipient_preview_created`
+- regression/unit/local integration coverage
+- migration `20261001000030_recipient_validation_preview.sql`
+
+0.10 intentionally does **not** perform consent or suppression checks. An included row is not send-authorized.
 
 ## Apply
 
 ```bash
-cd /home/noman/projects/bulktext-web-0.9.0-patch
+cd /home/noman/projects/bulktext-web-0.10.0-patch
 ./apply.sh --check /home/noman/projects/bulktext-web-0.4.0
 ./apply.sh /home/noman/projects/bulktext-web-0.4.0
 ```
 
-The installer does not run database migrations and writes backups outside the source tree.
+The installer preserves dependency versions, writes backups outside the source tree, and does not execute database migrations.
 
 ## Validate source
 
@@ -39,7 +42,7 @@ npm audit
 
 ## Cloud Supabase
 
-Verify the linked BulkText project before pushing:
+Verify the linked BulkText project first:
 
 ```bash
 npx supabase projects list
@@ -51,7 +54,7 @@ Do not run a cloud database reset.
 
 ## Local integration gate
 
-When using the isolated BulkText local stack (`56321` API) apply migrations and run:
+With the isolated BulkText local stack on API port `56321`:
 
 ```bash
 npx supabase migration up --local
@@ -61,5 +64,5 @@ npm run validate:local
 Expected new marker:
 
 ```text
-BulkText 0.9.0 EXCEL / CSV IMPORT LOCAL PASS
+BulkText 0.10.0 RECIPIENT VALIDATION & PREVIEW LOCAL PASS
 ```

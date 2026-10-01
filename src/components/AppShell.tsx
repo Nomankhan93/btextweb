@@ -46,7 +46,7 @@ export function AppShell() {
               </select>
             </label>
           ) : null}
-          <span className="environment-pill">Import Core 0.9</span>
+          <span className="environment-pill">Recipient Preview 0.10</span>
           <div className="account-menu">
             <span title={user?.email ?? ''}>{user?.email ?? 'Account'}</span>
             <button className="text-button" type="button" onClick={() => void logout()}>Sign out</button>
@@ -63,7 +63,7 @@ export function AppShell() {
               </NavLink>
             ))}
           </nav>
-          <div className="sidebar-footer"><span className="status-dot" />Tenant isolation active. CSV/XLSX staging and canonical PK mobile normalization enabled.</div>
+          <div className="sidebar-footer"><span className="status-dot" />Tenant isolation active. Import staging plus recipient validation snapshots enabled; consent/suppression remains gated.</div>
         </aside>
 
         <main className="content"><Outlet /></main>

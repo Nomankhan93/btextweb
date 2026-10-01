@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { EmptyState, LoadingState } from '../components/StateViews'
 import { MAX_IMPORT_ROWS, parseSpreadsheetFile, type ParsedImportFile } from '../lib/importFiles'
 import { autoDetectImportMapping, buildImportPreview, type ImportColumnMapping } from '../lib/importMapping'
@@ -95,7 +96,7 @@ export function ImportsPage() {
     setBusy(true)
     try {
       await createContactImport(currentOrganization.id, parsed, mapping, preview.rows)
-      setMessage(`${parsed.fileName} was staged successfully. Recipient validation/deduplication remains gated to phase 0.10.`)
+      setMessage(`${parsed.fileName} was staged successfully. Use Validate & preview to resolve duplicates and create a recipient snapshot.`)
       setParsed(null)
       setMapping(emptyMapping)
       if (inputRef.current) inputRef.current.value = ''
@@ -131,9 +132,9 @@ export function ImportsPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">BulkText 0.9</p>
+          <p className="eyebrow">BulkText 0.10</p>
           <h1>Excel / CSV Import</h1>
-          <p>Parse CSV or modern XLSX files in the browser, map recipient fields, preview canonical Pakistan mobile numbers, then stage the rows inside the current organization for the 0.10 validation workflow.</p>
+          <p>Parse CSV or modern XLSX files in the browser, map recipient fields, preview canonical Pakistan mobile numbers, then stage the rows inside the current organization for recipient validation and preview.</p>
         </div>
       </section>
 
@@ -206,14 +207,14 @@ export function ImportsPage() {
         ) : (
           <div className="table-wrap">
             <table className="data-table import-history-table">
-              <thead><tr><th>File</th><th>Rows</th><th>Phone preview</th><th>Created</th><th /></tr></thead>
+              <thead><tr><th>File</th><th>Rows</th><th>Phone preview</th><th>Created</th><th>Actions</th></tr></thead>
               <tbody>{imports.map((item) => (
                 <tr key={item.importId}>
                   <td><strong>{item.sourceFilename}</strong><small>{item.sourceType.toUpperCase()}{item.sheetName ? ` · ${item.sheetName}` : ''} · {bytesLabel(item.sourceSizeBytes)}</small></td>
                   <td>{item.totalRows}</td>
                   <td><span className="badge badge-success">{item.validPhoneRows} valid</span> <span className="badge badge-warning">{item.invalidPhoneRows} review</span><small>{item.duplicatePhoneRows} duplicate-in-file rows retained</small></td>
                   <td>{dateTime(item.createdAt)}</td>
-                  <td>{canImport ? <button className="danger-button compact-button" type="button" disabled={busy} onClick={() => void removeImport(item)}>Delete</button> : null}</td>
+                  <td><div className="import-row-actions"><Link className="secondary-button compact-button" to={`/imports/${item.importId}/validate`}>Validate & preview</Link>{canImport ? <button className="danger-button compact-button" type="button" disabled={busy} onClick={() => void removeImport(item)}>Delete</button> : null}</div></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -221,7 +222,7 @@ export function ImportsPage() {
         )}
       </section>
 
-      <section className="notice warning-notice">0.9 stages source rows and normalization results only. It does not remove duplicates, create final contacts, apply consent/suppression rules, or send SMS. Those decisions remain explicit gates in later phases.</section>
+      <section className="notice warning-notice">0.10 adds explicit recipient validation and immutable preview revisions. Imports with saved preview history are retained by the app; staging still does not create final contacts, apply consent/suppression rules, or send SMS.</section>
     </div>
   )
 }
