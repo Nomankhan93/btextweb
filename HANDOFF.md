@@ -1,48 +1,66 @@
-# BulkText 0.12.1 Handoff
+# BulkText 0.13.0 Handoff
 
 ## Current state
 
-BulkText has pivoted from organization/team-first UX to an **individual-first account model**.
+BulkText is an **individual-first SIM-powered SMS product**.
 
-Current user journey:
+Current workflow:
 
 ```text
 Sign up
-→ account automatically prepared
+→ personal workspace prepared automatically
 → pair Android phone
 → select SIM
 → upload recipients
 → validate / consent / suppression
 → compose personalized message
+→ estimate GSM-7 / Unicode SMS usage
 ```
 
-The existing organization schema is retained only as a hidden tenant container to preserve all already-built 0.6–0.12 data and RLS/RPC behavior.
+No campaign can be confirmed or sent yet.
 
-## Important implementation detail
+## 0.13 implementation
 
-Do **not** drop `organizations`, `organization_members`, or `organization_id` fields in later patches unless a separate, fully tested ownership migration is intentionally designed.
+`src/lib/smsSegments.ts` is the deterministic calculation layer.
 
-Use `useWorkspace()` in frontend pages. The returned `workspace.id` is passed to existing backend RPC parameters named `p_organization_id`.
+It supports:
 
-Do not reintroduce:
+- GSM-7 detection
+- GSM extension-table characters at two septets
+- 160 / 153 GSM-7 limits
+- Unicode/Urdu estimation at 70 / 67 UTF-16 units
+- mixed English + Urdu
+- supplementary Unicode such as emoji
+- personalized recipient-by-recipient calculation
+- campaign total / min / max / average segments
+- long-message review warning
+- exclusion of incomplete personalization from package-usage totals
 
-- organization onboarding
-- organization switching
-- team invitations
-- role management UI
+The composer displays these estimates live. A draft still cannot create queue jobs or contact the Android gateway.
 
-unless a future Organizations feature is explicitly started.
+## Database note
+
+`20261001000070_sms_segment_usage_calculator.sql` adds no campaign tables. It advances capability metadata and restores the full metadata object after the 0.12.1 individual-account transition.
+
+The hidden `organization_id` tenant architecture remains internal. Do not drop it.
+
+## Sending rule remains authoritative
+
+Actual SMS will later be sent by:
+
+```text
+User's paired Android phone
+→ explicitly selected SIM
+→ user's package / balance
+```
+
+No automatic SIM fallback. Carrier charging remains authoritative.
 
 ## Next development
 
-After local validation passes:
-
 ```text
-0.13 SMS Segment & Usage Calculator
 0.14 Campaign Confirmation Snapshot
 0.15 Gateway Preflight
 0.16 Durable Cloud Queue
 0.17 Android Cloud Sending
 ```
-
-Actual SMS sending remains Android-only and must use the user's explicitly selected SIM. The carrier determines actual package/balance charging.

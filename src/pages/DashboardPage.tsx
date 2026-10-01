@@ -5,7 +5,7 @@ import { getRuntimeConfig } from '../lib/env'
 const quickActions = [
   ['Pair or check my phone', '/devices', 'Connect the Android gateway and explicitly select the SIM BulkText may use.'],
   ['Upload recipients', '/imports', 'Import CSV or XLSX recipient data and validate Pakistan mobile numbers.'],
-  ['Write a message', '/composer', 'Create a personalized message draft from an eligible recipient snapshot.'],
+  ['Write a message', '/composer', 'Create a personalized draft and review GSM-7/Unicode SMS usage before confirmation.'],
 ] as const
 
 export function DashboardPage() {
@@ -47,7 +47,7 @@ export function DashboardPage() {
       </section>
 
       {!config.supabaseConfigured ? (
-        <section className="notice warning-notice">Supabase is not configured. Set the local environment variables before using account data.</section>
+        <section className="notice warning-notice">Supabase is not configured. Set the environment variables before using account data.</section>
       ) : null}
     </div>
   )

@@ -108,13 +108,13 @@ async function cleanup() {
 }
 
 try {
-  console.log('BulkText 0.12.1 Individual Account Transition acceptance')
+  console.log('BulkText 0.13.0 Individual Account Transition acceptance')
   console.log(`Target: ${parsedUrl.origin}`)
 
   const schemaMeta = assertNoError(await admin.from('app_meta').select('value').eq('key', 'schema').single(), 'read schema metadata')
-  assert(schemaMeta?.value?.version === '0.12.1', `Expected schema version 0.12.1, received ${JSON.stringify(schemaMeta?.value)}`)
+  assert(schemaMeta?.value?.version === '0.13.0', `Expected schema version 0.13.0, received ${JSON.stringify(schemaMeta?.value)}`)
   assert(schemaMeta?.value?.tenant_model === 'hidden_personal_workspace', 'Hidden personal workspace metadata is missing')
-  console.log('✓ 0.12.1 schema metadata present')
+  console.log('✓ 0.13.0 schema metadata present')
 
   const [userA, userB] = await Promise.all([
     createConfirmedUser(emails.a, 'Individual A'),
@@ -180,7 +180,7 @@ try {
   assert(repairedProfile.personal_workspace_id === workspaceA.workspace_id, 'Repair did not persist personal workspace link')
   console.log('✓ Missing profile link repairs by adopting existing owned data')
 
-  console.log('\nBulkText 0.12.1 INDIVIDUAL ACCOUNT TRANSITION PASS')
+  console.log('\nBulkText 0.13.0 INDIVIDUAL ACCOUNT TRANSITION PASS')
 } finally {
   await cleanup()
 }

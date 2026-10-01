@@ -7,10 +7,13 @@ import {
   analyzeMessageTemplate,
   builtInMessageTokens,
   discoverCustomFieldKeys,
-  renderPersonalizedMessage,
   summarizePersonalization,
   type PersonalizationSourceRow,
 } from '../lib/messageComposer'
+import {
+  SMS_LONG_MESSAGE_WARNING_SEGMENTS,
+  estimatePersonalizedSmsUsage,
+} from '../lib/smsSegments'
 import {
   deleteMessageComposerDraft,
   getMessagePersonalizationSourceRows,
@@ -98,10 +101,8 @@ export function MessageComposerPage() {
   const customKeys = useMemo(() => discoverCustomFieldKeys(rows), [rows])
   const analysis = useMemo(() => analyzeMessageTemplate(messageTemplate), [messageTemplate])
   const personalizationSummary = useMemo(() => summarizePersonalization(messageTemplate, rows), [messageTemplate, rows])
-  const previews = useMemo(
-    () => rows.slice(0, 8).map((row) => ({ row, rendered: renderPersonalizedMessage(messageTemplate, row) })),
-    [messageTemplate, rows],
-  )
+  const smsUsage = useMemo(() => estimatePersonalizedSmsUsage(messageTemplate, rows), [messageTemplate, rows])
+  const previews = useMemo(() => smsUsage.recipients.slice(0, 8), [smsUsage])
   const customTokenSet = useMemo(() => new Set(customKeys.map((key) => `custom:${key}`)), [customKeys])
   const unavailableCustomTokens = analysis.tokens.filter((token) => token.startsWith('custom:') && !customTokenSet.has(token))
   const hasTemplateProblem = analysis.malformed || analysis.unsupportedTokens.length > 0 || unavailableCustomTokens.length > 0
@@ -231,7 +232,7 @@ export function MessageComposerPage() {
             <div className="panel composer-editor-panel">
               <div className="panel-heading"><div><p className="eyebrow">Draft editor</p><h2>{draftId ? 'Edit message draft' : 'New message draft'}</h2></div>{draftId ? <span className="badge badge-success">Saved draft</span> : <span className="badge badge-muted">Unsaved</span>}</div>
               <label className="field"><span>Draft title</span><input maxLength={120} value={title} disabled={!canEdit} onChange={(event) => setTitle(event.target.value)} placeholder="October service reminder" /></label>
-              <label className="field"><span>Message</span><textarea ref={textareaRef} rows={9} maxLength={MESSAGE_TEMPLATE_MAX_CHARACTERS} value={messageTemplate} disabled={!canEdit} onChange={(event) => setMessageTemplate(event.target.value)} placeholder="Hello {{name}}, your appointment is…" /><small>{messageTemplate.length} / {MESSAGE_TEMPLATE_MAX_CHARACTERS} template characters. SMS encoding and segment count are handled in the next campaign step.</small></label>
+              <label className="field"><span>Message</span><textarea ref={textareaRef} rows={9} maxLength={MESSAGE_TEMPLATE_MAX_CHARACTERS} value={messageTemplate} disabled={!canEdit} onChange={(event) => setMessageTemplate(event.target.value)} placeholder="Hello {{name}}, your appointment is…" /><small>{messageTemplate.length} / {MESSAGE_TEMPLATE_MAX_CHARACTERS} template characters. Encoding and estimated SMS units update live below for every complete personalized recipient.</small></label>
 
               <div className="composer-token-section">
                 <span className="field-label">Built-in variables</span>
@@ -259,21 +260,42 @@ export function MessageComposerPage() {
                   <div><dt>Missing values</dt><dd>{personalizationSummary.recipientsWithMissingValues}</dd></div>
                   <div><dt>Tokens used</dt><dd>{analysis.tokens.length}</dd></div>
                   <div><dt>Longest rendered text</dt><dd>{personalizationSummary.longestRenderedCharacters} chars</dd></div>
-                  <div><dt>Segment estimate</dt><dd>Next step</dd></div>
+                  <div><dt>Estimated SMS units</dt><dd>{smsUsage.estimatedSmsUnits}</dd></div>
                 </dl>
               )}
               <p className="muted-copy">A saved draft is editable. It is not a confirmed campaign and cannot queue or send SMS.</p>
             </aside>
           </section>
 
+          <section className="panel sms-usage-panel">
+            <div className="panel-heading">
+              <div><p className="eyebrow">SMS usage estimate</p><h2>Encoding & package usage</h2></div>
+              <span className="badge badge-muted">Estimate only</span>
+            </div>
+            {sourceLoading ? <LoadingState label="Calculating SMS usage…" /> : (
+              <>
+                <div className="metric-grid sms-usage-metrics">
+                  <article className="metric-card"><span>Estimated usage</span><h2>{smsUsage.estimatedSmsUnits} SMS unit{smsUsage.estimatedSmsUnits === 1 ? '' : 's'}</h2><p>Sum of personalized SMS segments for recipients whose message can be rendered completely.</p></article>
+                  <article className="metric-card"><span>Encoding</span><h2>{smsUsage.encodingSummary}</h2><p>{smsUsage.gsm7Recipients} GSM-7 · {smsUsage.unicodeRecipients} Unicode recipient message{smsUsage.readyRecipients === 1 ? '' : 's'}.</p></article>
+                  <article className="metric-card"><span>Average</span><h2>{smsUsage.averageSegments.toFixed(2)} segments</h2><p>Minimum {smsUsage.minimumSegments} · maximum {smsUsage.maximumSegments} segment{smsUsage.maximumSegments === 1 ? '' : 's'} per ready recipient.</p></article>
+                  <article className="metric-card"><span>Ready recipients</span><h2>{smsUsage.readyRecipients} / {smsUsage.recipientCount}</h2><p>{smsUsage.blockedRecipients ? `${smsUsage.blockedRecipients} recipient(s) excluded because personalization is incomplete.` : 'Every eligible recipient has a complete rendered message.'}</p></article>
+                </div>
+                {smsUsage.blockedRecipients > 0 ? <div className="notice warning-notice">The total excludes {smsUsage.blockedRecipients} recipient(s) with missing or unsupported personalization. Resolve those values before campaign confirmation.</div> : null}
+                {smsUsage.longMessageRecipients > 0 ? <div className="notice warning-notice">{smsUsage.longMessageRecipients} recipient message(s) are {SMS_LONG_MESSAGE_WARNING_SEGMENTS}+ SMS segments. Review unusually long personalized messages before confirming a campaign.</div> : null}
+                <p className="muted-copy">Estimated SMS usage only. GSM-7 extension characters consume extra encoding units, Unicode/Urdu has shorter segment limits, and your mobile operator determines actual package deduction and charges.</p>
+              </>
+            )}
+          </section>
+
           <section className="panel">
             <div className="panel-heading"><div><p className="eyebrow">Recipient preview</p><h2>Rendered examples</h2></div><span className={hasRecipientProblem ? 'badge badge-warning' : 'badge badge-success'}>{hasRecipientProblem ? 'Needs review' : 'Complete'}</span></div>
             {sourceLoading ? <LoadingState label="Rendering personalization…" /> : previews.length === 0 ? <EmptyState title="No eligible recipients">The selected eligibility snapshot has no eligible rows.</EmptyState> : (
-              <div className="message-preview-list">{previews.map(({ row, rendered }) => (
-                <article className="message-preview-card" key={row.eligibilityRowId}>
-                  <div className="message-preview-meta"><strong>{row.displayName ?? row.normalizedE164}</strong><code>{row.normalizedE164}</code><span className={rendered.complete ? 'badge badge-success' : 'badge badge-warning'}>{rendered.complete ? 'Complete' : 'Missing data'}</span></div>
-                  <p>{rendered.text}</p>
-                  {rendered.missingTokens.length ? <small>Missing: {rendered.missingTokens.join(', ')}</small> : null}
+              <div className="message-preview-list">{previews.map((preview) => (
+                <article className="message-preview-card" key={preview.row.eligibilityRowId}>
+                  <div className="message-preview-meta"><strong>{preview.row.displayName ?? preview.row.normalizedE164}</strong><code>{preview.row.normalizedE164}</code><span className={preview.complete ? 'badge badge-success' : 'badge badge-warning'}>{preview.complete ? 'Complete' : 'Missing data'}</span>{preview.estimate ? <span className="badge badge-muted">{preview.estimate.encoding} · {preview.estimate.segments} SMS</span> : null}</div>
+                  <p>{preview.text}</p>
+                  {preview.estimate ? <small className="sms-preview-estimate">{preview.estimate.characters} characters · {preview.estimate.encodingUnits} encoding units · {preview.estimate.segments} estimated SMS unit{preview.estimate.segments === 1 ? '' : 's'}</small> : null}
+                  {preview.missingTokens.length ? <small>Missing: {preview.missingTokens.join(', ')}</small> : null}
                 </article>
               ))}</div>
             )}
@@ -291,7 +313,7 @@ export function MessageComposerPage() {
         )}
       </section>
 
-      <section className="notice warning-notice">Message drafts and personalization previews do not calculate SMS units, confirm a campaign, schedule delivery, create queue jobs, contact the Android gateway, or send messages.</section>
+      <section className="notice warning-notice">Message drafts and SMS usage estimates do not confirm a campaign, schedule delivery, create queue jobs, contact the Android gateway, or send messages. Actual package deduction remains controlled by the mobile operator.</section>
     </div>
   )
 }

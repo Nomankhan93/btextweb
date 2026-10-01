@@ -21,6 +21,7 @@ const requiredFiles = [
   'src/lib/consentSuppressionApi.ts',
   'src/lib/messageComposer.ts',
   'src/lib/messageComposerApi.ts',
+  'src/lib/smsSegments.ts',
   'src/lib/supabase.ts',
   'src/components/PairingQr.tsx',
   'src/pages/DevicesPage.tsx',
@@ -43,6 +44,7 @@ const requiredFiles = [
   'supabase/migrations/20261001000040_consent_suppression.sql',
   'supabase/migrations/20261001000050_message_composer_personalization.sql',
   'supabase/migrations/20261001000060_individual_account_transition.sql',
+  'supabase/migrations/20261001000070_sms_segment_usage_calculator.sql',
   'scripts/test-individual-account-local.mjs',
   'scripts/test-pairing-local.mjs',
   'scripts/test-device-dashboard-local.mjs',
@@ -59,6 +61,8 @@ const requiredFiles = [
   'docs/RECIPIENT_VALIDATION_PREVIEW.md',
   'docs/CONSENT_SUPPRESSION.md',
   'docs/MESSAGE_COMPOSER_PERSONALIZATION.md',
+  'docs/SMS_SEGMENT_USAGE_CALCULATOR.md',
+  'src/test/smsSegments.test.ts',
 ]
 
 const forbiddenFiles = [
@@ -97,4 +101,4 @@ if (missing.length || forbiddenPresent.length) {
   process.exit(1)
 }
 
-console.log('BulkText 0.12.1 preflight PASS')
+console.log('BulkText 0.13.0 preflight PASS')

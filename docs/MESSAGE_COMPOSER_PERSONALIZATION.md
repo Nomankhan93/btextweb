@@ -85,10 +85,8 @@ Direct authenticated writes to the table are revoked. Mutations go through RPCs.
 
 ## Security boundary
 
-0.12 keeps these capabilities disabled:
+After 0.13, the composer now includes SMS encoding/segment estimation, but these execution capabilities remain disabled:
 
-- SMS encoding / segment calculation
-- SMS package usage estimate
 - immutable campaign confirmation
 - scheduling
 - gateway preflight
@@ -97,3 +95,8 @@ Direct authenticated writes to the table are revoked. Mutations go through RPCs.
 - SMS sending
 
 A saved composer draft is **not send authorization**.
+
+
+## 0.13 integration
+
+The live composer now calls the deterministic `smsSegments` calculation layer after personalization rendering. Incomplete personalization remains visible and is excluded from estimated package usage. See `SMS_SEGMENT_USAGE_CALCULATOR.md`.

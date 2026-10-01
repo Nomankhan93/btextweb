@@ -1,62 +1,82 @@
-# Patch 0.12.1 — Individual Account Transition
+# Patch 0.13.0 — SMS Segment & Package Usage Calculator
 
 ## Purpose
 
-Convert the existing multi-organization web experience into an individual-first MVP **without destructively rewriting the working 0.6–0.12 backend data model**.
+Add accurate pre-send SMS usage estimation to the existing 0.12.1 individual account workflow.
 
 ## Main changes
 
-- auto-create/adopt one hidden personal workspace per authenticated user
-- existing owned workspace is adopted so current data remains in place
-- remove Create Organization onboarding
-- remove organization switcher
-- remove Team/invitation UI and routes
-- replace `OrganizationProvider` with `WorkspaceProvider`
-- remove frontend RBAC gates
-- simplify Settings to account profile only
-- make profiles self-readable only
-- hide internal organization/member/invitation tables from normal web clients
-- revoke old organization/team RPCs for authenticated users
-- update local regression scripts to use `get_my_personal_workspace()`
-- add `test:account-local`
+- GSM-7 vs Unicode detection
+- GSM extension characters counted as two septets
+- GSM-7 single/multipart limits: 160 / 153
+- Unicode single/multipart limits: 70 / 67 UTF-16 units
+- recipient-specific personalized segment calculation
+- campaign estimated SMS-unit total
+- min / max / average segments
+- GSM-7 / Unicode recipient breakdown
+- long-message warning at 4+ estimated segments
+- missing-personalization recipients excluded from the estimate rather than silently substituted
+- live estimate shown in Message Composer
+- per-recipient encoding/segment badges in preview
+- explicit operator-charging disclaimer
 
-## Intentionally retained
+## Database change
 
-These remain in PostgreSQL for compatibility and possible future organization support:
+New forward migration:
 
 ```text
-organizations
-organization_members
-organization_invitations
-organization_id foreign keys
-is_org_member()
-org_role()
-can_manage_org()
+20261001000070_sms_segment_usage_calculator.sql
 ```
 
-They are implementation details, not user-facing MVP concepts.
+It adds no campaign/send tables. It only advances/restores capability metadata.
 
-## Apply
+## Explicitly not built
 
-Use the supplied patch ZIP and `apply.sh`. The installer stores backups **outside the target repo** under the target's parent directory so Vitest does not discover backup tests.
+- campaign confirmation
+- queue jobs
+- Android cloud-triggered sending
+- scheduling
+- delivery reports
+- carrier balance lookup
+- automatic SIM switching
 
-Then run:
+## Apply to the existing project
+
+```bash
+cd /home/noman/projects
+rm -rf /home/noman/projects/bulktext-web-0.13.0-patch
+unzip "/mnt/c/Users/noman/Downloads/bulktext-web-0.13.0-patch.zip" -d /home/noman/projects
+
+bash /home/noman/projects/bulktext-web-0.13.0-patch/apply.sh \
+  /home/noman/projects/bulktext-web-0.4.0
+```
+
+Then validate code:
 
 ```bash
 cd /home/noman/projects/bulktext-web-0.4.0
+nvm use || nvm install
 npm install
-npx supabase start
-npx supabase migration up --local
-npm run validate:local
+npm run validate
 npm audit
 ```
 
-Expected schema metadata after migration:
+For the current Supabase Cloud setup:
 
-```json
-{
-  "version": "0.12.1",
-  "phase": "individual_account_transition",
-  "tenant_model": "hidden_personal_workspace"
-}
+```bash
+npx supabase migration list
+npx supabase db push --dry-run
+```
+
+Only this migration should be pending:
+
+```text
+20261001000070_sms_segment_usage_calculator.sql
+```
+
+Then:
+
+```bash
+npx supabase db push
+npx supabase migration list
 ```

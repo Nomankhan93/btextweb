@@ -35,7 +35,7 @@ export default function App() {
           <Route element={<AppShell />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/campaigns" element={<PlaceholderPage title="Campaigns" description="Campaign confirmation becomes available after SMS usage estimation. Use Composer for your editable message workflow." />} />
+            <Route path="/campaigns" element={<PlaceholderPage title="Campaigns" description="Use Composer to review personalized SMS usage estimates. Immutable campaign confirmation is the next workflow step." />} />
             <Route path="/composer" element={<MessageComposerPage />} />
             <Route path="/contacts" element={<PhoneNumbersPage />} />
             <Route path="/imports" element={<ImportsPage />} />

@@ -66,13 +66,13 @@ async function cleanup() {
 }
 
 try {
-  console.log('BulkText 0.12.1 local phone-number foundation acceptance')
+  console.log('BulkText 0.13.0 local phone-number foundation acceptance')
   console.log(`Target: ${parsedUrl.origin}`)
 
   const schemaMeta = assertNoError(await admin.from('app_meta').select('value').eq('key', 'schema').single(), 'read schema metadata')
-  assert(schemaMeta?.value?.version === '0.12.1', `Expected schema version 0.12.1, received ${JSON.stringify(schemaMeta?.value)}`)
+  assert(schemaMeta?.value?.version === '0.13.0', `Expected schema version 0.13.0, received ${JSON.stringify(schemaMeta?.value)}`)
   assert(schemaMeta?.value?.normalization_version === 'pk-mobile-v1', 'Normalization version metadata missing')
-  console.log('✓ 0.12.1 migration metadata present')
+  console.log('✓ 0.13.0 migration metadata present')
 
   const anonymousAttempt = await anonymous.rpc('normalize_phone_number', { p_raw: '03001234567', p_default_country: 'PK' })
   assert(anonymousAttempt.error, 'Anonymous client unexpectedly executed normalize_phone_number')
@@ -133,7 +133,7 @@ try {
   assert(browserPredicate.error, 'Authenticated browser unexpectedly executed internal canonical predicate')
   console.log('✓ Internal constraint helper is not exposed to browser clients')
 
-  console.log('\nBulkText 0.12.1 PHONE NUMBER FOUNDATION LOCAL PASS')
+  console.log('\nBulkText 0.13.0 PHONE NUMBER FOUNDATION LOCAL PASS')
 } finally {
   await cleanup()
 }

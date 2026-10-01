@@ -98,15 +98,15 @@ const sourceRows = [
 ]
 
 try {
-  console.log('BulkText 0.12.1 local Consent & Suppression acceptance')
+  console.log('BulkText 0.13.0 local Consent & Suppression acceptance')
   console.log(`Target: ${parsedUrl.origin}`)
 
   const schemaMeta = assertNoError(await admin.from('app_meta').select('value').eq('key', 'schema').single(), 'read schema metadata')
-  assert(schemaMeta?.value?.version === '0.12.1', `Expected schema version 0.12.1, received ${JSON.stringify(schemaMeta?.value)}`)
-  assert(schemaMeta?.value?.phase === 'message_composer_personalization', 'Latest schema phase metadata missing')
+  assert(schemaMeta?.value?.version === '0.13.0', `Expected schema version 0.13.0, received ${JSON.stringify(schemaMeta?.value)}`)
+  assert(schemaMeta?.value?.phase === 'sms_segment_usage_calculator', 'Latest schema phase metadata missing')
   assert(schemaMeta?.value?.consent_suppression_policy_version === 'consent-suppression-v1', 'Consent/suppression policy metadata missing')
   assert(schemaMeta?.value?.campaign_send_enabled === false, '0.11 must not enable campaign sending')
-  console.log('✓ 0.12.1 schema metadata present; consent policy retained and campaign sending remains gated')
+  console.log('✓ 0.13.0 schema metadata present; consent policy retained and campaign sending remains gated')
 
   const anonymousLookup = await anonymous.rpc('get_contact_compliance_status', { p_organization_id: crypto.randomUUID(), p_phone: '03001234567' })
   assert(anonymousLookup.error, 'Anonymous client unexpectedly executed compliance lookup')
@@ -279,7 +279,7 @@ try {
   }
   console.log('✓ Consent, suppression and eligibility actions are audit logged')
 
-  console.log('\nBulkText 0.12.1 CONSENT & SUPPRESSION LOCAL PASS')
+  console.log('\nBulkText 0.13.0 CONSENT & SUPPRESSION LOCAL PASS')
 } finally {
   await cleanup()
 }

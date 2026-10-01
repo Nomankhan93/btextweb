@@ -1,15 +1,15 @@
-# BulkText Web 0.12.1
+# BulkText Web 0.13.0
 
 BulkText is an **individual-first SIM-powered SMS platform**.
 
-The web app prepares recipients and messages; a paired Android gateway will later send SMS through the user's explicitly selected SIM. SMS package eligibility and actual carrier charging are determined by the mobile operator.
+The web app prepares recipients, personalized messages and SMS usage estimates; a paired Android gateway will later send SMS through the user's explicitly selected SIM. SMS package eligibility and actual carrier charging are determined by the mobile operator.
 
 ## Current product scope
 
-Built through 0.12 plus the 0.12.1 individual-account transition:
+Built through 0.13:
 
 - Supabase authentication and account recovery
-- automatic personal workspace provisioning
+- automatic hidden personal-workspace provisioning
 - secure Android pairing foundation
 - device dashboard and explicit SIM binding
 - Pakistan mobile-number normalization
@@ -17,59 +17,67 @@ Built through 0.12 plus the 0.12.1 individual-account transition:
 - recipient validation and immutable preview snapshots
 - consent / suppression evidence and eligibility snapshots
 - message composer and personalization preview
+- GSM-7 / Unicode SMS segment estimation
+- recipient-specific and campaign-wide estimated SMS usage
 
 Not built yet:
 
-- SMS segment/usage calculator
-- campaign confirmation
+- immutable campaign confirmation
 - gateway preflight
 - durable cloud queue
 - cloud-triggered Android sending
 - scheduling
 - campaign reports
 
-## Individual account architecture
-
-The UI has no organizations, teams, invitations or role management.
-
-For migration safety, the backend still uses a hidden personal workspace as the internal tenant container:
+## SMS model
 
 ```text
-Auth user
-→ profiles.personal_workspace_id
-→ hidden organizations row
-→ hidden Owner membership
-→ existing organization_id-scoped 0.6–0.12 data
+User account
+→ paired Android phone
+→ explicitly selected SIM
+→ user's mobile-operator SMS package / balance
+→ recipients
 ```
 
-See `docs/INDIVIDUAL_ACCOUNT_TRANSITION.md`.
+BulkText estimates SMS units from rendered message content. It does not claim authoritative carrier package balance or charges.
 
-## Local ports
+## Internal tenant architecture
 
-BulkText local Supabase uses:
+The UI remains individual-first. The database still uses a hidden personal workspace (`organization_id`) internally so previously built device/import/recipient/compliance/composer data remains compatible and future Organizations support can be added without a destructive rewrite.
 
-```text
-API      56321
-DB       56322
-Studio   56323
-Mailpit  56324
-```
+## Validation
 
-This keeps it separate from the user's other local Supabase projects.
-
-## Run
+Use the project Node version first:
 
 ```bash
 nvm use || nvm install
 npm install
-cp .env.example .env.local
-npx supabase start
-npx supabase migration up --local
-npm run validate:local
+npm run validate
 npm audit
-npm run dev
 ```
+
+The active BulkText setup uses Supabase Cloud. Before pushing the 0.13 metadata migration:
+
+```bash
+npx supabase migration list
+npx supabase db push --dry-run
+```
+
+Expected pending migration:
+
+```text
+20261001000070_sms_segment_usage_calculator.sql
+```
+
+If the dry run contains only the expected pending migration, apply it:
+
+```bash
+npx supabase db push
+npx supabase migration list
+```
+
+Do not run `supabase start` unless intentionally using a separate local test environment.
 
 ## Next planned feature
 
-After 0.12.1 validates cleanly, continue with **0.13 — SMS Segment & Usage Calculator**.
+`0.14 — Campaign Confirmation Snapshot`
