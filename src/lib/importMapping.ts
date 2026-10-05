@@ -27,6 +27,30 @@ export interface ImportPreviewSummary {
   duplicatePhoneRows: number
 }
 
+export interface PhoneColumnCandidate {
+  header: string
+  sampledValues: number
+  validValues: number
+  validRatio: number
+  score: number
+  headerMatched: boolean
+}
+
+export interface SmartImportDetection {
+  mapping: ImportColumnMapping
+  phoneCandidates: PhoneColumnCandidate[]
+  confidence: 'high' | 'medium' | 'low'
+  message: string
+}
+
+const phoneAliases = [
+  'phone', 'phone no', 'phone number', 'mobile', 'mobile no', 'mobile number',
+  'cell', 'cell no', 'cell number', 'cell phone', 'cellphone',
+  'contact', 'contact no', 'contact number', 'contact phone', 'contact mobile',
+  'whatsapp', 'whatsapp no', 'whatsapp number', 'telephone', 'tel',
+  'recipient', 'recipient phone', 'recipient number', 'recipient mobile', 'msisdn', 'number',
+]
+
 function normalizedHeader(value: string): string {
   return value.trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 }
@@ -40,15 +64,72 @@ function findAlias(headers: string[], aliases: string[]): string | null {
   return null
 }
 
-export function autoDetectImportMapping(headers: string[]): ImportColumnMapping {
+function phoneHeaderScore(header: string): number {
+  const value = normalizedHeader(header)
+  if (phoneAliases.includes(value)) return 120
+  if (/\b(phone|mobile|cell|contact|whatsapp|msisdn|telephone|tel)\b/.test(value)) return 75
+  return 0
+}
+
+function nameMapping(headers: string[]): Omit<ImportColumnMapping, 'phone'> {
   return {
-    phone: findAlias(headers, [
-      'phone', 'phone number', 'mobile', 'mobile number', 'cell', 'cell phone', 'cellphone',
-      'contact number', 'recipient', 'recipient phone', 'recipient number', 'msisdn', 'number',
-    ]) ?? '',
     firstName: findAlias(headers, ['first name', 'firstname', 'given name', 'givenname']),
     lastName: findAlias(headers, ['last name', 'lastname', 'surname', 'family name', 'familyname']),
-    displayName: findAlias(headers, ['full name', 'display name', 'customer name', 'contact name', 'name']),
+    displayName: findAlias(headers, ['full name', 'display name', 'customer name', 'contact name', 'client name', 'name']),
+  }
+}
+
+export function autoDetectImportMapping(headers: string[]): ImportColumnMapping {
+  return {
+    phone: findAlias(headers, phoneAliases) ?? '',
+    ...nameMapping(headers),
+  }
+}
+
+export function detectSmartImportMapping(file: ParsedImportFile): SmartImportDetection {
+  const sampleRows = file.rows.slice(0, 250)
+  const candidates = file.headers.map((header): PhoneColumnCandidate => {
+    const values = sampleRows
+      .map((row) => (row.values[header] ?? '').trim())
+      .filter(Boolean)
+    const validValues = values.filter((value) => normalizePakistanMobile(value).validationStatus === 'valid').length
+    const validRatio = values.length ? validValues / values.length : 0
+    const headerScore = phoneHeaderScore(header)
+    // Header semantics are useful, but actual phone-shaped values are authoritative.
+    const contentScore = validValues === 0 ? 0 : Math.round(validRatio * 100) + Math.min(validValues, 25) * 2
+    return {
+      header,
+      sampledValues: values.length,
+      validValues,
+      validRatio,
+      score: headerScore + contentScore,
+      headerMatched: headerScore > 0,
+    }
+  }).sort((a, b) => b.score - a.score || b.validRatio - a.validRatio || b.validValues - a.validValues || a.header.localeCompare(b.header))
+
+  const best = candidates[0]
+  const second = candidates[1]
+  const contentStrong = Boolean(best && best.validValues >= Math.min(3, Math.max(1, sampleRows.length)) && best.validRatio >= 0.6)
+  const clearlyAhead = !second || best.score >= second.score + 30 || best.validRatio >= second.validRatio + 0.35
+  const phone = best && (best.headerMatched || contentStrong) ? best.header : ''
+  const base = nameMapping(file.headers)
+  const confidence: SmartImportDetection['confidence'] = phone && contentStrong && clearlyAhead
+    ? 'high'
+    : phone && (best?.headerMatched || (best?.validRatio ?? 0) >= 0.4)
+      ? 'medium'
+      : 'low'
+
+  let message = 'Choose the column that contains mobile numbers.'
+  if (phone && best) {
+    const percent = Math.round(best.validRatio * 100)
+    message = `Detected “${phone}” as the phone column (${best.validValues}/${best.sampledValues || 0} sampled non-empty values look like Pakistan mobile numbers${best.sampledValues ? `, ${percent}%` : ''}).`
+  }
+
+  return {
+    mapping: { phone, ...base },
+    phoneCandidates: candidates.filter((candidate) => candidate.headerMatched || candidate.validValues > 0).slice(0, 5),
+    confidence,
+    message,
   }
 }
 

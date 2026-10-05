@@ -1,38 +1,35 @@
-# Patch 0.16.2 — Release & Verification Stabilization
+# Patch 0.16.3 — Simple Campaign Flow + Smart Number Import
 
-## Purpose
+Apply this patch only to the certified **Web 0.16.2** baseline (commit `331d56d` in the user's repository).
 
-Stabilize the already-built Web 0.16.1 / Cloud 00320 baseline without changing database or queue behavior.
+## Adds
 
-## Changes
+- campaign-first `/campaigns/new` wizard;
+- content-aware CSV/XLSX Pakistan mobile-number detection;
+- robust meaningful-row/header detection for real-world XLSX files;
+- one bulk consent declaration tied to a saved recipient preview;
+- automatic eligibility snapshot creation;
+- simplified message/review path;
+- one Web `Send to Android` handoff action using existing preflight/authorization/queue RPCs;
+- improved zero-eligible and retained-import UX;
+- migration `20261001000330_simple_campaign_flow_bulk_consent.sql`.
 
-- bump Web package to 0.16.2;
-- refresh stale release documentation;
-- correct stale UI copy about campaign confirmation and cloud queue availability;
-- verify fresh schema through migration 00320;
-- add safe placeholder-only `.env.example`;
-- add deterministic release staging / checksum / ZIP scripts;
-- exclude local/runtime/generated files and secrets from release artifacts;
-- regenerate project-level `SHA256SUMS.txt`.
+## Does not change
 
-## Explicitly unchanged
+- Android 0.17 source;
+- exact-SIM/no-fallback rules;
+- durable queue lease/download semantics;
+- `SmsManager` execution semantics;
+- SENT/DELIVERED callbacks or retry policy;
+- any already-applied Supabase migration.
 
-- no SMS execution;
-- no Android 0.17 work;
-- no 0.18 work;
-- no queue-state or lease-semantic changes;
-- no exact-SIM rule changes;
-- no new or rewritten Supabase migration.
-
-## Apply patch
-
-From the extracted patch directory:
+## Apply
 
 ```bash
 ./apply.sh /home/noman/projects/bulktext-web-0.4.0
 ```
 
-The patch accepts only a target whose `package.json` version is `0.16.1` (or is already `0.16.2` for an idempotent re-apply).
+The patch installer validates the 0.16.2 baseline and existing migration chain before copying files. It then regenerates the project-level checksum manifest.
 
 ## Validate
 
@@ -43,16 +40,13 @@ npm ci
 npm run validate
 npm audit
 git diff --check
+
 npx supabase migration list
 npx supabase db push --dry-run
 ```
 
-Expected database result: migration chain aligned through `20261001000320` and **no new migration from 0.16.2**.
-
-## Package
+The dry-run must show exactly **`20261001000330`** as the new pending migration. Review it before:
 
 ```bash
-./scripts/release-package.sh
+npx supabase db push
 ```
-
-This creates a clean staged tree, verifies `SHA256SUMS.txt` with `sha256sum -c`, performs release safety scans, creates a deterministic ZIP, and writes a separate final ZIP SHA256.

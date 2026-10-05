@@ -187,6 +187,11 @@ export function MessageComposerPage() {
   }
 
   function newDraft() {
+    if (sources.length === 0) {
+      setMessage(null)
+      setError('Prepare at least one eligible recipient list before starting a message draft.')
+      return
+    }
     setDraftId(null)
     setTitle('')
     setMessageTemplate('Hello {{name}}, ')
@@ -204,14 +209,14 @@ export function MessageComposerPage() {
           <h1>Write a message</h1>
           <p>Write and personalize your SMS, preview the final text for recipients and review estimated SMS usage before confirming a campaign.</p>
         </div>
-        {canEdit ? <button className="secondary-button compact-button" type="button" onClick={newDraft}>New draft</button> : null}
+        {canEdit ? <button className="secondary-button compact-button" type="button" disabled={sources.length === 0} onClick={newDraft}>New draft</button> : null}
       </section>
 
       {error ? <div className="notice error-notice">{error}</div> : null}
       {message ? <div className="notice success-notice">{message}</div> : null}
 
       {sources.length === 0 ? (
-        <EmptyState title="No recipients ready yet">Upload recipients and complete validation plus consent/do-not-send checks before writing a message.</EmptyState>
+        <EmptyState title="No recipients ready yet">Use <Link to="/campaigns/new">New campaign</Link> for the simple upload → message flow, or prepare recipients through the advanced tools.</EmptyState>
       ) : (
         <>
           <section className="panel">

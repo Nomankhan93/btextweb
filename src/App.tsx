@@ -4,6 +4,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { CampaignsPage } from './pages/CampaignsPage'
 import { CampaignConfirmationPage } from './pages/CampaignConfirmationPage'
 import { CampaignDetailPage } from './pages/CampaignDetailPage'
+import { SimpleCampaignPage } from './pages/SimpleCampaignPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -39,6 +40,7 @@ export default function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/campaigns" element={<CampaignsPage />} />
+            <Route path="/campaigns/new" element={<SimpleCampaignPage />} />
             <Route path="/campaigns/review/:draftId" element={<CampaignConfirmationPage />} />
             <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
             <Route path="/composer" element={<MessageComposerPage />} />

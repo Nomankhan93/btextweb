@@ -1,98 +1,99 @@
-# BulkText Web 0.16.2
+# BulkText Web 0.16.3
 
-BulkText is an **individual-first SIM-powered SMS platform**. Web 0.16.2 is a release and verification stabilization build on top of the 0.16.1 recipient-completeness fix. It does not add SMS execution and does not change the durable queue or exact-SIM rules.
+BulkText is an **individual-first SIM-powered SMS platform**. Web 0.16.3 makes the primary workflow campaign-first and adds smart phone-number import for real-world CSV/XLSX files while preserving the certified exact-SIM, immutable campaign, authorization and durable-queue safety boundaries.
 
-## Current flow
-
-```text
-CSV/XLSX upload
-→ column mapping
-→ number validation / duplicate handling
-→ consent and suppression
-→ message composer / personalization
-→ SMS segment estimate
-→ immutable campaign confirmation
-→ gateway + exact-SIM preflight
-→ short-lived send authorization
-→ durable cloud queue
-→ Android claim / durable local persist / ACK
-→ STOP
-```
-
-`downloaded` means the Android client durably persisted and ACKed a cloud job. It does **not** mean submitted, sent, or delivered. Cloud-triggered SMS execution is intentionally out of scope.
-
-## Certified database baseline
-
-The migration chain is unchanged through:
+## Primary user flow
 
 ```text
-20261001000320_durable_cloud_queue.sql
+New Campaign
+→ Campaign name
+→ Upload CSV/XLSX
+→ BulkText detects Pakistan mobile numbers
+→ Confirm the prepared list has consent
+→ Automatic consent/suppression eligibility
+→ Write message
+→ Review immutable campaign
+→ Send to Android
 ```
 
-No migration is added by 0.16.2. Database metadata therefore remains the 00320 schema version (`0.16.0`) while the Web package version is `0.16.2`. Never rewrite an already-applied migration.
+Advanced recipient validation, consent history, gateway preflight, authorization and queue diagnostics remain available for audit/recovery, but they are no longer the normal path.
 
-Important current database capabilities:
+## Smart number import
 
-- immutable campaign confirmation snapshot;
-- gateway preflight and approximately 5-minute authorization;
-- `campaign_dispatches`;
-- `campaign_message_jobs`;
-- `campaign_queue_events`;
-- credential-authenticated claim / ACK / lease-release RPCs;
-- exact Web-bound SIM enforcement;
-- `queue_enabled=true`;
-- `campaign_send_enabled=false`.
+0.16.3 treats the phone-number column as the required data and names/other columns as optional. It:
 
-## 0.16.1 recipient completeness
+- accepts CSV and XLSX (up to 5 MB / 5,000 meaningful rows);
+- detects common headers such as `phone`, `mobile`, `contact`, `cell`, `WhatsApp`, etc.;
+- also scores the actual column values, so unfamiliar headers can still be detected;
+- normalizes supported Pakistan mobile formats to `+923xxxxxxxxx`;
+- identifies invalid and duplicate rows;
+- auto-detects a display-name column when available;
+- ignores styled-but-empty XLSX tail rows and searches the first meaningful rows for the real header.
 
-0.16.1 fixed client retrieval that could treat one PostgREST page as the complete recipient dataset. Explicit paged retrieval now preserves the product limit of 5,000 import rows. The verified 1,400-row acceptance remained 1,400 source / 1,400 included.
+The real `HAMZA DATA.xlsx` acceptance workbook resolves `Contact` as the phone column and `name` as the display-name column, with 1,400 meaningful rows.
 
-## 0.16.2 stabilization
+## Bulk consent declaration
 
-0.16.2 only:
+The simple flow replaces per-number `Manage` clicks with one explicit list-level declaration:
 
-- synchronizes release documentation and UI copy with the 00320 baseline;
-- restores a placeholder-only `.env.example`;
-- upgrades `supabase/verify_fresh_schema.sql` through 00320;
-- adds deterministic release packaging and secret/path scanning;
-- regenerates project-level checksums from a clean staged tree.
+> I confirm these recipients have agreed to receive this campaign.
 
-## Exact-SIM and retry invariants
+The server records append-only consent evidence against each included recipient in the saved preview. Existing active consent is not duplicated. **Do-not-send/suppression always overrides consent.** The declaration is an audit mechanism; users must only confirm it when they actually have permission to message the uploaded recipients.
 
-- The Web-selected SIM is authoritative.
-- Never silently fall back to another SIM.
-- No cloud job is submitted to `SmsManager` in Web 0.16.2.
-- Future uncertain post-submission states must fail closed as `UNKNOWN`, not blind-auto-retry.
+## Send boundary
 
-## Development validation
+Web 0.16.3 does not call Android `SmsManager` directly. After immutable confirmation, **Send to Android** re-runs current safety checks, issues a short-lived authorization and creates the existing durable queue. Android 0.17 then explicitly claims/persists/ACKs and submits jobs using the exact Web-bound SIM.
+
+Cloud SENT/DELIVERED callbacks, attempt/part history and safe retry remain future 0.18 work.
+
+## Versions
+
+```text
+Web package:          0.16.3
+Cloud migration head: 20261001000330
+Android gateway:      0.17.0 / versionCode 9
+Node:                 24.21.0 (project .nvmrc)
+```
+
+0.16.3 adds exactly one forward-only migration:
+
+```text
+20261001000330_simple_campaign_flow_bulk_consent.sql
+```
+
+Do not rewrite already-applied migrations.
+
+## Validation
 
 ```bash
+cd /home/noman/projects/bulktext-web-0.4.0
 nvm use || nvm install
 npm ci
 npm run validate
 npm audit
 git diff --check
-```
 
-Migration state:
-
-```bash
 npx supabase migration list
 npx supabase db push --dry-run
 ```
 
-For this stabilization release, the expected result is **no new migration pending**.
-
-## Release packaging
+Before pushing the database, the dry-run must show **only `20261001000330` pending**. After review:
 
 ```bash
-./scripts/release-package.sh
+npx supabase db push
+npx supabase migration list
 ```
 
-The release builder creates a clean staging directory, excludes local/runtime/generated material, writes and verifies `SHA256SUMS.txt`, scans for secret-bearing artifacts, then creates a deterministic ZIP and a separate ZIP SHA256 file.
+Then run `supabase/verify_fresh_schema.sql` against a fresh/current schema as appropriate.
 
-Excluded examples include `.git/`, `node_modules/`, `dist/`, local `.env*` files except `.env.example`, `supabase/.temp/`, caches, patch backups, and generated release output.
+## Safety invariants preserved
 
-## Next gate
-
-Complete Android 0.6.1 ↔ Web 0.16.x real-device queue acceptance with 1–2 controlled recipients and **zero cloud SMS submission**. Only after that gate passes should a fresh Android 0.17 be built on 0.6.1. Old 0.17/0.18 patches must not be force-applied.
+- exact Web-bound SIM only;
+- no automatic fallback to another SIM;
+- suppression overrides consent;
+- immutable campaign confirmation before queue creation;
+- short-lived server authorization before durable queue creation;
+- Android persists before external SMS effect;
+- ambiguous post-`SmsManager` state is `UNKNOWN`;
+- no blind automatic retry after possible submission;
+- no service-role secrets in browser or Android clients.

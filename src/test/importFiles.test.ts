@@ -109,4 +109,28 @@ describe('XLSX import parsing', () => {
     expect(parsed.rows[0].values).toEqual({ Name: 'Ali', Mobile: '03001234567', City: 'Karachi' })
     expect(parsed.rows[1].values.Mobile).toBe('+923111234567')
   })
+
+  it('finds a phone header after title rows and ignores styled empty tail rows', async () => {
+    const workbook = '<?xml version="1.0"?><workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Data" sheetId="1" r:id="rId1"/></sheets></workbook>'
+    const rels = '<?xml version="1.0"?><Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>'
+    const shared = '<?xml version="1.0"?><sst><si><t>Customer Export</t></si><si><t>name</t></si><si><t>Contact</t></si><si><t>Nimra</t></si></sst>'
+    const emptyRows = Array.from({ length: 1002 }, (_, index) => `<row r="${index + 5}"><c r="A${index + 5}" s="1"/></row>`).join('')
+    const sheet = '<?xml version="1.0"?><worksheet><sheetData>' +
+      '<row r="1"><c r="A1" t="s"><v>0</v></c></row>' +
+      '<row r="3"><c r="A3" t="s"><v>1</v></c><c r="B3" t="s"><v>2</v></c></row>' +
+      '<row r="4"><c r="A4" t="s"><v>3</v></c><c r="B4" t="str"><v>923041013222</v></c></row>' +
+      emptyRows + '</sheetData></worksheet>'
+    const buffer = storedZip([
+      ['xl/workbook.xml', workbook],
+      ['xl/_rels/workbook.xml.rels', rels],
+      ['xl/sharedStrings.xml', shared],
+      ['xl/worksheets/sheet1.xml', sheet],
+    ])
+    const parsed = await parseXlsxArrayBuffer(buffer, { fileName: 'messy.xlsx', fileSha256: 'c'.repeat(64) })
+    expect(parsed.headers).toEqual(['name', 'Contact'])
+    expect(parsed.rows).toHaveLength(1)
+    expect(parsed.rows[0].sourceRowNumber).toBe(4)
+    expect(parsed.rows[0].values.Contact).toBe('923041013222')
+  })
+
 })

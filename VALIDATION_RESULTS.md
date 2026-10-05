@@ -1,97 +1,58 @@
-# BulkText Web 0.16.2 Validation Results
+# BulkText Web 0.16.3 — Validation Results
 
-## Release scope
+## Scope
 
-Web 0.16.2 is **Release & Verification Stabilization only** on top of Web 0.16.1 / Cloud migration head `20261001000320`.
+Simple Campaign Flow + Smart Number Import on top of Web 0.16.2 / Cloud 00320 / Android 0.17.0.
 
-Explicitly unchanged:
+## Completed in artifact environment
 
-- no SMS execution;
-- no Android 0.17 work;
-- no Web/Cloud 0.18 work;
-- no durable queue semantic changes;
-- no exact-SIM rule changes;
-- no Supabase migration added or rewritten.
+- package version `0.16.3`: **PASS**
+- `npm run preflight`: **PASS**
+- TypeScript `tsc --noEmit`: **PASS**
+- TS/TSX syntax transpilation: **PASS**
+- smart-import core compile: **PASS**
+- content-based CSV phone detection/normalization: **PASS**
+- real `HAMZA DATA.xlsx` smart-import acceptance: **PASS**
+  - meaningful source rows: `1400`
+  - detected phone column: `Contact`
+  - detected display-name column: `name`
+  - valid phones: `1400`
+  - invalid: `0`
+  - duplicates: `0`
+- old migrations through `20261001000320`: expected to remain byte-for-byte unchanged (verified during release packaging)
+- exactly one new migration: `20261001000330_simple_campaign_flow_bulk_consent.sql`
+- deterministic clean release packaging/checksum verification: performed during final packaging
 
-## Artifact-side checks completed
+## Environment limitation
 
-- `package.json` / `package-lock.json` version = `0.16.2`: **PASS**
-- placeholder-only `.env.example` restored: **PASS**
-- stale Campaigns / Recipient Eligibility queue-confirmation copy corrected: **PASS**
-- `npm run preflight`: **PASS** (`BulkText 0.16.2 preflight PASS`)
-- migration filename comparison vs uploaded 0.16.1 baseline: **16 / 16 identical**
-- migration byte comparison vs uploaded 0.16.1 baseline: **16 / 16 identical**
-- migration head in source: `20261001000320_durable_cloud_queue.sql`: **PASS**
-- `supabase/verify_fresh_schema.sql` updated through 00320: **PASS (static review)**
-- no-index `git diff --check` equivalent for uploaded ZIP baseline: **PASS (no whitespace errors)**
-- deterministic clean staging release builder: **PASS**
-- staged `SHA256SUMS.txt` generated without self-entry: **PASS**
-- `sha256sum -c SHA256SUMS.txt` in staged release: **PASS**
-- staged forbidden-path scan: **PASS**
-- staged secret-value scan: **PASS**
-- ZIP forbidden-path scan: **PASS**
-- ZIP secret-value scan: **PASS**
+The artifact container has Node 22.16.0 rather than the project's pinned Node 24.21.0. A fresh `npm ci` cannot complete because external NPM registry/network access is unavailable in this environment. The available TypeScript compiler can type-check the project, but local `vitest`/`vite` binaries cannot be freshly installed here.
 
-The release scan recognizes that source code legitimately contains PostgreSQL role-name references such as `service_role` and local-test environment-variable identifiers such as `BULKTEXT_SUPABASE_SERVICE_ROLE_KEY`. These identifiers are not secret values. The scan rejects secret-like values/assignments and forbidden runtime files.
-
-## Required release exclusions verified
-
-The clean source ZIP excludes:
-
-- `.git/`
-- `node_modules/`
-- `dist/`
-- `.env`
-- `.env.local`
-- all `.env.*` except `.env.example`
-- `supabase/.temp/`
-- `supabase/.branches/`
-- `supabase/config.toml.before-*`
-- caches / Python bytecode / coverage / Vite/Turbo caches
-- `.patch-backups/`
-- generated release output
-- `docker.env`
-
-## Environment-dependent commands not independently completed here
-
-The artifact container does not have the project-pinned Node `24.21.0`; it only has Node `22.16.0`. An attempt to install Node `24.21.0` through NVM could not resolve that remote version in this environment.
-
-The container also has no DNS access to `registry.npmjs.org`. Therefore:
-
-- `npm ci`: **BLOCKED by environment/network**
-- `npm run validate` beyond the dependency-free preflight: **BLOCKED because dependencies cannot be installed**
-- `npm audit`: **BLOCKED by registry/DNS access**
-
-The uploaded 0.16.1 handoff records the preceding baseline as 73/73 tests PASS, production build PASS, and `npm audit` 0 vulnerabilities. Those baseline results are not being misrepresented as a fresh 0.16.2 execution.
-
-## Supabase migration-state verification
-
-Static source verification confirms:
-
-- no migration was added;
-- no migration was rewritten;
-- source migration chain remains exactly aligned through `20261001000320`;
-- Web 0.16.2 intentionally leaves DB `app_meta.schema.version` at `0.16.0`, because that value belongs to migration 00320.
-
-A live `npx supabase migration list` / `npx supabase db push --dry-run` could not be independently completed in this artifact container because the Supabase CLI is not installed locally and NPM registry access is unavailable. The provided project handoff states the hosted migration head is already `20261001000320`; rerun the two CLI commands in the linked WSL project before deployment/push to reconfirm there is no pending migration.
-
-## Required WSL confirmation commands
+Therefore the following must be rerun in the user's WSL environment with Node 24.21.0 before commit/deployment:
 
 ```bash
-cd /home/noman/projects/bulktext-web-0.4.0
 nvm use || nvm install
 npm ci
 npm run validate
 npm audit
 git diff --check
+```
+
+## Database deployment gate
+
+Before DB push:
+
+```bash
 npx supabase migration list
 npx supabase db push --dry-run
 ```
 
-Expected database result: local migration files and hosted history align through `20261001000320`, with **no 0.16.2 migration pending**.
+Expected: hosted history aligned through `20261001000320` and **only `20261001000330` pending**. Do not push if any other unexpected migration appears.
 
-## Release result
+After review:
 
-Artifact/package stabilization checks: **PASS**.
+```bash
+npx supabase db push
+npx supabase migration list
+```
 
-Full Node 24 dependency/test/build/audit and live hosted migration-list confirmation: **requires execution in the user's networked WSL project**.
+No Android 0.17 or 0.18 code is part of this Web patch.

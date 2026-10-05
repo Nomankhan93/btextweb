@@ -135,6 +135,34 @@ export function CampaignDetailPage() {
     }
   }
 
+
+  async function sendToPhone() {
+    if (!workspace || !campaignId || dispatch) return
+    if (!window.confirm('Send this confirmed campaign to the paired Android phone? BulkText will re-run exact-SIM preflight, issue a short-lived authorization and create the durable queue. Android 0.17 still requires explicit execution on the phone.')) return
+    setSafetyBusy(true)
+    setSafetyError(null)
+    try {
+      const freshPreflight = await getCampaignSendPreflight(workspace.id, campaignId)
+      setPreflight(freshPreflight)
+      if (!freshPreflight.ready) {
+        setSafetyError(freshPreflight.blockers.join(' ' ) || 'Gateway preflight is blocked.')
+        return
+      }
+      const freshAuthorization = await authorizeCampaignSend(workspace.id, campaignId)
+      setAuthorization(freshAuthorization)
+      const nextDispatch = await enqueueCampaignDispatch(workspace.id, campaignId, freshAuthorization.authorizationId)
+      setDispatch(nextDispatch)
+      setAuthorization(await getLatestCampaignSendAuthorization(workspace.id, campaignId))
+      setNow(new Date())
+    } catch (reason) {
+      const message = errorMessage(reason, 'Could not send this campaign to Android.')
+      try { await refreshSafety() } catch {}
+      setSafetyError(message)
+    } finally {
+      setSafetyBusy(false)
+    }
+  }
+
   const activeAuthorization = useMemo(() => authorizationIsActive(authorization, now), [authorization, now])
   const authorizationStatus = authorization ? (authorization.status === 'consumed' ? 'Consumed' : activeAuthorization ? 'Authorized' : authorization.revokedAt || authorization.status === 'revoked' ? 'Revoked' : 'Expired') : 'Not authorized'
 
@@ -148,7 +176,7 @@ export function CampaignDetailPage() {
 
   return (
     <div className="page-stack">
-      <section className="page-heading recipient-heading"><div><p className="eyebrow">Confirmed campaign</p><h1>{campaign.title}</h1><p>Immutable execution snapshot confirmed {dateTime(campaign.confirmedAt)}. Gateway preflight, short-lived authorization, and durable cloud queueing are available. SMS sending remains disabled.</p></div><Link className="secondary-button" to="/campaigns">Back to campaigns</Link></section>
+      <section className="page-heading recipient-heading"><div><p className="eyebrow">Confirmed campaign</p><h1>{campaign.title}</h1><p>Immutable execution snapshot confirmed {dateTime(campaign.confirmedAt)}. Send to Android runs the exact-SIM safety checks, authorization and durable queue handoff in one action.</p></div><Link className="secondary-button" to="/campaigns">Back to campaigns</Link></section>
 
       <section className="metric-grid confirmation-metrics">
         <article className="metric-card"><span>Recipients</span><h2>{campaign.recipientCount.toLocaleString()}</h2><p>Frozen recipient snapshot.</p></article>
@@ -160,6 +188,13 @@ export function CampaignDetailPage() {
       <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Frozen message</p><h2>Template snapshot</h2></div><span className="badge badge-success">Confirmed</span></div><pre className="campaign-template-preview">{campaign.messageTemplateSnapshot}</pre></section>
 
       <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Phone &amp; SIM</p><h2>Confirmed sending identity</h2></div></div><div className="definition-grid confirmation-device-grid"><div><dt>Phone</dt><dd>{phone}</dd></div><div><dt>Selected SIM</dt><dd>{campaign.simCarrierName || campaign.simDisplayName || 'SIM'} · SIM {campaign.simSlotIndex + 1}</dd></div><div><dt>Subscription</dt><dd>{campaign.simSubscriptionId}</dd></div><div><dt>Phone last seen at confirmation</dt><dd>{dateTime(campaign.gatewayLastSeenAt)}</dd></div></div></section>
+
+      <section className="panel simple-send-panel">
+        <div className="panel-heading"><div><p className="eyebrow">Simple send</p><h2>{dispatch ? 'Campaign is queued on Android' : 'Send to Android'}</h2></div><span className={`badge ${dispatch ? 'badge-success' : preflight?.ready ? 'badge-success' : 'badge-warning'}`}>{dispatch ? 'Queued' : preflight?.ready ? 'Ready' : 'Check required'}</span></div>
+        {safetyError ? <div className="notice error-notice">{safetyError}</div> : null}
+        {dispatch ? <><p className="muted-copy">The durable cloud queue has been created for the exact confirmed SIM. On Android 0.17, tap <strong>Sync cloud jobs (no SMS)</strong>, verify the job becomes Ready, then use <strong>Send next cloud SMS</strong>.</p><p className="muted-copy">{dispatchSummary(dispatch)}</p></> : <><p className="muted-copy">One click re-runs current eligibility, phone/SIM freshness and exact SIM identity, then creates the authorized durable queue. It never falls back to another SIM.</p><div className="button-row"><button className="primary-button" type="button" disabled={safetyBusy} onClick={() => void sendToPhone()}>{safetyBusy ? 'Checking & queueing…' : 'Send to Android'}</button></div></>}
+        <details className="advanced-send-details"><summary>Advanced send controls</summary><p className="muted-copy">The detailed preflight, authorization and queue panels below remain available for diagnostics and recovery.</p></details>
+      </section>
 
       <section className="panel gateway-preflight-panel">
         <div className="panel-heading">
@@ -201,7 +236,7 @@ export function CampaignDetailPage() {
 
       <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Recipients</p><h2>Frozen personalized messages</h2></div><span className="badge badge-muted">First {Math.min(100, campaign.recipientCount)}</span></div>{recipients.length === 0 ? <EmptyState title="No recipients">This campaign has no stored recipients.</EmptyState> : <div className="table-wrap"><table className="data-table campaign-recipient-table"><thead><tr><th>Recipient</th><th>Message</th><th>SMS</th><th>Eligibility</th></tr></thead><tbody>{recipients.map((recipient) => <tr key={recipient.recipientId}><td><strong>{recipient.displayName || 'Recipient'}</strong><small>{recipient.normalizedE164}</small></td><td className="campaign-message-cell">{recipient.renderedMessage}</td><td>{recipient.smsEncoding}<small>{recipient.segmentCount} segment{recipient.segmentCount === 1 ? '' : 's'} · {recipient.characterCount} chars</small></td><td><span className="badge badge-success">Eligible at confirmation</span><small>Current eligibility is rechecked by preflight.</small></td></tr>)}</tbody></table></div>}{campaign.recipientCount > recipients.length ? <p className="muted-copy">Showing the first {recipients.length} recipients. The full snapshot contains {campaign.recipientCount} recipients.</p> : null}</section>
 
-      <section className="notice warning-notice"><strong>0.16 safety boundary:</strong> the cloud queue is durable and Android may lease/download/ACK jobs, but no job reaches SmsManager in this phase. Downloaded does not mean submitted or sent.</section>
+      <section className="notice warning-notice"><strong>0.16.3 / Android 0.17 boundary:</strong> Web can prepare and queue the confirmed campaign; Android 0.17 may explicitly submit downloaded jobs on the exact bound SIM. Cloud SENT/DELIVERED callbacks, attempt history and safe retry workflows remain for 0.18.</section>
     </div>
   )
 }

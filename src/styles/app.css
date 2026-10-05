@@ -393,3 +393,34 @@ a { color: inherit; }
 .send-authorization-panel .button-row { margin-bottom: 0; }
 .durable-queue-panel .button-row { margin-bottom: 0; }
 .durable-queue-panel .definition-grid + .definition-grid { margin-top: 12px; }
+
+/* 0.16.3 — Simple Campaign Flow + Smart Number Import */
+.simple-stepper { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+.simple-stepper li { display: flex; align-items: center; gap: 9px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 12px; color: var(--muted); background: #f8fbfb; font-size: .85rem; font-weight: 750; }
+.simple-stepper li span { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; background: #e7eeee; color: #456168; }
+.simple-stepper li.active { color: #185f5b; border-color: #9fc9c6; background: #f0faf8; }
+.simple-stepper li.active span { background: var(--brand); color: white; }
+.simple-campaign-section .field { max-width: 100%; }
+.simple-import-summary { grid-template-columns: repeat(4,minmax(0,1fr)); margin-top: 18px; }
+.advanced-mapping { margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: #fbfdfd; }
+.advanced-mapping summary, .advanced-workflow-panel summary, .advanced-send-details summary { cursor: pointer; font-weight: 750; color: #385057; }
+.bulk-consent-declaration, .bulk-consent-panel { display: grid; gap: 14px; margin-top: 18px; }
+.consent-check { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1px solid #9fc9c6; border-radius: 12px; background: #f0faf8; }
+.consent-check input { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; }
+.consent-check span { display: grid; gap: 4px; }
+.consent-check small { color: var(--muted); font-weight: 500; line-height: 1.45; }
+.simple-message-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); margin-top: 16px; }
+.simple-flow-card { background: linear-gradient(180deg,#fff,#f8fbfb); }
+.simple-flow-steps { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-top: 8px; }
+.simple-flow-steps div { border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: grid; gap: 5px; }
+.simple-flow-steps span { color: var(--muted); font-size: .84rem; line-height: 1.45; }
+.advanced-workflow-panel { padding: 16px 20px; }
+.advanced-tool-links { margin-top: 14px; }
+.simple-send-panel { border-color: #9fc9c6; background: #f8fdfc; }
+.advanced-send-details { margin-top: 14px; }
+@media (max-width: 980px) {
+  .simple-stepper, .simple-flow-steps, .simple-import-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 700px) {
+  .simple-stepper, .simple-flow-steps, .simple-import-summary, .simple-message-metrics { grid-template-columns: 1fr; }
+}

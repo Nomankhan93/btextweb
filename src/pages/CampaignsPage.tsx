@@ -6,12 +6,6 @@ import { errorMessage } from '../lib/errors'
 import { workflowRoutes } from '../lib/productNavigation'
 import { useWorkspace } from '../workspace/WorkspaceProvider'
 
-const preparationSteps = [
-  { step: '1', title: 'Add recipients', description: 'Upload a CSV or XLSX file, map the phone column and review invalid or duplicate numbers.', href: workflowRoutes.recipients, action: 'Upload recipients' },
-  { step: '2', title: 'Check consent & opt-outs', description: 'Review whether each number is allowed to continue and keep do-not-send records up to date.', href: workflowRoutes.consent, action: 'Review eligibility' },
-  { step: '3', title: 'Write the message', description: 'Personalize the SMS, review estimated SMS units and save a draft for confirmation.', href: workflowRoutes.composer, action: 'Write message' },
-] as const
-
 function dateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
@@ -38,19 +32,35 @@ export function CampaignsPage() {
 
   return (
     <div className="page-stack">
-      <section className="page-heading"><div><p className="eyebrow">Campaigns</p><h1>Campaigns</h1><p>Prepare recipients and a message, then review and confirm an immutable campaign snapshot before any sending workflow is enabled.</p></div></section>
+      <section className="page-heading recipient-heading">
+        <div><p className="eyebrow">Campaigns</p><h1>Campaigns</h1><p>Create a campaign, upload the list, write the message and review before sending through your exact selected SIM.</p></div>
+        <Link className="primary-button" to="/campaigns/new">+ New campaign</Link>
+      </section>
       {error ? <div className="notice error-notice">{error}</div> : null}
 
-      <section className="metric-grid dashboard-module-grid" aria-label="Campaign preparation">{preparationSteps.map((item) => <article className="metric-card" key={item.step}><span>Step {item.step}</span><h2>{item.title}</h2><p>{item.description}</p><Link className="primary-link" to={item.href}>{item.action}</Link></article>)}</section>
+      <section className="panel simple-flow-card">
+        <div className="panel-heading"><div><p className="eyebrow">Simple flow</p><h2>Campaign → List → Message → Send</h2></div><Link className="primary-link" to="/campaigns/new">Start campaign</Link></div>
+        <div className="simple-flow-steps">
+          <div><strong>1. Campaign</strong><span>Name the campaign.</span></div>
+          <div><strong>2. List</strong><span>Upload CSV/XLSX. BulkText finds the mobile numbers.</span></div>
+          <div><strong>3. Message</strong><span>Type the SMS and review estimated usage.</span></div>
+          <div><strong>4. Send</strong><span>Confirm the exact recipients, phone and SIM, then queue to Android.</span></div>
+        </div>
+      </section>
 
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">Confirmed campaigns</p><h2>Immutable campaign snapshots</h2></div><span className="badge badge-muted">{campaigns.length}</span></div>
-        {loading ? <LoadingState label="Loading campaigns…" /> : campaigns.length === 0 ? <EmptyState title="No confirmed campaigns yet">Save a message draft, then use Review &amp; confirm from the message screen.</EmptyState> : (
+        <div className="panel-heading"><div><p className="eyebrow">Confirmed campaigns</p><h2>Campaign history</h2></div><span className="badge badge-muted">{campaigns.length}</span></div>
+        {loading ? <LoadingState label="Loading campaigns…" /> : campaigns.length === 0 ? <EmptyState title="No confirmed campaigns yet">Use New campaign to create the first one.</EmptyState> : (
           <div className="table-wrap"><table className="data-table campaign-list-table"><thead><tr><th>Campaign</th><th>Recipients</th><th>Estimated SMS</th><th>Phone &amp; SIM</th><th>Confirmed</th><th /></tr></thead><tbody>{campaigns.map((campaign) => <tr key={campaign.campaignId}><td><strong>{campaign.title}</strong><small>{campaign.encodingSummary} · {campaign.minimumSegments}–{campaign.maximumSegments} segments</small></td><td>{campaign.recipientCount.toLocaleString()}</td><td>{campaign.estimatedSmsUnits.toLocaleString()}</td><td>{campaign.gatewayDeviceName}<small>{campaign.simCarrierName || 'SIM'} · SIM {campaign.simSlotIndex + 1}</small></td><td>{dateTime(campaign.confirmedAt)}</td><td><Link className="primary-link" to={`/campaigns/${campaign.campaignId}`}>Open</Link></td></tr>)}</tbody></table></div>
         )}
       </section>
 
-      <section className="notice warning-notice">Confirmed campaigns are frozen for execution. Gateway preflight, short-lived authorization, and durable cloud queueing are available. SMS execution and scheduling remain disabled.</section>
+      <details className="panel advanced-workflow-panel">
+        <summary>Advanced recipient &amp; compliance tools</summary>
+        <div className="button-row advanced-tool-links"><Link className="secondary-button" to={workflowRoutes.recipients}>Recipient imports</Link><Link className="secondary-button" to={workflowRoutes.consent}>Consent / do-not-send</Link><Link className="secondary-button" to={workflowRoutes.composer}>Message drafts</Link></div>
+      </details>
+
+      <section className="notice warning-notice">Web confirmation, exact-SIM preflight, short-lived authorization and durable cloud queueing remain enforced. With Android 0.17+, downloaded jobs can be explicitly submitted on the bound SIM; cloud SENT/DELIVERED callbacks and scheduling remain future work.</section>
     </div>
   )
 }

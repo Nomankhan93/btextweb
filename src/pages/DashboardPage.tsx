@@ -69,8 +69,9 @@ export function DashboardPage() {
         <div>
           <p className="eyebrow">My BulkText</p>
           <h1>{displayName ? `Welcome, ${displayName}` : 'Welcome'}</h1>
-          <p>Prepare recipients and a personalized SMS campaign using your own Android phone and the SIM you explicitly select.</p>
+          <p>Create a campaign, upload your list, write the SMS and send it through your explicitly selected Android SIM.</p>
         </div>
+        <Link className="primary-button" to="/campaigns/new">+ New campaign</Link>
       </section>
 
       {loadError ? <section className="notice warning-notice">{loadError}</section> : null}

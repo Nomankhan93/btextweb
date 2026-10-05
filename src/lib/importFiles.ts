@@ -41,18 +41,26 @@ function matrixToParsedRows(matrix: string[][], options: {
   fileSizeBytes: number
   fileSha256: string
   sheetName: string | null
-}): ParsedImportFile {
+}, sourceRowNumbers?: number[]): ParsedImportFile {
   const meaningful = matrix
-    .map((row, index) => ({ row, sourceRowNumber: index + 1 }))
+    .map((row, index) => ({ row, sourceRowNumber: sourceRowNumbers?.[index] ?? index + 1 }))
     .filter(({ row }) => !isBlankRow(row))
   if (meaningful.length === 0) throw new Error('The import file is empty.')
 
+  const phoneHeaderHints = /^(phone|phone no|phone number|mobile|mobile no|mobile number|cell|cell no|contact|contact no|contact number|whatsapp|whatsapp no|number|recipient|msisdn)$/i
+  const candidateHeaderIndex = meaningful.slice(0, 20).findIndex(({ row }) =>
+    row.some((value) => phoneHeaderHints.test(value.trim().replace(/[^a-z0-9]+/gi, ' ').trim())),
+  )
+  const headerIndex = candidateHeaderIndex >= 0 ? candidateHeaderIndex : 0
+  const headerRow = meaningful[headerIndex]
+
   const seen = new Map<string, number>()
-  const rawHeaders = meaningful[0].row.slice(0, MAX_IMPORT_COLUMNS)
+  const headerWidth = Math.min(headerRow.row.length, MAX_IMPORT_COLUMNS)
+  const rawHeaders = Array.from({ length: headerWidth }, (_, index) => headerRow.row[index] ?? '')
   const headers = rawHeaders.map((value, index) => normalizeHeader(value, index, seen))
   if (headers.length === 0) throw new Error('The import file does not contain a header row.')
 
-  const dataRows = meaningful.slice(1)
+  const dataRows = meaningful.slice(headerIndex + 1)
   const limitedRows = dataRows.slice(0, MAX_IMPORT_ROWS)
   const rows: ParsedImportRow[] = limitedRows.map(({ row, sourceRowNumber }) => {
     const values: Record<string, string> = {}
@@ -265,13 +273,16 @@ function columnIndex(reference: string): number {
   return result - 1
 }
 
-function parseWorksheet(xml: string, sharedStrings: string[]): string[][] {
+function parseWorksheet(xml: string, sharedStrings: string[]): { rows: string[][]; rowNumbers: number[] } {
   const rows: string[][] = []
+  const rowNumbers: number[] = []
+  let blankRun = 0
+  let lastRowNumber = 0
   for (const rowMatch of xml.matchAll(/<row\b([^>]*)>([\s\S]*?)<\/row>/g)) {
     const row: string[] = []
     const rowNumberText = attribute(rowMatch[1], 'r')
-    const rowNumber = rowNumberText && /^\d+$/.test(rowNumberText) ? Number(rowNumberText) : rows.length + 1
-    while (rows.length < rowNumber - 1) rows.push([])
+    const rowNumber = rowNumberText && /^\d+$/.test(rowNumberText) ? Number(rowNumberText) : lastRowNumber + 1
+    lastRowNumber = rowNumber
     const body = rowMatch[2]
     for (const cellMatch of body.matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>|<c\b([^>]*)\/>/g)) {
       const attrs = cellMatch[1] ?? cellMatch[3] ?? ''
@@ -288,9 +299,20 @@ function parseWorksheet(xml: string, sharedStrings: string[]): string[][] {
       else value = decodeXml(rawValue)
       row[index] = value
     }
-    rows.push(row.map((value) => value ?? ''))
+    const normalized = row.map((value) => value ?? '')
+    if (isBlankRow(normalized)) {
+      blankRun += 1
+      // Real-world XLSX files often contain hundreds of thousands of styled-but-empty rows.
+      // Once data has started, a long empty tail is treated as worksheet formatting rather than recipient data.
+      if (rows.length > 1 && blankRun >= 1000) break
+      continue
+    }
+    blankRun = 0
+    rows.push(normalized)
+    rowNumbers.push(rowNumber)
+    if (rows.length >= MAX_IMPORT_ROWS + 2) break
   }
-  return rows
+  return { rows, rowNumbers }
 }
 
 function resolveWorksheetTarget(workbookXml: string, relationshipsXml: string): { sheetName: string; path: string } {
@@ -334,15 +356,15 @@ export async function parseXlsxArrayBuffer(buffer: ArrayBuffer, options: {
   const sharedEntry = entries.get('xl/sharedStrings.xml')
   const sharedStrings = sharedEntry ? parseSharedStrings(textDecoder.decode(await readZipEntry(buffer, sharedEntry))) : []
   const worksheetXml = textDecoder.decode(await readZipEntry(buffer, worksheetEntry))
-  const matrix = parseWorksheet(worksheetXml, sharedStrings)
+  const parsedWorksheet = parseWorksheet(worksheetXml, sharedStrings)
 
-  return matrixToParsedRows(matrix, {
+  return matrixToParsedRows(parsedWorksheet.rows, {
     fileName: options.fileName ?? 'import.xlsx',
     fileType: 'xlsx',
     fileSizeBytes: options.fileSizeBytes ?? buffer.byteLength,
     fileSha256: options.fileSha256 ?? await sha256Hex(buffer),
     sheetName,
-  })
+  }, parsedWorksheet.rowNumbers)
 }
 
 export async function parseSpreadsheetFile(file: File): Promise<ParsedImportFile> {

@@ -1,6 +1,6 @@
--- BulkText Individual-First schema verification through migration 20261001000320.
+-- BulkText Individual-First schema verification through migration 20261001000330.
 -- Structural/metadata checks only; this script does not create or modify application data.
--- Web 0.16.2 adds no migration, so app_meta.schema.version remains 0.16.0 from 00320.
+-- Web 0.16.3 adds the bulk consent declaration RPC while preserving queue/exact-SIM semantics.
 
 do $$
 declare
@@ -14,8 +14,8 @@ begin
     raise exception 'Missing app_meta schema metadata';
   end if;
 
-  if coalesce(v_meta ->> 'version', '') <> '0.16.0' then
-    raise exception 'Expected app_meta schema version 0.16.0 from migration 00320, got %', v_meta;
+  if coalesce(v_meta ->> 'version', '') <> '0.16.3' then
+    raise exception 'Expected app_meta schema version 0.16.3 from migration 00330, got %', v_meta;
   end if;
 
   if coalesce(v_meta ->> 'tenant_model', '') <> 'hidden_personal_workspace' then
@@ -39,7 +39,7 @@ begin
   end if;
 
   if coalesce((v_meta ->> 'campaign_send_enabled')::boolean, false) is not false then
-    raise exception 'Cloud SMS execution must remain disabled through Web 0.16.2';
+    raise exception 'Web-direct SMS execution flag must remain disabled; Android execution is a separate client boundary';
   end if;
 
   if coalesce((v_meta ->> 'queue_lease_seconds')::integer, 0) <> 120 then
@@ -56,6 +56,18 @@ begin
 
   if coalesce((v_meta ->> 'exact_sim_queue_claim_required')::boolean, false) is not true then
     raise exception 'Exact-SIM queue claim enforcement must remain enabled';
+  end if;
+
+  if coalesce((v_meta ->> 'smart_number_import_enabled')::boolean, false) is not true then
+    raise exception 'Smart number import must be enabled after 00330';
+  end if;
+
+  if coalesce((v_meta ->> 'bulk_consent_declaration_enabled')::boolean, false) is not true then
+    raise exception 'Bulk consent declaration must be enabled after 00330';
+  end if;
+
+  if coalesce((v_meta ->> 'simple_campaign_flow_enabled')::boolean, false) is not true then
+    raise exception 'Simple campaign flow must be enabled after 00330';
   end if;
 
   foreach v_name in array array[
@@ -76,7 +88,7 @@ begin
   end loop;
 
   if cardinality(v_missing) > 0 then
-    raise exception 'Missing required tables through 00320: %', array_to_string(v_missing, ', ');
+    raise exception 'Missing required tables through 00330: %', array_to_string(v_missing, ', ');
   end if;
 
   -- Campaign confirmation snapshot (00300/00305).
@@ -126,6 +138,12 @@ begin
     raise exception 'Missing release_gateway_message_job_leases(uuid,text,jsonb) RPC';
   end if;
 
+
+  -- Simple campaign flow bulk consent declaration (00330).
+  if to_regprocedure('public.record_recipient_preview_bulk_consent(uuid,uuid,text,text,text,timestamptz)') is null then
+    raise exception 'Missing record_recipient_preview_bulk_consent(uuid,uuid,text,text,text,timestamptz) RPC';
+  end if;
+
   if not exists (
     select 1 from pg_indexes
     where schemaname='public' and tablename='gateway_devices'
@@ -153,7 +171,7 @@ begin
     raise exception 'Legacy list_my_organizations() RPC should not exist';
   end if;
 
-  raise notice 'BulkText schema structural verification through 20261001000320 PASS';
+  raise notice 'BulkText schema structural verification through 20261001000330 PASS';
 end;
 $$;
 

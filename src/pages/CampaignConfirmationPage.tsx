@@ -124,8 +124,8 @@ export function CampaignConfirmationPage() {
       </section>
 
       <section className="panel confirmation-action-panel">
-        <div><p className="eyebrow">Immutable confirmation</p><h2>Freeze this campaign</h2><p className="muted-copy">After confirmation, edits to the source Excel file, recipient preparation or message draft do not change this campaign snapshot. No SMS is sent in this phase.</p></div>
-        <button className="primary-button" type="button" disabled={!readiness.ready || busy} onClick={() => void confirm()}>{busy ? 'Confirming…' : 'Confirm campaign'}</button>
+        <div><p className="eyebrow">Immutable confirmation</p><h2>Freeze this campaign</h2><p className="muted-copy">After confirmation, edits to the source file, recipient preparation or message draft do not change this campaign snapshot. Confirmation itself sends nothing; the next screen performs the exact-SIM Web → Android handoff.</p></div>
+        <button className="primary-button" type="button" disabled={!readiness.ready || busy} onClick={() => void confirm()}>{busy ? 'Confirming…' : 'Confirm & continue to send'}</button>
       </section>
     </div>
   )

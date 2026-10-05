@@ -1,93 +1,87 @@
-# BulkText Web 0.16.2 Handoff
+# BulkText Web 0.16.3 Handoff
 
-## Baseline
-
-```text
-Web package:             0.16.2
-Built from Web baseline: 0.16.1 / commit 5310827
-Cloud migration head:    20261001000320
-Android baseline:        0.6.1 / versionCode 8
-Recipient 1400→1000 bug: fixed in 0.16.1
-```
-
-0.16.2 is **stabilization only**. No Supabase migration was added or rewritten. No SMS execution was added. Durable queue semantics and exact-SIM behavior are unchanged.
-
-## Current architecture boundary
+## Certified incoming baseline
 
 ```text
-confirmed campaign
-→ gateway/exact-SIM preflight
-→ short-lived authorization
-→ durable cloud queue
-→ Android claim
-→ durable local persistence
-→ ACK
-→ STOP
+Web:                   0.16.2
+Web commit:            331d56d on main
+Cloud migration head:  20261001000320
+Android:               0.17.0 / versionCode 9
 ```
 
-Queue state `downloaded` is not SMS submission, sent, or delivered. `campaign_send_enabled=false`.
+## 0.16.3 purpose
 
-## Non-negotiable rules
-
-- exact Web-bound SIM only;
-- no silent SIM fallback;
-- suppression overrides consent;
-- browser pagination must not define campaign completeness;
-- persist before future external SMS effect;
-- no blind retry after possible future `SmsManager` submission;
-- ambiguous future submission state is `UNKNOWN`;
-- never rewrite applied Supabase migrations.
-
-## Database state
-
-Current forward migration chain ends at:
+**Simple Campaign Flow + Smart Number Import.** The product now follows the user's natural mental model:
 
 ```text
-20261001000300_campaign_confirmation_snapshot.sql
-20261001000305_campaign_confirmation_lint_stabilization.sql
-20261001000310_gateway_preflight_send_authorization.sql
-20261001000320_durable_cloud_queue.sql
+Create Campaign → Upload List → Write Message → Review / Send
 ```
 
-Because 0.16.2 has no DB migration, `app_meta.schema.version` remains `0.16.0` from 00320. The fresh-schema verifier checks the 00320 objects and feature flags.
+Technical validation/compliance/safety details remain enforced and inspectable, but are not required as separate manual pages in the primary flow.
 
-## 0.16.2 changes
+## New Web behavior
 
-- Web version bumped to 0.16.2.
-- README / handoff / patch / validation documentation refreshed.
-- Stale Campaigns and Recipient Eligibility copy corrected: confirmation and durable queue are present; SMS execution remains disabled.
-- `.env.example` restored with public placeholder values only.
-- `supabase/verify_fresh_schema.sql` updated through 00320.
-- deterministic clean-stage release packaging added.
-- project-level `SHA256SUMS.txt` regenerated from the clean release stage.
-- release scan rejects local env/runtime files and secret-value patterns.
+- `/campaigns/new` campaign-first wizard.
+- Smart CSV/XLSX phone-column detection from both headers and actual values.
+- Names are optional; phone numbers are the required field.
+- XLSX parser tolerates leading title rows and large styled-empty tails.
+- Automatic valid/invalid/duplicate summary and unique-recipient selection.
+- One explicit bulk consent declaration for the prepared list.
+- Suppression/do-not-send remains authoritative and always wins.
+- Eligibility snapshot is created automatically after the declaration.
+- Message composer is embedded in the simple flow.
+- Existing immutable review/confirmation remains the final Web snapshot boundary.
+- Confirmed campaign detail provides one `Send to Android` action that combines preflight + short authorization + durable queue creation.
+- Android 0.17 still performs explicit phone-side execution; 0.16.3 does not add browser-to-SmsManager execution.
 
-## Remaining QA gate before 0.17
-
-Use only 1–2 controlled/authorized recipients:
-
-1. create a tiny confirmed campaign;
-2. preflight Ready;
-3. authorize;
-4. create durable queue;
-5. Android 0.6.1 Sync cloud jobs (no SMS);
-6. verify claim → local persistence → ACK;
-7. verify Web queue becomes `downloaded`;
-8. force-stop/reopen and verify persistence;
-9. offline → restore → safe resync;
-10. remove/disable bound SIM and verify Missing/block;
-11. verify other SIM is never substituted;
-12. duplicate sync does not duplicate local jobs;
-13. cloud-triggered SMS count remains zero.
-
-## Next build order
+## New migration
 
 ```text
-0.16.2 stabilization
-→ finish Android 0.6.1 real-device queue QA
-→ build NEW Android 0.17 on 0.6.1
-→ controlled SMS execution acceptance
-→ build NEW Web/Cloud 0.18 on 0.16.2/current baseline
+20261001000330_simple_campaign_flow_bulk_consent.sql
 ```
 
-Do not force-apply old Android 0.17 or old Web 0.18 artifacts.
+Adds:
+
+```text
+record_recipient_preview_bulk_consent(...)
+```
+
+The RPC creates append-only grant events only where active consent is not already present. It does not remove or bypass suppression. It updates schema metadata to `0.16.3` and enables the simple-flow/smart-import feature flags.
+
+## Real workbook acceptance case
+
+`HAMZA DATA.xlsx` contains one meaningful 1,400-row dataset even though its stored XLSX worksheet dimension extends much farther due formatting. 0.16.3 detects:
+
+```text
+phone column: Contact
+name column:  name
+rows:         1400
+valid:        1400
+invalid:      0
+duplicates:   0
+```
+
+## Unchanged boundaries
+
+- exact SIM binding and no-fallback rules;
+- migrations through `20261001000320` are unchanged;
+- campaign confirmation remains immutable;
+- queue jobs and leases retain 00320 semantics;
+- Android 0.17 `SUBMITTING` / `SUBMITTED` / `UNKNOWN` rules are unchanged;
+- no cloud SENT/DELIVERED callback model is added here.
+
+## Deployment order
+
+```text
+1. Apply Web 0.16.3 source/patch
+2. nvm use / npm ci / npm run validate / npm audit / git diff --check
+3. npx supabase migration list
+4. npx supabase db push --dry-run
+5. Confirm ONLY 20261001000330 is pending
+6. npx supabase db push
+7. Re-run migration list / schema verification
+8. Browser acceptance using a controlled recipient list
+9. Continue Android 0.17 real-device cloud execution acceptance
+```
+
+Do **not** start/rebase 0.18 until 0.17 real-device execution acceptance is complete.

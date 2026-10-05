@@ -3,7 +3,7 @@ import process from 'node:process'
 
 const requiredFiles = [
   'package.json','.env.example','src/App.tsx','src/pages/DashboardPage.tsx','src/pages/CampaignsPage.tsx',
-  'src/pages/CampaignConfirmationPage.tsx','src/pages/CampaignDetailPage.tsx','src/auth/AuthProvider.tsx',
+  'src/pages/CampaignConfirmationPage.tsx','src/pages/CampaignDetailPage.tsx','src/pages/SimpleCampaignPage.tsx','src/auth/AuthProvider.tsx',
   'src/workspace/WorkspaceProvider.tsx','src/workspace/RequireWorkspace.tsx','src/lib/errors.ts','src/lib/gatewayDevices.ts',
   'src/lib/messageComposer.ts','src/lib/messageComposerApi.ts','src/lib/smsSegments.ts','src/lib/campaignConfirmation.ts',
   'src/lib/campaignConfirmationApi.ts','src/lib/gatewayPreflight.ts','src/lib/gatewayPreflightApi.ts','src/lib/durableQueue.ts','src/lib/durableQueueApi.ts','src/lib/productNavigation.ts',
@@ -24,6 +24,7 @@ const requiredFiles = [
   'supabase/migrations/20261001000305_campaign_confirmation_lint_stabilization.sql',
   'supabase/migrations/20261001000310_gateway_preflight_send_authorization.sql',
   'supabase/migrations/20261001000320_durable_cloud_queue.sql',
+  'supabase/migrations/20261001000330_simple_campaign_flow_bulk_consent.sql',
   'docs/CAMPAIGN_CONFIRMATION_SNAPSHOT.md','docs/GATEWAY_PREFLIGHT_SEND_AUTHORIZATION.md','docs/DURABLE_CLOUD_QUEUE.md',
   'scripts/test-durable-queue-local.mjs','scripts/release-package.py','scripts/release-package.sh','supabase/verify_fresh_schema.sql','src/test/smsSegments.test.ts','src/test/campaignConfirmation.test.ts','src/test/gatewayPreflight.test.ts','src/test/durableQueue.test.ts','src/test/productNavigation.test.ts',
 ]
@@ -31,4 +32,4 @@ const forbiddenFiles = ['src/organizations/OrganizationProvider.tsx','src/organi
 const missing=[]; for (const file of requiredFiles) { try { await readFile(new URL(`../${file}`,import.meta.url)) } catch { missing.push(file) } }
 const forbiddenPresent=[]; for (const file of forbiddenFiles) { try { await access(new URL(`../${file}`,import.meta.url)); forbiddenPresent.push(file) } catch {} }
 if (missing.length || forbiddenPresent.length) { if(missing.length) console.error(`Preflight failed. Missing: ${missing.join(', ')}`); if(forbiddenPresent.length) console.error(`Preflight failed. Legacy files present: ${forbiddenPresent.join(', ')}`); process.exit(1) }
-console.log('BulkText 0.16.2 preflight PASS')
+console.log('BulkText 0.16.3 preflight PASS')

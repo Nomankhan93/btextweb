@@ -7,6 +7,7 @@ import {
   getRecipientEligibilitySnapshotRows,
   listRecipientEligibilityRows,
   listRecipientEligibilitySnapshots,
+  recordRecipientPreviewBulkConsent,
   type RecipientEligibilityRow,
   type RecipientEligibilitySnapshotSummary,
   type StoredEligibilityRow,
@@ -30,6 +31,8 @@ export function RecipientEligibilityPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [bulkConsentConfirmed, setBulkConsentConfirmed] = useState(false)
+  const [bulkEvidenceReference, setBulkEvidenceReference] = useState('')
   const canCreate = true
 
   const summary = useMemo(() => summarizeEligibility(rows), [rows])
@@ -80,6 +83,30 @@ export function RecipientEligibilityPage() {
     }
   }
 
+
+  async function recordBulkConsent() {
+    if (!workspace || !previewId || !bulkConsentConfirmed) return
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const result = await recordRecipientPreviewBulkConsent({
+        organizationId: workspace.id,
+        previewId,
+        source: 'import',
+        evidenceNote: 'Bulk consent declaration from the recipient eligibility screen. The account owner confirmed that the included recipients may receive this campaign.',
+        evidenceReference: bulkEvidenceReference.trim() || `Recipient preview ${previewId}`,
+      })
+      await refresh()
+      setMessage(`${result.newGrantEvents.toLocaleString()} consent grant${result.newGrantEvents === 1 ? '' : 's'} recorded. Existing do-not-send blocks remain enforced.`)
+      setBulkConsentConfirmed(false)
+    } catch (reason) {
+      setError(errorMessage(reason, 'Could not record the bulk consent declaration.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function viewSnapshot(snapshotId: string) {
     if (!workspace) return
     setBusy(true)
@@ -125,6 +152,15 @@ export function RecipientEligibilityPage() {
         <article className="metric-card"><span>Do-not-send</span><h2>{summary.suppressed}</h2><p>Blocked numbers cannot continue even when consent exists.</p></article>
       </section>
 
+      {summary.noConsent + summary.revoked + summary.expired > 0 ? (
+        <section className="panel bulk-consent-panel">
+          <div className="panel-heading"><div><p className="eyebrow">Bulk consent</p><h2>Confirm the prepared list once</h2><p className="muted-copy">Use this only when the recipients in this list have actually agreed to receive the campaign. You do not need to manage each number individually.</p></div></div>
+          <label className="consent-check"><input type="checkbox" checked={bulkConsentConfirmed} disabled={busy} onChange={(event) => setBulkConsentConfirmed(event.target.checked)} /><span><strong>I confirm the included recipients have consented to receive this campaign.</strong><small>One append-only consent event is recorded per included recipient. Do-not-send status still overrides consent.</small></span></label>
+          <label className="field"><span>Evidence / list reference (optional)</span><input value={bulkEvidenceReference} disabled={busy} maxLength={500} onChange={(event) => setBulkEvidenceReference(event.target.value)} placeholder="CRM export, signup batch, customer list…" /></label>
+          <div className="button-row"><button className="primary-button" type="button" disabled={busy || !bulkConsentConfirmed} onClick={() => void recordBulkConsent()}>{busy ? 'Recording…' : `Record consent for prepared list`}</button></div>
+        </section>
+      ) : null}
+
       <section className="panel">
         <div className="panel-heading">
           <div><p className="eyebrow">Current checks</p><h2>Recipient eligibility</h2></div>
@@ -156,14 +192,14 @@ export function RecipientEligibilityPage() {
 
       {activeSnapshotId ? (
         <section className="panel">
-          <div className="panel-heading"><div><p className="eyebrow">Saved eligibility</p><h2>Recipient decisions</h2></div><div className="recipient-actions"><span className="badge badge-success">{storedRows.filter((row) => row.eligibilityState === 'eligible').length} eligible</span><Link className="primary-button compact-button" to={`/composer?snapshot=${encodeURIComponent(activeSnapshotId)}`}>Write message</Link></div></div>
+          <div className="panel-heading"><div><p className="eyebrow">Saved eligibility</p><h2>Recipient decisions</h2></div><div className="recipient-actions"><span className="badge badge-success">{storedRows.filter((row) => row.eligibilityState === 'eligible').length} eligible</span>{storedRows.some((row) => row.eligibilityState === 'eligible') ? <Link className="primary-button compact-button" to={`/composer?snapshot=${encodeURIComponent(activeSnapshotId)}`}>Write message</Link> : <span className="badge badge-warning">Consent required</span>}</div></div>
           <div className="table-wrap"><table className="data-table stored-eligibility-table"><thead><tr><th>Row</th><th>Name</th><th>Number</th><th>Consent</th><th>Do-not-send</th><th>Decision</th></tr></thead><tbody>{storedRows.map((row) => (
             <tr key={row.eligibilityRowId}><td>{row.sourceRowNumber}</td><td>{row.displayName ?? '—'}</td><td><code>{row.normalizedE164}</code></td><td>{consentStateLabel(row.consentState)}<small>{row.consentSource?.replaceAll('_', ' ') ?? '—'}</small></td><td>{row.suppressionState}<small>{row.suppressionReason?.replaceAll('_', ' ') ?? '—'}</small></td><td><span className={row.eligibilityState === 'eligible' ? 'badge badge-success' : 'badge badge-warning'}>{row.eligibilityState}</span><small>{blockReasonLabel(row.blockReason)}</small></td></tr>
           ))}</tbody></table></div>
         </section>
       ) : null}
 
-      <section className="notice warning-notice">Eligibility snapshots are a compliance gate. You can draft personalized text, confirm an immutable campaign, run gateway preflight, authorize, and create the durable cloud queue. SMS execution remains disabled.</section>
+      <section className="notice warning-notice">Eligibility snapshots remain the compliance gate. With Android 0.17+, downloaded cloud jobs may be explicitly submitted on the exact bound SIM; SENT/DELIVERED cloud callbacks and scheduling are not yet part of this Web release.</section>
     </div>
   )
 }

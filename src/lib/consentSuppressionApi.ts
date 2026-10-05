@@ -253,3 +253,36 @@ export async function getRecipientEligibilitySnapshotRows(organizationId: string
     suppressionOccurredAt: row.suppression_occurred_at ? String(row.suppression_occurred_at) : null,
   }))
 }
+
+export interface BulkConsentDeclarationResult {
+  candidateRows: number
+  newGrantEvents: number
+  alreadyGrantedRows: number
+  suppressedRows: number
+}
+
+export async function recordRecipientPreviewBulkConsent(input: {
+  organizationId: string
+  previewId: string
+  source?: ConsentSource
+  evidenceNote?: string | null
+  evidenceReference?: string | null
+  expiresAt?: string | null
+}): Promise<BulkConsentDeclarationResult> {
+  const { data, error } = await client().rpc('record_recipient_preview_bulk_consent', {
+    p_organization_id: input.organizationId,
+    p_preview_id: input.previewId,
+    p_source: input.source ?? 'import',
+    p_evidence_note: input.evidenceNote ?? null,
+    p_evidence_reference: input.evidenceReference ?? null,
+    p_expires_at: input.expiresAt ?? null,
+  })
+  if (error) throw new Error(errorMessage(error, 'Could not record bulk consent declaration.'))
+  const row = (data ?? {}) as Record<string, unknown>
+  return {
+    candidateRows: Number(row.candidateRows ?? 0),
+    newGrantEvents: Number(row.newGrantEvents ?? 0),
+    alreadyGrantedRows: Number(row.alreadyGrantedRows ?? 0),
+    suppressedRows: Number(row.suppressedRows ?? 0),
+  }
+}
