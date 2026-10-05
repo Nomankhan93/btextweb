@@ -129,3 +129,7 @@ Shadow DB  56320
 The current Individual-First baseline is intended for the linked Supabase Cloud
 development project. Do not assume a local BulkText database is running unless
 a local environment is explicitly created again.
+
+## 0.14 Campaign Confirmation Snapshot
+
+Migration `20261001000300_campaign_confirmation_snapshot.sql` adds immutable `campaigns` and `campaign_recipients` snapshots plus server-authoritative confirmation RPCs. Sending and queueing remain disabled in 0.14.

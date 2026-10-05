@@ -1,5 +1,6 @@
 import { errorMessage } from './errors'
 import type { RecipientValidationRow } from './recipientPreview'
+import { collectPagedRows } from './pagedRpc'
 import { supabase } from './supabase'
 
 export interface RecipientPreviewSummary {
@@ -41,12 +42,15 @@ export async function listImportValidationRows(
   organizationId: string,
   importId: string,
 ): Promise<RecipientValidationRow[]> {
-  const { data, error } = await client().rpc('list_contact_import_validation_rows', {
-    p_organization_id: organizationId,
-    p_import_id: importId,
+  const rawRows = await collectPagedRows<Record<string, unknown>>(async (from, to) => {
+    const { data, error } = await client().rpc('list_contact_import_validation_rows', {
+      p_organization_id: organizationId,
+      p_import_id: importId,
+    }).range(from, to)
+    if (error) throw new Error(errorMessage(error, 'Could not load staged recipient rows.'))
+    return (data ?? []) as Array<Record<string, unknown>>
   })
-  if (error) throw new Error(errorMessage(error, 'Could not load staged recipient rows.'))
-  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+  return rawRows.map((row) => ({
     importRowId: Number(row.import_row_id),
     sourceRowNumber: Number(row.source_row_number),
     rawPhone: String(row.raw_phone ?? ''),
@@ -105,12 +109,15 @@ export async function getRecipientPreviewRows(
   organizationId: string,
   previewId: string,
 ): Promise<StoredRecipientPreviewRow[]> {
-  const { data, error } = await client().rpc('get_recipient_preview_rows', {
-    p_organization_id: organizationId,
-    p_preview_id: previewId,
+  const rawRows = await collectPagedRows<Record<string, unknown>>(async (from, to) => {
+    const { data, error } = await client().rpc('get_recipient_preview_rows', {
+      p_organization_id: organizationId,
+      p_preview_id: previewId,
+    }).range(from, to)
+    if (error) throw new Error(errorMessage(error, 'Could not load recipient preview rows.'))
+    return (data ?? []) as Array<Record<string, unknown>>
   })
-  if (error) throw new Error(errorMessage(error, 'Could not load recipient preview rows.'))
-  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+  return rawRows.map((row) => ({
     previewRowId: Number(row.preview_row_id),
     importRowId: Number(row.import_row_id),
     sourceRowNumber: Number(row.source_row_number),

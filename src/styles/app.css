@@ -369,3 +369,27 @@ a { color: inherit; }
 @media (max-width: 700px) {
   .sms-usage-metrics { grid-template-columns: 1fr; }
 }
+
+/* 0.14 — Campaign Confirmation Snapshot */
+.confirmation-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.confirmation-blockers { margin: .55rem 0 0; padding-left: 1.15rem; }
+.confirmation-blockers li + li { margin-top: .25rem; }
+.confirmation-device-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.campaign-template-preview { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.6; padding: 1rem; border-radius: 12px; border: 1px solid var(--border); background: #f8fbfb; }
+.confirmation-action-panel { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
+.confirmation-action-panel h2 { margin: .2rem 0 .45rem; }
+.confirmation-action-panel p { margin: 0; }
+.campaign-list-table { min-width: 900px; }
+.campaign-list-table small, .campaign-recipient-table small { display: block; margin-top: .3rem; color: var(--muted); line-height: 1.35; }
+.campaign-recipient-table { min-width: 1080px; }
+.campaign-message-cell { max-width: 520px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+@media (max-width: 1050px) { .confirmation-metrics, .confirmation-device-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .confirmation-metrics, .confirmation-device-grid { grid-template-columns: 1fr; } .confirmation-action-panel { align-items: stretch; flex-direction: column; } }
+
+/* 0.15 gateway preflight + send authorization */
+.gateway-preflight-panel > .notice,
+.send-authorization-panel > .notice { margin-top: 14px; }
+.gateway-preflight-panel .button-row,
+.send-authorization-panel .button-row { margin-bottom: 0; }
+.durable-queue-panel .button-row { margin-bottom: 0; }
+.durable-queue-panel .definition-grid + .definition-grid { margin-top: 12px; }

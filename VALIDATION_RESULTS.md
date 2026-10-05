@@ -1,56 +1,51 @@
-# BulkText 0.13.0 Validation Results
+# BulkText 0.14.0 Validation Results
 
-## Artifact-side checks
+## Artifact-side checks completed
 
-- source integration review: PASS
-- `npm run preflight`: PASS
-- TypeScript `npx tsc --noEmit`: PASS
-- new GSM-7 / Unicode boundary tests included: PASS (test definitions present)
-- migration ordering / metadata review: PASS
-- organization/team individual-account boundary retained: PASS
-- Vitest/Vite execution: not completed in the artifact container because dependency installation timed out before a complete local toolchain was available
+- patch payload construction: PASS
+- 0.14 preflight file check: PASS in reconstructed Individual-First baseline
+- changed TypeScript / TSX parse check: PASS
+- campaign confirmation unit-test definitions included: PASS
+- migration ordering review: PASS
+- server-side personalization + SMS estimate review: PASS
+- sending/queue metadata remains disabled: PASS
 
-## Added unit coverage
+## Not independently completed in artifact environment
 
-`src/test/smsSegments.test.ts` covers:
+A complete `npm ci` could not finish in the artifact container, so authoritative Vitest / Vite execution remains the user's WSL environment.
 
-- GSM-7 160/161 boundary
-- GSM multipart boundary
-- extension-table two-septet accounting
-- Urdu Unicode 70/71 boundary
-- mixed English + Urdu encoding
-- emoji / supplementary UTF-16 accounting
-- personalized recipient-specific encoding differences
-- aggregate estimated SMS units
-- incomplete personalization exclusion
-- long-message warning threshold
+The new PostgreSQL migration must also be validated against the linked Supabase project using `db push --dry-run`, actual migration application, and `db lint --linked`.
 
-## Required user-side acceptance
-
-The user's active BulkText setup uses Supabase Cloud.
+## Required acceptance
 
 ```bash
-cd /home/noman/projects/bulktext-web-0.4.0
-nvm use || nvm install
-npm install
 npm run validate
 npm audit
-
 npx supabase migration list
 npx supabase db push --dry-run
 ```
 
-Expected pending migration:
+Expected pending migration only:
 
 ```text
-20261001000220_sms_segment_usage_calculator.sql
+20261001000300_campaign_confirmation_snapshot.sql
 ```
 
-If the dry run shows only that expected migration:
+After push:
 
 ```bash
-npx supabase db push
-npx supabase migration list
+npx supabase db lint --linked
 ```
 
-Browser smoke-test the composer with short English, long English, Urdu, mixed content and personalized rows of different lengths.
+Target: no schema errors.
+
+## Browser acceptance
+
+1. Save a complete message draft.
+2. Ensure one Android phone is paired and a present SIM is selected.
+3. Click `Review & confirm`.
+4. Verify recipients, SMS estimate and phone/SIM summary.
+5. Confirm the campaign.
+6. Open the confirmed campaign detail.
+7. Edit the original draft and verify the confirmed campaign snapshot does not change.
+8. Confirm that there is still no send/schedule action.

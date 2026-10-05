@@ -1,7 +1,7 @@
 {
   "name": "bulktext-web",
   "private": true,
-  "version": "0.13.1",
+  "version": "0.16.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,7 +19,9 @@
     "test:recipient-preview-local": "node scripts/test-recipient-preview-local.mjs",
     "test:consent-suppression-local": "node scripts/test-consent-suppression-local.mjs",
     "test:composer-local": "node scripts/test-composer-local.mjs",
-    "test:account-local": "node scripts/test-individual-account-local.mjs"
+    "test:account-local": "node scripts/test-individual-account-local.mjs",
+    "test:durable-queue-local": "node scripts/test-durable-queue-local.mjs",
+    "test:recipient-completeness-local": "node scripts/test-recipient-completeness-local.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

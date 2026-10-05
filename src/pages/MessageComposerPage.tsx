@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState, LoadingState } from '../components/StateViews'
 import { errorMessage } from '../lib/errors'
 import {
@@ -244,7 +244,7 @@ export function MessageComposerPage() {
               {unavailableCustomTokens.length ? <div className="notice warning-notice">These custom fields do not exist in the selected recipient snapshot: {unavailableCustomTokens.join(', ')}</div> : null}
               {hasRecipientProblem && !hasTemplateProblem ? <div className="notice warning-notice">{personalizationSummary.recipientsWithMissingValues} recipient(s) are missing at least one value used by this template. The preview below shows each missing token explicitly.</div> : null}
 
-              {canEdit ? <div className="recipient-actions"><button className="primary-button" type="button" disabled={busy || !selectedSnapshotId || !title.trim() || !messageTemplate.trim() || hasTemplateProblem} onClick={() => void saveDraft()}>{busy ? 'Saving…' : draftId ? 'Update draft' : 'Save draft'}</button></div> : null}
+              {canEdit ? <div className="recipient-actions"><button className="primary-button" type="button" disabled={busy || !selectedSnapshotId || !title.trim() || !messageTemplate.trim() || hasTemplateProblem} onClick={() => void saveDraft()}>{busy ? 'Saving…' : draftId ? 'Update draft' : 'Save draft'}</button>{draftId && !hasTemplateProblem && !hasRecipientProblem && smsUsage.readyRecipients > 0 ? <Link className="secondary-button" to={`/campaigns/review/${draftId}`}>Review &amp; confirm</Link> : null}</div> : null}
             </div>
 
             <aside className="panel composer-summary-panel">

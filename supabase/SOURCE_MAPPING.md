@@ -25,3 +25,9 @@ Do **not** apply the historical and fresh chains together to the same new projec
 - user-facing multi-workspace/team capability
 
 `organizations`, `organization_members`, and `organization_id` remain because they are the hidden tenant boundary used by the already-built gateway/import/recipient/compliance/composer architecture.
+
+## 0.14 mapping
+
+- `20261001000300_campaign_confirmation_snapshot.sql` → Campaign Confirmation Snapshot
+- depends on message drafts, eligibility snapshots, Android device inventory and explicit SIM binding
+- next phase: Gateway Preflight & Send Authorization

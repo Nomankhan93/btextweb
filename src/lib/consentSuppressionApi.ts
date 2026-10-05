@@ -1,5 +1,6 @@
 import { errorMessage } from './errors'
 import type { ContactComplianceStatus, EligibilityBlockReason, EligibilityState } from './consentSuppression'
+import { collectPagedRows } from './pagedRpc'
 import { supabase } from './supabase'
 
 export type ConsentEventType = 'granted' | 'revoked'
@@ -175,12 +176,15 @@ export async function recordContactSuppression(input: {
 }
 
 export async function listRecipientEligibilityRows(organizationId: string, previewId: string): Promise<RecipientEligibilityRow[]> {
-  const { data, error } = await client().rpc('list_recipient_eligibility_rows', {
-    p_organization_id: organizationId,
-    p_preview_id: previewId,
+  const rawRows = await collectPagedRows<Record<string, unknown>>(async (from, to) => {
+    const { data, error } = await client().rpc('list_recipient_eligibility_rows', {
+      p_organization_id: organizationId,
+      p_preview_id: previewId,
+    }).range(from, to)
+    if (error) throw new Error(errorMessage(error, 'Could not evaluate recipient consent and suppression.'))
+    return (data ?? []) as Array<Record<string, unknown>>
   })
-  if (error) throw new Error(errorMessage(error, 'Could not evaluate recipient consent and suppression.'))
-  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+  return rawRows.map((row) => ({
     ...mapCompliance(row),
     previewRowId: Number(row.preview_row_id),
     sourceRowNumber: Number(row.source_row_number),
@@ -223,12 +227,15 @@ export async function listRecipientEligibilitySnapshots(organizationId: string, 
 }
 
 export async function getRecipientEligibilitySnapshotRows(organizationId: string, snapshotId: string): Promise<StoredEligibilityRow[]> {
-  const { data, error } = await client().rpc('get_recipient_eligibility_snapshot_rows', {
-    p_organization_id: organizationId,
-    p_snapshot_id: snapshotId,
+  const rawRows = await collectPagedRows<Record<string, unknown>>(async (from, to) => {
+    const { data, error } = await client().rpc('get_recipient_eligibility_snapshot_rows', {
+      p_organization_id: organizationId,
+      p_snapshot_id: snapshotId,
+    }).range(from, to)
+    if (error) throw new Error(errorMessage(error, 'Could not load eligibility snapshot rows.'))
+    return (data ?? []) as Array<Record<string, unknown>>
   })
-  if (error) throw new Error(errorMessage(error, 'Could not load eligibility snapshot rows.'))
-  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+  return rawRows.map((row) => ({
     eligibilityRowId: Number(row.eligibility_row_id),
     previewRowId: Number(row.preview_row_id),
     sourceRowNumber: Number(row.source_row_number),

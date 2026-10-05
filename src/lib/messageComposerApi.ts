@@ -1,5 +1,6 @@
 import { errorMessage } from './errors'
 import type { PersonalizationSourceRow } from './messageComposer'
+import { collectPagedRows } from './pagedRpc'
 import { supabase } from './supabase'
 
 export interface MessageComposerSource {
@@ -52,12 +53,15 @@ export async function listMessageComposerSources(organizationId: string): Promis
 }
 
 export async function getMessagePersonalizationSourceRows(organizationId: string, eligibilitySnapshotId: string): Promise<PersonalizationSourceRow[]> {
-  const { data, error } = await client().rpc('get_message_personalization_source_rows', {
-    p_organization_id: organizationId,
-    p_eligibility_snapshot_id: eligibilitySnapshotId,
+  const rawRows = await collectPagedRows<Record<string, unknown>>(async (from, to) => {
+    const { data, error } = await client().rpc('get_message_personalization_source_rows', {
+      p_organization_id: organizationId,
+      p_eligibility_snapshot_id: eligibilitySnapshotId,
+    }).range(from, to)
+    if (error) throw new Error(errorMessage(error, 'Could not load eligible personalization source rows.'))
+    return (data ?? []) as Record<string, unknown>[]
   })
-  if (error) throw new Error(errorMessage(error, 'Could not load eligible personalization source rows.'))
-  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+  return rawRows.map((row) => ({
     eligibilityRowId: Number(row.eligibility_row_id),
     previewRowId: Number(row.preview_row_id),
     sourceRowNumber: Number(row.source_row_number),

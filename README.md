@@ -1,83 +1,83 @@
-# BulkText Web 0.13.0
+# BulkText Web 0.15.0
 
 BulkText is an **individual-first SIM-powered SMS platform**.
 
-The web app prepares recipients, personalized messages and SMS usage estimates; a paired Android gateway will later send SMS through the user's explicitly selected SIM. SMS package eligibility and actual carrier charging are determined by the mobile operator.
-
-## Current product scope
-
-Built through 0.13:
-
-- Supabase authentication and account recovery
-- automatic hidden personal-workspace provisioning
-- secure Android pairing foundation
-- device dashboard and explicit SIM binding
-- Pakistan mobile-number normalization
-- CSV/XLSX import
-- recipient validation and immutable preview snapshots
-- consent / suppression evidence and eligibility snapshots
-- message composer and personalization preview
-- GSM-7 / Unicode SMS segment estimation
-- recipient-specific and campaign-wide estimated SMS usage
-
-Not built yet:
-
-- immutable campaign confirmation
-- gateway preflight
-- durable cloud queue
-- cloud-triggered Android sending
-- scheduling
-- campaign reports
-
-## SMS model
+Current user flow:
 
 ```text
-User account
-→ paired Android phone
-→ explicitly selected SIM
-→ user's mobile-operator SMS package / balance
-→ recipients
+Sign up
+→ hidden personal workspace prepared automatically
+→ pair Android phone
+→ explicitly select SIM
+→ upload recipients
+→ validate numbers
+→ consent / suppression check
+→ compose personalized message
+→ estimate SMS units
+→ review & confirm immutable campaign
+→ run gateway preflight
+→ issue short-lived send authorization
 ```
 
-BulkText estimates SMS units from rendered message content. It does not claim authoritative carrier package balance or charges.
+## 0.15 capability
 
-## Internal tenant architecture
+0.15 adds **Gateway Preflight & Send Authorization** after the 0.14 immutable campaign snapshot.
 
-The UI remains individual-first. The database still uses a hidden personal workspace (`organization_id`) internally so previously built device/import/recipient/compliance/composer data remains compatible and future Organizations support can be added without a destructive rewrite.
+The server now verifies current send-safety conditions immediately before authorization:
+
+- confirmed campaign snapshot integrity;
+- exact confirmed Android device still active and recently seen;
+- fresh SIM inventory;
+- valid current gateway credential;
+- exact Web-bound SIM still selected and present;
+- subscription ID unchanged;
+- SIM slot unchanged;
+- SIM identity unchanged;
+- current consent still valid;
+- current suppression still clear.
+
+A successful authorization is server-created, auditable, explicitly revocable and expires after 5 minutes.
+
+## Exact-SIM rule
+
+BulkText never silently switches to another active SIM. Missing, rebound, replaced or unverifiable confirmed SIM identity blocks authorization.
+
+## Still disabled
+
+0.15 does **not** create the durable cloud queue and does **not** send SMS.
+
+```text
+campaign_send_enabled=false
+queue_enabled=false
+```
+
+The next build is `0.16 — Durable Cloud Queue`, which must atomically revalidate/consume a fresh authorization before creating jobs.
 
 ## Validation
 
-Use the project Node version first:
-
 ```bash
-nvm use || nvm install
-npm install
 npm run validate
 npm audit
-```
-
-The active BulkText setup uses Supabase Cloud. Before pushing the 0.13 metadata migration:
-
-```bash
 npx supabase migration list
 npx supabase db push --dry-run
 ```
 
-Expected pending migration:
+Expected new pending migration only:
 
 ```text
-20261001000220_sms_segment_usage_calculator.sql
+20261001000310_gateway_preflight_send_authorization.sql
 ```
 
-If the dry run contains only the expected pending migration, apply it:
+After manual dry-run review:
 
 ```bash
 npx supabase db push
 npx supabase migration list
+npx supabase db lint --linked
 ```
 
-Do not run `supabase start` unless intentionally using a separate local test environment.
+Do not edit already-applied migrations `00300` or `00305`.
 
-## Next planned feature
+## 0.16 — Durable Cloud Queue
 
-`0.14 — Campaign Confirmation Snapshot`
+BulkText 0.16 adds the durable cloud queue between short-lived send authorization and the future Android job client. Queue creation consumes/revalidates a fresh authorization, freezes the exact Web-selected device/SIM identity, creates immutable jobs from `campaign_recipients`, and supports credential-authenticated lease/download/ACK. No SMS is submitted or sent in this phase. See `docs/DURABLE_CLOUD_QUEUE.md`.
