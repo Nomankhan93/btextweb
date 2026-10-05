@@ -163,7 +163,7 @@ export function RecipientEligibilityPage() {
         </section>
       ) : null}
 
-      <section className="notice warning-notice">Eligibility snapshots are a compliance gate. You can draft and preview personalized text from a stored snapshot, but campaign confirmation, queueing and sending remain disabled.</section>
+      <section className="notice warning-notice">Eligibility snapshots are a compliance gate. You can draft personalized text, confirm an immutable campaign, run gateway preflight, authorize, and create the durable cloud queue. SMS execution remains disabled.</section>
     </div>
   )
 }

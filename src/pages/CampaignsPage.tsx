@@ -50,7 +50,7 @@ export function CampaignsPage() {
         )}
       </section>
 
-      <section className="notice warning-notice">Confirmed campaigns are frozen for review and future execution. Sending, scheduling and cloud queueing are still disabled.</section>
+      <section className="notice warning-notice">Confirmed campaigns are frozen for execution. Gateway preflight, short-lived authorization, and durable cloud queueing are available. SMS execution and scheduling remain disabled.</section>
     </div>
   )
 }

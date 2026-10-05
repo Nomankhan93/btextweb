@@ -1,67 +1,93 @@
-# BulkText 0.15.0 Handoff
+# BulkText Web 0.16.2 Handoff
 
-## Product direction
-
-BulkText remains individual-first. Existing organization tables remain only as the hidden personal-workspace tenancy boundary.
-
-## Completed through 0.15
+## Baseline
 
 ```text
-0.4–0.13.1  foundation through individual UX cleanup
-0.14        immutable campaign confirmation snapshot
-0.14.x      campaign SQL lint stabilization (00305)
-0.15        gateway preflight + 5-minute send authorization
+Web package:             0.16.2
+Built from Web baseline: 0.16.1 / commit 5310827
+Cloud migration head:    20261001000320
+Android baseline:        0.6.1 / versionCode 8
+Recipient 1400→1000 bug: fixed in 0.16.1
 ```
 
-## 0.15 architecture
+0.16.2 is **stabilization only**. No Supabase migration was added or rewritten. No SMS execution was added. Durable queue semantics and exact-SIM behavior are unchanged.
+
+## Current architecture boundary
 
 ```text
-Confirmed campaign
-→ current gateway/device/SIM/compliance preflight
-→ short-lived auditable authorization
+confirmed campaign
+→ gateway/exact-SIM preflight
+→ short-lived authorization
+→ durable cloud queue
+→ Android claim
+→ durable local persistence
+→ ACK
 → STOP
 ```
 
-Authoritative rules:
+Queue state `downloaded` is not SMS submission, sent, or delivered. `campaign_send_enabled=false`.
+
+## Non-negotiable rules
 
 - exact Web-bound SIM only;
 - no silent SIM fallback;
-- current suppression overrides old eligibility evidence;
-- authorization expires after 5 minutes and is revocable;
-- no queue in 0.15;
-- no SMS sending in 0.15;
-- do not claim exactly-once SMS delivery in future phases.
+- suppression overrides consent;
+- browser pagination must not define campaign completeness;
+- persist before future external SMS effect;
+- no blind retry after possible future `SmsManager` submission;
+- ambiguous future submission state is `UNKNOWN`;
+- never rewrite applied Supabase migrations.
 
-## Current migration head after deployment
+## Database state
+
+Current forward migration chain ends at:
 
 ```text
+20261001000300_campaign_confirmation_snapshot.sql
+20261001000305_campaign_confirmation_lint_stabilization.sql
 20261001000310_gateway_preflight_send_authorization.sql
+20261001000320_durable_cloud_queue.sql
 ```
 
-Never rewrite `00300`, `00305`, or any other applied migration.
+Because 0.16.2 has no DB migration, `app_meta.schema.version` remains `0.16.0` from 00320. The fresh-schema verifier checks the 00320 objects and feature flags.
 
-## 0.15 completion gate
+## 0.16.2 changes
 
-- `npm run validate` PASS;
-- `npm audit` = 0 vulnerabilities;
-- dry-run shows only `00310` pending before push;
-- `db lint --linked` clean after push;
-- paired Android + original selected SIM → preflight Ready;
-- authorization → Authorized;
-- approximately 5-minute expiry verified;
-- explicit revoke → Revoked;
-- selected SIM disabled → preflight blocked/missing;
-- other active SIM is not accepted;
-- original SIM restored → preflight Ready;
-- no queue jobs created;
-- no SMS sent.
+- Web version bumped to 0.16.2.
+- README / handoff / patch / validation documentation refreshed.
+- Stale Campaigns and Recipient Eligibility copy corrected: confirmation and durable queue are present; SMS execution remains disabled.
+- `.env.example` restored with public placeholder values only.
+- `supabase/verify_fresh_schema.sql` updated through 00320.
+- deterministic clean-stage release packaging added.
+- project-level `SHA256SUMS.txt` regenerated from the clean release stage.
+- release scan rejects local env/runtime files and secret-value patterns.
 
-## Next
+## Remaining QA gate before 0.17
 
-`0.16 — Durable Cloud Queue`
+Use only 1–2 controlled/authorized recipients:
 
-0.16 must require a fresh valid 0.15 authorization and atomically revalidate/consume it during idempotent queue creation. Android sending remains out of scope until the cloud queue and durable Android job client are proven.
+1. create a tiny confirmed campaign;
+2. preflight Ready;
+3. authorize;
+4. create durable queue;
+5. Android 0.6.1 Sync cloud jobs (no SMS);
+6. verify claim → local persistence → ACK;
+7. verify Web queue becomes `downloaded`;
+8. force-stop/reopen and verify persistence;
+9. offline → restore → safe resync;
+10. remove/disable bound SIM and verify Missing/block;
+11. verify other SIM is never substituted;
+12. duplicate sync does not duplicate local jobs;
+13. cloud-triggered SMS count remains zero.
 
-## 0.16 Durable Cloud Queue
+## Next build order
 
-0.16 introduces `campaign_dispatches`, immutable `campaign_message_jobs`, and `campaign_queue_events`. A fresh 0.15 authorization is atomically revalidated and consumed during idempotent queue creation. Android queue RPCs use the existing device credential, enforce the frozen exact SIM identity, cap claims at 25 jobs with 2-minute leases, require durable download ACK, and safely recover only expired/un-ACKed leases. `downloaded` is not SMS submission. `campaign_send_enabled` remains false. Next: Android 0.6 Durable Cloud Job Client.
+```text
+0.16.2 stabilization
+→ finish Android 0.6.1 real-device queue QA
+→ build NEW Android 0.17 on 0.6.1
+→ controlled SMS execution acceptance
+→ build NEW Web/Cloud 0.18 on 0.16.2/current baseline
+```
+
+Do not force-apply old Android 0.17 or old Web 0.18 artifacts.

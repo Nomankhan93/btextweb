@@ -1,76 +1,58 @@
-# Patch 0.14.0 — Campaign Confirmation Snapshot
+# Patch 0.16.2 — Release & Verification Stabilization
 
 ## Purpose
 
-Turn an editable saved message draft into an immutable campaign snapshot before any sending workflow exists.
+Stabilize the already-built Web 0.16.1 / Cloud 00320 baseline without changing database or queue behavior.
 
-## Main changes
+## Changes
 
-- activate Campaigns as a confirmed-campaign list
-- add Review & Confirm flow from saved composer drafts
-- freeze recipients and rendered personalized messages
-- server-side personalization rendering during confirmation
-- server-side GSM-7 / Unicode segment recalculation
-- freeze total estimated SMS units
-- freeze consent/suppression evidence from the selected eligibility snapshot
-- freeze paired Android phone + explicitly selected SIM/subscription
-- add confirmed campaign detail screen
-- add recipient snapshot preview
-- keep sending / scheduling / queueing disabled
+- bump Web package to 0.16.2;
+- refresh stale release documentation;
+- correct stale UI copy about campaign confirmation and cloud queue availability;
+- verify fresh schema through migration 00320;
+- add safe placeholder-only `.env.example`;
+- add deterministic release staging / checksum / ZIP scripts;
+- exclude local/runtime/generated files and secrets from release artifacts;
+- regenerate project-level `SHA256SUMS.txt`.
 
-## New migration
+## Explicitly unchanged
 
-```text
-20261001000300_campaign_confirmation_snapshot.sql
-```
+- no SMS execution;
+- no Android 0.17 work;
+- no 0.18 work;
+- no queue-state or lease-semantic changes;
+- no exact-SIM rule changes;
+- no new or rewritten Supabase migration.
 
-## Database objects
+## Apply patch
 
-```text
-campaigns
-campaign_recipients
-confirm_campaign(...)
-list_campaign_confirmations(...)
-get_campaign_confirmation(...)
-list_campaign_confirmation_recipients(...)
-```
-
-## Apply
+From the extracted patch directory:
 
 ```bash
 ./apply.sh /home/noman/projects/bulktext-web-0.4.0
 ```
 
-Then:
+The patch accepts only a target whose `package.json` version is `0.16.1` (or is already `0.16.2` for an idempotent re-apply).
+
+## Validate
 
 ```bash
 cd /home/noman/projects/bulktext-web-0.4.0
 nvm use || nvm install
-npm install
+npm ci
 npm run validate
 npm audit
+git diff --check
 npx supabase migration list
 npx supabase db push --dry-run
 ```
 
-Dry-run must show only:
+Expected database result: migration chain aligned through `20261001000320` and **no new migration from 0.16.2**.
 
-```text
-20261001000300_campaign_confirmation_snapshot.sql
-```
-
-After inspection:
+## Package
 
 ```bash
-npx supabase db push
-npx supabase db lint --linked
+./scripts/release-package.sh
 ```
 
-## Out of scope
-
-- actual SMS sending
-- gateway readiness authorization
-- queue jobs / leases
-- scheduling
-- retry execution
-- delivery reporting
+This creates a clean staged tree, verifies `SHA256SUMS.txt` with `sha256sum -c`, performs release safety scans, creates a deterministic ZIP, and writes a separate final ZIP SHA256.
