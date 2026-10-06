@@ -182,8 +182,8 @@ def main() -> int:
     root = Path(args.root).resolve()
     package = json.loads((root / 'package.json').read_text(encoding='utf-8'))
     version = package['version']
-    if version != '0.16.3':
-        raise SystemExit(f'Release packager expects version 0.16.3, found {version}')
+    if version != '0.16.4':
+        raise SystemExit(f'Release packager expects version 0.16.4, found {version}')
 
     output_dir = Path(args.output_dir).resolve() if args.output_dir else root.parent / 'release'
     output_dir.mkdir(parents=True, exist_ok=True)

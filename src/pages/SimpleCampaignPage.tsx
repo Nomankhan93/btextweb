@@ -178,7 +178,7 @@ export function SimpleCampaignPage() {
 
       <section className="panel simple-campaign-section">
         <div className="panel-heading"><div><p className="eyebrow">Step 1</p><h2>Campaign name</h2></div></div>
-        <label className="field"><span>Name</span><input value={campaignName} maxLength={120} onChange={(event) => setCampaignName(event.target.value)} placeholder="October customer update" /></label>
+        <label className="field simple-campaign-name-field"><span>Name</span><input value={campaignName} maxLength={120} onChange={(event) => setCampaignName(event.target.value)} placeholder="October customer update" /></label>
       </section>
 
       <section className="panel simple-campaign-section">
@@ -226,7 +226,7 @@ export function SimpleCampaignPage() {
       {prepared ? <section className="panel simple-campaign-section">
         <div className="panel-heading"><div><p className="eyebrow">Step 3</p><h2>Write message</h2></div><span className="badge badge-success">{prepared.eligibleRows.toLocaleString()} ready</span></div>
         {prepared.suppressedRows > 0 ? <div className="notice warning-notice">{prepared.suppressedRows.toLocaleString()} recipient{prepared.suppressedRows === 1 ? ' is' : 's are'} on the do-not-send list and will not receive this campaign.</div> : null}
-        <label className="field"><span>SMS message</span><textarea rows={8} maxLength={4000} value={messageTemplate} onChange={(event) => setMessageTemplate(event.target.value)} placeholder="Type your message…" /><small>Personalization is optional. Use <code>{'{{name}}'}</code> only when the uploaded file contains names.</small></label>
+        <label className="field simple-message-field"><span>SMS message</span><textarea rows={8} maxLength={4000} value={messageTemplate} onChange={(event) => setMessageTemplate(event.target.value)} placeholder="Type your message…" /><small>Personalization is optional. Use <code>{'{{name}}'}</code> only when the uploaded file contains names.</small></label>
         {templateAnalysis.malformed ? <div className="notice error-notice">Message contains malformed <code>{'{{…}}'}</code> braces.</div> : null}
         {templateAnalysis.unsupportedTokens.length ? <div className="notice error-notice">Unsupported variables: {templateAnalysis.unsupportedTokens.join(', ')}</div> : null}
         <div className="metric-grid simple-message-metrics">

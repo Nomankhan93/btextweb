@@ -424,3 +424,14 @@ a { color: inherit; }
 @media (max-width: 700px) {
   .simple-stepper, .simple-flow-steps, .simple-import-summary, .simple-message-metrics { grid-template-columns: 1fr; }
 }
+
+
+/* 0.16.4 — Simple Send UX polish */
+.simple-campaign-name-field, .simple-message-field { display: grid; gap: 8px; width: 100%; }
+.simple-campaign-name-field > span, .simple-message-field > span { color: #385057; font-size: .86rem; font-weight: 750; }
+.simple-campaign-name-field input, .simple-message-field textarea { width: 100%; min-width: 0; border: 1px solid #cbd8d8; border-radius: 12px; background: white; color: var(--ink); padding: 12px 14px; outline: none; }
+.simple-campaign-name-field input { min-height: 48px; font-size: 1rem; }
+.simple-message-field textarea { min-height: 230px; resize: vertical; line-height: 1.55; }
+.simple-campaign-name-field input:focus, .simple-message-field textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(15,118,110,.12); }
+.simple-message-field small { color: var(--muted); line-height: 1.45; }
+@media (max-width: 700px) { .simple-message-field textarea { min-height: 180px; } }

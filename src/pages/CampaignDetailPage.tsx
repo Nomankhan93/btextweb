@@ -192,19 +192,24 @@ export function CampaignDetailPage() {
       <section className="panel simple-send-panel">
         <div className="panel-heading"><div><p className="eyebrow">Simple send</p><h2>{dispatch ? 'Campaign is queued on Android' : 'Send to Android'}</h2></div><span className={`badge ${dispatch ? 'badge-success' : preflight?.ready ? 'badge-success' : 'badge-warning'}`}>{dispatch ? 'Queued' : preflight?.ready ? 'Ready' : 'Check required'}</span></div>
         {safetyError ? <div className="notice error-notice">{safetyError}</div> : null}
-        {dispatch ? <><p className="muted-copy">The durable cloud queue has been created for the exact confirmed SIM. On Android 0.17, tap <strong>Sync cloud jobs (no SMS)</strong>, verify the job becomes Ready, then use <strong>Send next cloud SMS</strong>.</p><p className="muted-copy">{dispatchSummary(dispatch)}</p></> : <><p className="muted-copy">One click re-runs current eligibility, phone/SIM freshness and exact SIM identity, then creates the authorized durable queue. It never falls back to another SIM.</p><div className="button-row"><button className="primary-button" type="button" disabled={safetyBusy} onClick={() => void sendToPhone()}>{safetyBusy ? 'Checking & queueing…' : 'Send to Android'}</button></div></>}
+        {dispatch ? <><p className="muted-copy">The durable cloud queue has been created for the exact confirmed SIM. Android 0.17.1 automatically checks for new cloud jobs while the gateway app is open. When the campaign is Ready on Android, use <strong>Send campaign</strong> once; manual queue sync remains available only for recovery/diagnostics.</p><p className="muted-copy">{dispatchSummary(dispatch)}</p></> : <><p className="muted-copy">One click re-runs current eligibility, phone/SIM freshness and exact SIM identity, then creates the authorized durable queue. It never falls back to another SIM.</p><div className="button-row"><button className="primary-button" type="button" disabled={safetyBusy} onClick={() => void sendToPhone()}>{safetyBusy ? 'Checking & queueing…' : 'Send to Android'}</button></div></>}
         <details className="advanced-send-details"><summary>Advanced send controls</summary><p className="muted-copy">The detailed preflight, authorization and queue panels below remain available for diagnostics and recovery.</p></details>
       </section>
 
       <section className="panel gateway-preflight-panel">
         <div className="panel-heading">
-          <div><p className="eyebrow">Gateway preflight</p><h2>Current send-safety checks</h2></div>
-          <span className={`badge ${preflight?.ready ? 'badge-success' : 'badge-warning'}`}>{preflight?.ready ? 'Ready' : 'Blocked'}</span>
+          <div><p className="eyebrow">Gateway preflight</p><h2>{dispatch ? 'Queue-time safety snapshot' : 'Current send-safety checks'}</h2></div>
+          <span className={`badge ${dispatch || preflight?.ready ? 'badge-success' : 'badge-warning'}`}>{dispatch ? 'Queue created' : preflight?.ready ? 'Ready' : 'Blocked'}</span>
         </div>
-        <p className="muted-copy">{preflightSummary(preflight)}</p>
-        {preflight && !preflight.ready ? <div className="notice warning-notice"><strong>Authorization is blocked.</strong><ul className="confirmation-blockers">{preflight.blockers.map((blocker, index) => <li key={`${preflight.blockerCodes[index] ?? 'blocker'}-${index}`}>{blocker}</li>)}</ul></div> : null}
-        {preflight?.ready ? <div className="definition-grid confirmation-device-grid"><div><dt>Current eligible recipients</dt><dd>{preflight.currentEligibleRecipients.toLocaleString()}</dd></div><div><dt>Phone last seen</dt><dd>{dateTime(preflight.deviceLastSeenAt)}</dd></div><div><dt>Inventory refreshed</dt><dd>{dateTime(preflight.inventoryLastSeenAt)}</dd></div><div><dt>Credential expires</dt><dd>{dateTime(preflight.credentialExpiresAt)}</dd></div></div> : null}
-        <div className="button-row"><button className="secondary-button" type="button" disabled={safetyBusy} onClick={() => void refreshSafety()}>{safetyBusy ? 'Checking…' : 'Refresh preflight'}</button></div>
+        {dispatch ? <>
+          <p className="muted-copy">The server re-ran eligibility, device freshness and exact-SIM checks when this durable queue was created. A later stale phone/inventory indicator is diagnostic only for this already-created queue; Android still re-checks the frozen exact SIM immediately before every SmsManager submission.</p>
+          <div className="definition-grid confirmation-device-grid"><div><dt>Queue created</dt><dd>{dateTime(dispatch.enqueuedAt)}</dd></div><div><dt>Exact subscription</dt><dd>{dispatch.simSubscriptionId}</dd></div><div><dt>Exact SIM slot</dt><dd>SIM {dispatch.simSlotIndex + 1}</dd></div></div>
+        </> : <>
+          <p className="muted-copy">{preflightSummary(preflight)}</p>
+          {preflight && !preflight.ready ? <div className="notice warning-notice"><strong>Authorization is blocked.</strong><ul className="confirmation-blockers">{preflight.blockers.map((blocker, index) => <li key={`${preflight.blockerCodes[index] ?? 'blocker'}-${index}`}>{blocker}</li>)}</ul></div> : null}
+          {preflight?.ready ? <div className="definition-grid confirmation-device-grid"><div><dt>Current eligible recipients</dt><dd>{preflight.currentEligibleRecipients.toLocaleString()}</dd></div><div><dt>Phone last seen</dt><dd>{dateTime(preflight.deviceLastSeenAt)}</dd></div><div><dt>Inventory refreshed</dt><dd>{dateTime(preflight.inventoryLastSeenAt)}</dd></div><div><dt>Credential expires</dt><dd>{dateTime(preflight.credentialExpiresAt)}</dd></div></div> : null}
+          <div className="button-row"><button className="secondary-button" type="button" disabled={safetyBusy} onClick={() => void refreshSafety()}>{safetyBusy ? 'Checking…' : 'Refresh preflight'}</button></div>
+        </>}
       </section>
 
       <section className="panel send-authorization-panel">
@@ -236,7 +241,7 @@ export function CampaignDetailPage() {
 
       <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Recipients</p><h2>Frozen personalized messages</h2></div><span className="badge badge-muted">First {Math.min(100, campaign.recipientCount)}</span></div>{recipients.length === 0 ? <EmptyState title="No recipients">This campaign has no stored recipients.</EmptyState> : <div className="table-wrap"><table className="data-table campaign-recipient-table"><thead><tr><th>Recipient</th><th>Message</th><th>SMS</th><th>Eligibility</th></tr></thead><tbody>{recipients.map((recipient) => <tr key={recipient.recipientId}><td><strong>{recipient.displayName || 'Recipient'}</strong><small>{recipient.normalizedE164}</small></td><td className="campaign-message-cell">{recipient.renderedMessage}</td><td>{recipient.smsEncoding}<small>{recipient.segmentCount} segment{recipient.segmentCount === 1 ? '' : 's'} · {recipient.characterCount} chars</small></td><td><span className="badge badge-success">Eligible at confirmation</span><small>Current eligibility is rechecked by preflight.</small></td></tr>)}</tbody></table></div>}{campaign.recipientCount > recipients.length ? <p className="muted-copy">Showing the first {recipients.length} recipients. The full snapshot contains {campaign.recipientCount} recipients.</p> : null}</section>
 
-      <section className="notice warning-notice"><strong>0.16.3 / Android 0.17 boundary:</strong> Web can prepare and queue the confirmed campaign; Android 0.17 may explicitly submit downloaded jobs on the exact bound SIM. Cloud SENT/DELIVERED callbacks, attempt history and safe retry workflows remain for 0.18.</section>
+      <section className="notice warning-notice"><strong>0.16.4 / Android 0.17.1 boundary:</strong> Web prepares and queues the confirmed campaign; Android 0.17.1 auto-syncs while the app is foregrounded and can submit a READY campaign in a bounded sequential batch on the exact bound SIM. Cloud SENT/DELIVERED callbacks, attempt history and safe retry workflows remain for 0.18.</section>
     </div>
   )
 }
