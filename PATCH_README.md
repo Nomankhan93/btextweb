@@ -24,3 +24,10 @@ After `SmsManager` invocation, callback failure is ambiguous. Do not resend. UNK
 3. Push migration.
 4. Revalidate.
 5. Re-run controlled real-device acceptance without pressing any legacy Safe retry path.
+
+## 0.18.2 — Safe campaign/history delete
+
+- Per-campaign Delete action on Campaign history and Campaign detail.
+- `Delete safe history` bulk cleanup.
+- Database-enforced guards prevent deletion while Android execution, callbacks, UNKNOWN recovery, leases, or unsafe downloaded jobs are still active.
+- Never-downloaded queued jobs may be cancelled by an intentional delete.

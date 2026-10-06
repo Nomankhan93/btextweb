@@ -135,3 +135,72 @@ export async function listCampaignConfirmationRecipients(organizationId: string,
     consentExpiresAt: row.consent_expires_at == null ? null : String(row.consent_expires_at), suppressionState: String(row.suppression_state),
   }))
 }
+
+
+export interface CampaignDeleteStatus {
+  canDelete: boolean
+  blockReason: string | null
+}
+
+export interface CampaignDeleteResult {
+  campaignId: string
+  title: string
+  cancelledQueuedJobs: number
+}
+
+export interface CampaignHistoryDeleteResult {
+  deletedCount: number
+  skippedCount: number
+  cancelledQueuedJobs: number
+  skipped: Array<{ campaignId: string; title: string; reason: string }>
+}
+
+export async function getCampaignDeleteStatus(organizationId: string, campaignId: string): Promise<CampaignDeleteStatus> {
+  const { data, error } = await client().rpc('get_campaign_delete_status', {
+    p_organization_id: organizationId,
+    p_campaign_id: campaignId,
+  })
+  if (error) throw new Error(errorMessage(error, 'Could not check whether this campaign can be deleted.'))
+  const row = ((data ?? []) as Record<string, unknown>[])[0]
+  if (!row) throw new Error('Campaign delete status was incomplete.')
+  return {
+    canDelete: Boolean(row.can_delete),
+    blockReason: row.block_reason == null ? null : String(row.block_reason),
+  }
+}
+
+export async function deleteCampaign(organizationId: string, campaignId: string): Promise<CampaignDeleteResult> {
+  const { data, error } = await client().rpc('delete_campaign', {
+    p_organization_id: organizationId,
+    p_campaign_id: campaignId,
+  })
+  if (error) throw new Error(errorMessage(error, 'Could not delete this campaign.'))
+  const row = (data ?? {}) as Record<string, unknown>
+  return {
+    campaignId: String(row.campaignId ?? campaignId),
+    title: String(row.title ?? 'Campaign'),
+    cancelledQueuedJobs: Number(row.cancelledQueuedJobs ?? 0),
+  }
+}
+
+export async function deleteCampaignHistory(organizationId: string): Promise<CampaignHistoryDeleteResult> {
+  const { data, error } = await client().rpc('delete_campaign_history', {
+    p_organization_id: organizationId,
+  })
+  if (error) throw new Error(errorMessage(error, 'Could not clean campaign history.'))
+  const row = (data ?? {}) as Record<string, unknown>
+  const skipped = Array.isArray(row.skipped) ? row.skipped : []
+  return {
+    deletedCount: Number(row.deletedCount ?? 0),
+    skippedCount: Number(row.skippedCount ?? 0),
+    cancelledQueuedJobs: Number(row.cancelledQueuedJobs ?? 0),
+    skipped: skipped.map((item) => {
+      const value = (item ?? {}) as Record<string, unknown>
+      return {
+        campaignId: String(value.campaignId ?? ''),
+        title: String(value.title ?? 'Campaign'),
+        reason: String(value.reason ?? 'Deletion is blocked by active Android work.'),
+      }
+    }),
+  }
+}

@@ -26,3 +26,6 @@ Safe retry is never automatic and requires an explicit Web request. A locally st
 ## Database
 
 Migration head becomes `20261001000340_delivery_attempts_callbacks_recovery.sql`. Applied migrations through `20261001000330_simple_campaign_flow_bulk_consent.sql` must remain byte-for-byte unchanged.
+
+### 0.18.2 campaign history cleanup
+Campaign history now supports per-campaign deletion and bulk safe-history cleanup. Active/ambiguous Android work is retained by database-enforced deletion guards.

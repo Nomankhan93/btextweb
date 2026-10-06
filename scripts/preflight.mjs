@@ -27,6 +27,7 @@ const requiredFiles = [
   'supabase/migrations/20261001000330_simple_campaign_flow_bulk_consent.sql',
   'supabase/migrations/20261001000340_delivery_attempts_callbacks_recovery.sql',
   'supabase/migrations/20261006000180_callback_retry_safety_stabilization.sql',
+  'supabase/migrations/20261006000200_campaign_history_safe_delete.sql',
   'docs/CAMPAIGN_CONFIRMATION_SNAPSHOT.md','docs/GATEWAY_PREFLIGHT_SEND_AUTHORIZATION.md','docs/DURABLE_CLOUD_QUEUE.md',
   'scripts/test-durable-queue-local.mjs','scripts/release-package.py','scripts/release-package.sh','supabase/verify_fresh_schema.sql','src/test/smsSegments.test.ts','src/test/campaignConfirmation.test.ts','src/test/gatewayPreflight.test.ts','src/test/durableQueue.test.ts','src/test/deliveryAttempts.test.ts','src/test/productNavigation.test.ts',
 ]
@@ -36,7 +37,7 @@ const forbiddenPresent=[]; for (const file of forbiddenFiles) { try { await acce
 if (missing.length || forbiddenPresent.length) { if(missing.length) console.error(`Preflight failed. Missing: ${missing.join(', ')}`); if(forbiddenPresent.length) console.error(`Preflight failed. Legacy files present: ${forbiddenPresent.join(', ')}`); process.exit(1) }
 
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
-if (packageJson.version !== '0.18.1') { console.error(`Preflight failed. Expected package version 0.18.1, got ${packageJson.version}`); process.exit(1) }
+if (packageJson.version !== '0.18.2') { console.error(`Preflight failed. Expected package version 0.18.2, got ${packageJson.version}`); process.exit(1) }
 
 const migration = await readFile(new URL('../supabase/migrations/20261001000340_delivery_attempts_callbacks_recovery.sql', import.meta.url), 'utf8')
 const requiredMigrationMarkers = [
@@ -59,6 +60,7 @@ if (/update\s+public\.campaign_message_jobs[\s\S]*state\s*=\s*['"]queued['"]/i.t
 
 
 const safetyMigration = await readFile(new URL('../supabase/migrations/20261006000180_callback_retry_safety_stabilization.sql', import.meta.url), 'utf8')
+const deleteMigration = await readFile(new URL('../supabase/migrations/20261006000200_campaign_history_safe_delete.sql', import.meta.url), 'utf8')
 const requiredSafetyMarkers = [
   "state = 'unknown'",
   'safe_retry_eligible = false',
@@ -68,7 +70,22 @@ const requiredSafetyMarkers = [
   "p_action <> 'skip_unknown'",
 ]
 const missingSafetyMarkers = requiredSafetyMarkers.filter((marker) => !safetyMigration.includes(marker))
-if (missingSafetyMarkers.length) { console.error(`Preflight failed. 0.18.1 safety markers missing: ${missingSafetyMarkers.join(', ')}`); process.exit(1) }
-if (/state\s*=\s*['"]failed['"][\s\S]{0,300}safe_retry_eligible\s*=\s*true/i.test(safetyMigration)) { console.error('Preflight failed. 0.18.1 must not create callback-derived safe-retry eligibility.'); process.exit(1) }
+if (missingSafetyMarkers.length) { console.error(`Preflight failed. 0.18.2 safety markers missing: ${missingSafetyMarkers.join(', ')}`); process.exit(1) }
+if (/state\s*=\s*['"]failed['"][\s\S]{0,300}safe_retry_eligible\s*=\s*true/i.test(safetyMigration)) { console.error('Preflight failed. 0.18.2 must not create callback-derived safe-retry eligibility.'); process.exit(1) }
 
-console.log('BulkText 0.18.1 preflight PASS')
+
+const requiredDeleteMarkers = [
+  'campaign_delete_block_reason_internal',
+  'get_campaign_delete_status',
+  'delete_campaign(',
+  'delete_campaign_history',
+  "state in ('prepared', 'submitted', 'sent')",
+  "state = 'downloaded'",
+  "state = 'leased'",
+  'campaign.deleted',
+]
+const missingDeleteMarkers = requiredDeleteMarkers.filter((marker) => !deleteMigration.includes(marker))
+if (missingDeleteMarkers.length) { console.error(`Preflight failed. 0.18.2 campaign-delete markers missing: ${missingDeleteMarkers.join(', ')}`); process.exit(1) }
+if (!deleteMigration.includes("'campaign_delete_blocks_inflight_android_work', true")) { console.error('Preflight failed. Campaign deletion safety metadata is missing.'); process.exit(1) }
+
+console.log('BulkText 0.18.2 preflight PASS')

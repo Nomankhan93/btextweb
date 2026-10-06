@@ -52,3 +52,6 @@ New signed-in Web RPCs:
 5. Run a small real-device campaign and verify SENT/DELIVERED callbacks plus recovery behavior.
 
 Do not install Android 0.18 against a cloud that does not yet expose migration 00340; Android intentionally blocks before `SmsManager` if attempt registration is unavailable.
+
+## 0.18.2 campaign/history deletion
+A forward migration adds safety-gated campaign deletion. Do not delete campaigns with active Android execution/recovery; the RPC enforces this server-side. `Delete safe history` skips blocked campaigns.

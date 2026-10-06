@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState, LoadingState } from '../components/StateViews'
-import { getCampaignConfirmation, listCampaignConfirmationRecipients, type CampaignConfirmationDetail, type CampaignConfirmationRecipient } from '../lib/campaignConfirmationApi'
+import { deleteCampaign, getCampaignConfirmation, listCampaignConfirmationRecipients, type CampaignConfirmationDetail, type CampaignConfirmationRecipient } from '../lib/campaignConfirmationApi'
 import { canCreateDurableQueue, dispatchProgress, dispatchSummary, type CampaignDispatch } from '../lib/durableQueue'
 import { enqueueCampaignDispatch, getCampaignDispatch } from '../lib/durableQueueApi'
 import { attemptBadgeClass, deliveryProgress, deliverySummary, sentProgress, type CampaignDeliveryStatus, type CampaignMessageAttempt, type MessageRecoveryAction } from '../lib/deliveryAttempts'
@@ -18,6 +18,7 @@ function dateTime(value: string | null) {
 
 export function CampaignDetailPage() {
   const { workspace } = useWorkspace()
+  const navigate = useNavigate()
   const { campaignId = '' } = useParams()
   const [campaign, setCampaign] = useState<CampaignConfirmationDetail | null>(null)
   const [recipients, setRecipients] = useState<CampaignConfirmationRecipient[]>([])
@@ -32,6 +33,8 @@ export function CampaignDetailPage() {
   const [safetyError, setSafetyError] = useState<string | null>(null)
   const [deliveryError, setDeliveryError] = useState<string | null>(null)
   const [recoveryBusy, setRecoveryBusy] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -127,6 +130,21 @@ export function CampaignDetailPage() {
       setDeliveryError(errorMessage(reason, 'Could not request message recovery.'))
     } finally {
       setRecoveryBusy(false)
+    }
+  }
+
+  async function removeCampaign() {
+    if (!workspace || !campaignId || !campaign || deleteBusy) return
+    if (!window.confirm(`Delete “${campaign.title}” from campaign history?\n\nBulkText will refuse deletion while Android has in-flight/downloaded work, unresolved UNKNOWN, pending recovery, or callbacks that are not safely terminal.`)) return
+    setDeleteBusy(true)
+    setDeleteError(null)
+    try {
+      await deleteCampaign(workspace.id, campaignId)
+      navigate('/campaigns', { replace: true })
+    } catch (reason) {
+      setDeleteError(errorMessage(reason, 'Could not delete this campaign.'))
+    } finally {
+      setDeleteBusy(false)
     }
   }
 
@@ -248,7 +266,8 @@ export function CampaignDetailPage() {
 
   return (
     <div className="page-stack">
-      <section className="page-heading recipient-heading"><div><p className="eyebrow">Confirmed campaign</p><h1>{campaign.title}</h1><p>Immutable execution snapshot confirmed {dateTime(campaign.confirmedAt)}. Send to Android runs the exact-SIM safety checks, authorization and durable queue handoff in one action.</p></div><Link className="secondary-button" to="/campaigns">Back to campaigns</Link></section>
+      <section className="page-heading recipient-heading"><div><p className="eyebrow">Confirmed campaign</p><h1>{campaign.title}</h1><p>Immutable execution snapshot confirmed {dateTime(campaign.confirmedAt)}. Send to Android runs the exact-SIM safety checks, authorization and durable queue handoff in one action.</p></div><div className="button-row"><Link className="secondary-button" to="/campaigns">Back to campaigns</Link><button className="danger-button" type="button" disabled={deleteBusy} onClick={() => void removeCampaign()}>{deleteBusy ? 'Deleting…' : 'Delete campaign'}</button></div></section>
+      {deleteError ? <div className="notice error-notice">{deleteError}</div> : null}
 
       <section className="metric-grid confirmation-metrics">
         <article className="metric-card"><span>Recipients</span><h2>{campaign.recipientCount.toLocaleString()}</h2><p>Frozen recipient snapshot.</p></article>

@@ -168,6 +168,23 @@ begin
     raise exception 'Missing acknowledge_gateway_message_recovery RPC';
   end if;
 
+  -- Safe campaign/history deletion (20261006000200).
+  if to_regprocedure('public.get_campaign_delete_status(uuid,uuid)') is null then
+    raise exception 'Missing get_campaign_delete_status(uuid,uuid) RPC';
+  end if;
+  if to_regprocedure('public.delete_campaign(uuid,uuid)') is null then
+    raise exception 'Missing delete_campaign(uuid,uuid) RPC';
+  end if;
+  if to_regprocedure('public.delete_campaign_history(uuid)') is null then
+    raise exception 'Missing delete_campaign_history(uuid) RPC';
+  end if;
+  if coalesce((v_meta ->> 'campaign_delete_enabled')::boolean, false) is not true then
+    raise exception 'Campaign deletion must be enabled after 20261006000200';
+  end if;
+  if coalesce((v_meta ->> 'campaign_delete_blocks_inflight_android_work')::boolean, false) is not true then
+    raise exception 'Campaign deletion must block in-flight Android work';
+  end if;
+
   if coalesce((v_meta ->> 'delivery_callbacks_enabled')::boolean, false) is not true then
     raise exception 'Delivery callbacks must be enabled after 00340';
   end if;
@@ -208,7 +225,7 @@ begin
     raise exception 'Legacy list_my_organizations() RPC should not exist';
   end if;
 
-  raise notice 'BulkText schema structural verification through 20261006000180 PASS';
+  raise notice 'BulkText schema structural verification through 20261006000200 PASS';
 end;
 $$;
 

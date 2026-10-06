@@ -30,3 +30,7 @@ npx supabase db push --dry-run
 Expected dry-run: only `20261006000180_callback_retry_safety_stabilization.sql`.
 
 This build environment does not have the user's linked Supabase project or Android source/device, so hosted migration deployment and real-device acceptance remain certification gates.
+
+## 0.18.2 pending local validation
+
+Campaign/history delete patch added with DB safety guards, UI actions, and preflight coverage. Run `npm ci && npm run validate`, then verify the hosted migration dry-run before push.
