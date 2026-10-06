@@ -1,6 +1,6 @@
--- BulkText Individual-First schema verification through migration 20261001000330.
+-- BulkText Individual-First schema verification through migration 20261001000340.
 -- Structural/metadata checks only; this script does not create or modify application data.
--- Web 0.16.3 adds the bulk consent declaration RPC while preserving queue/exact-SIM semantics.
+-- Web/Cloud 0.18 adds delivery callback attempt history and explicit safe recovery while preserving queue/exact-SIM semantics.
 
 do $$
 declare
@@ -14,8 +14,8 @@ begin
     raise exception 'Missing app_meta schema metadata';
   end if;
 
-  if coalesce(v_meta ->> 'version', '') <> '0.16.3' then
-    raise exception 'Expected app_meta schema version 0.16.3 from migration 00330, got %', v_meta;
+  if coalesce(v_meta ->> 'version', '') <> '0.18.0' then
+    raise exception 'Expected app_meta schema version 0.18.0 from migration 00340, got %', v_meta;
   end if;
 
   if coalesce(v_meta ->> 'tenant_model', '') <> 'hidden_personal_workspace' then
@@ -80,7 +80,8 @@ begin
     'message_composer_drafts',
     'campaigns','campaign_recipients',
     'campaign_send_authorizations',
-    'campaign_dispatches','campaign_message_jobs','campaign_queue_events'
+    'campaign_dispatches','campaign_message_jobs','campaign_queue_events',
+    'campaign_message_attempts','campaign_message_attempt_parts','campaign_message_attempt_events','campaign_message_recovery_requests'
   ] loop
     if to_regclass('public.' || v_name) is null then
       v_missing := array_append(v_missing, v_name);
@@ -88,7 +89,7 @@ begin
   end loop;
 
   if cardinality(v_missing) > 0 then
-    raise exception 'Missing required tables through 00330: %', array_to_string(v_missing, ', ');
+    raise exception 'Missing required tables through 00340: %', array_to_string(v_missing, ', ');
   end if;
 
   -- Campaign confirmation snapshot (00300/00305).
@@ -144,6 +145,39 @@ begin
     raise exception 'Missing record_recipient_preview_bulk_consent(uuid,uuid,text,text,text,timestamptz) RPC';
   end if;
 
+  -- Delivery attempts / callbacks / recovery (00340).
+  if to_regprocedure('public.begin_gateway_message_attempt(uuid,text,uuid,uuid,integer)') is null then
+    raise exception 'Missing begin_gateway_message_attempt RPC';
+  end if;
+  if to_regprocedure('public.report_gateway_message_attempt_event(uuid,text,uuid,uuid,text,integer,integer,bigint)') is null then
+    raise exception 'Missing report_gateway_message_attempt_event RPC';
+  end if;
+  if to_regprocedure('public.get_campaign_delivery_status(uuid,uuid)') is null then
+    raise exception 'Missing get_campaign_delivery_status RPC';
+  end if;
+  if to_regprocedure('public.list_campaign_message_attempts(uuid,uuid,integer)') is null then
+    raise exception 'Missing list_campaign_message_attempts RPC';
+  end if;
+  if to_regprocedure('public.request_campaign_message_recovery(uuid,uuid,text)') is null then
+    raise exception 'Missing request_campaign_message_recovery RPC';
+  end if;
+  if to_regprocedure('public.list_gateway_message_recovery_requests(uuid,text,integer)') is null then
+    raise exception 'Missing list_gateway_message_recovery_requests RPC';
+  end if;
+  if to_regprocedure('public.acknowledge_gateway_message_recovery(uuid,text,uuid)') is null then
+    raise exception 'Missing acknowledge_gateway_message_recovery RPC';
+  end if;
+
+  if coalesce((v_meta ->> 'delivery_callbacks_enabled')::boolean, false) is not true then
+    raise exception 'Delivery callbacks must be enabled after 00340';
+  end if;
+  if coalesce((v_meta ->> 'safe_retry_requires_explicit_web_request')::boolean, false) is not true then
+    raise exception 'Safe retry must require an explicit Web request';
+  end if;
+  if coalesce((v_meta ->> 'unknown_auto_retry_enabled')::boolean, true) is not false then
+    raise exception 'UNKNOWN automatic retry must remain disabled';
+  end if;
+
   if not exists (
     select 1 from pg_indexes
     where schemaname='public' and tablename='gateway_devices'
@@ -171,7 +205,7 @@ begin
     raise exception 'Legacy list_my_organizations() RPC should not exist';
   end if;
 
-  raise notice 'BulkText schema structural verification through 20261001000330 PASS';
+  raise notice 'BulkText schema structural verification through 20261001000340 PASS';
 end;
 $$;
 

@@ -1,19 +1,25 @@
-# BulkText Web 0.16.4
+# BulkText Web 0.18.0
 
-Web 0.16.4 is the Simple Send UX companion for Android 0.17.1. It builds on the certified 0.16.3 Simple Campaign Flow + Smart Number Import without changing any Supabase migration.
+Web 0.18 adds authoritative SMS attempt history, SENT/DELIVERED callback status, and explicit recovery controls on top of the certified 0.16.4 Simple Send UX.
 
 ## What changed
 
-- Campaign Name input now uses the available form width and remains responsive.
-- Message composer is wide, aligned and responsive with a larger writing area.
-- Queued campaigns no longer show a misleading current preflight blocker as if it invalidates an already-created durable queue.
-- Queue-time safety copy explains that Android still re-checks the exact frozen SIM before every irreversible submission.
-- Android instructions now describe 0.17.1 foreground auto-sync and one-action bounded campaign send.
+- Adds forward migration `20261001000340_delivery_attempts_callbacks_recovery.sql`.
+- Stores immutable per-job attempt numbers and per-part SENT/DELIVERED callback outcomes.
+- Campaign detail now shows Awaiting attempt, Submitted, Known sent, Delivered, Failed and UNKNOWN counts.
+- Attempt history is visible per recipient.
+- Explicit `safe_retry` is offered only when every SENT callback failed and zero parts reported SENT.
+- UNKNOWN/mixed outcomes are never automatically retried; Web can only choose **continue without resending** for that recipient.
+- Android callback/recovery RPCs require the paired gateway device credential even though they are reached through the public REST endpoint.
 
 ## Safety boundary
 
-Web still owns confirmation, eligibility re-check, short-lived authorization and durable queue creation. Exact-SIM/no-fallback semantics are unchanged. Cloud SENT/DELIVERED callbacks, attempt history and safe retry remain 0.18 work.
+Web still owns immutable campaign confirmation, current eligibility re-check, short-lived send authorization and durable queue creation. Exact-SIM/no-fallback semantics from 00320 remain unchanged.
+
+Android 0.18 must register a cloud attempt and persist local SUBMITTING before `SmsManager`. SENT and DELIVERED are separate facts. A delivery failure does not authorize resend. Callback timeout, mixed SENT results, conflicting callbacks, or an ambiguous post-submission boundary become UNKNOWN.
+
+Safe retry is never automatic and requires an explicit Web request. A locally staged retry cannot execute until the recovery request has also been acknowledged by the cloud.
 
 ## Database
 
-No migration is added or modified. Migration head remains `20261001000330_simple_campaign_flow_bulk_consent.sql`.
+Migration head becomes `20261001000340_delivery_attempts_callbacks_recovery.sql`. Applied migrations through `20261001000330_simple_campaign_flow_bulk_consent.sql` must remain byte-for-byte unchanged.

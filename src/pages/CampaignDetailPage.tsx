@@ -4,6 +4,8 @@ import { EmptyState, LoadingState } from '../components/StateViews'
 import { getCampaignConfirmation, listCampaignConfirmationRecipients, type CampaignConfirmationDetail, type CampaignConfirmationRecipient } from '../lib/campaignConfirmationApi'
 import { canCreateDurableQueue, dispatchProgress, dispatchSummary, type CampaignDispatch } from '../lib/durableQueue'
 import { enqueueCampaignDispatch, getCampaignDispatch } from '../lib/durableQueueApi'
+import { attemptBadgeClass, deliveryProgress, deliverySummary, sentProgress, type CampaignDeliveryStatus, type CampaignMessageAttempt, type MessageRecoveryAction } from '../lib/deliveryAttempts'
+import { getCampaignDeliveryStatus, listCampaignMessageAttempts, requestCampaignMessageRecovery } from '../lib/deliveryAttemptsApi'
 import { errorMessage } from '../lib/errors'
 import { authorizationIsActive, canAuthorizeCampaign, preflightSummary, type CampaignSendAuthorization, type CampaignSendPreflight } from '../lib/gatewayPreflight'
 import { authorizeCampaignSend, getCampaignSendPreflight, getLatestCampaignSendAuthorization, revokeCampaignSendAuthorization } from '../lib/gatewayPreflightApi'
@@ -22,10 +24,14 @@ export function CampaignDetailPage() {
   const [preflight, setPreflight] = useState<CampaignSendPreflight | null>(null)
   const [authorization, setAuthorization] = useState<CampaignSendAuthorization | null>(null)
   const [dispatch, setDispatch] = useState<CampaignDispatch | null>(null)
+  const [deliveryStatus, setDeliveryStatus] = useState<CampaignDeliveryStatus | null>(null)
+  const [attempts, setAttempts] = useState<CampaignMessageAttempt[]>([])
   const [loading, setLoading] = useState(true)
   const [safetyBusy, setSafetyBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [safetyError, setSafetyError] = useState<string | null>(null)
+  const [deliveryError, setDeliveryError] = useState<string | null>(null)
+  const [recoveryBusy, setRecoveryBusy] = useState(false)
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -57,6 +63,72 @@ export function CampaignDetailPage() {
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [workspace, campaignId])
+
+  async function refreshDelivery() {
+    if (!workspace || !campaignId || !dispatch) {
+      setDeliveryStatus(null)
+      setAttempts([])
+      return
+    }
+    try {
+      const [nextStatus, nextAttempts] = await Promise.all([
+        getCampaignDeliveryStatus(workspace.id, campaignId),
+        listCampaignMessageAttempts(workspace.id, campaignId, 100),
+      ])
+      setDeliveryStatus(nextStatus)
+      setAttempts(nextAttempts)
+      setDeliveryError(null)
+    } catch (reason) {
+      setDeliveryError(errorMessage(reason, 'Could not refresh SMS callback status.'))
+    }
+  }
+
+  useEffect(() => {
+    if (!workspace || !campaignId || !dispatch) {
+      setDeliveryStatus(null)
+      setAttempts([])
+      return
+    }
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const [nextStatus, nextAttempts] = await Promise.all([
+          getCampaignDeliveryStatus(workspace.id, campaignId),
+          listCampaignMessageAttempts(workspace.id, campaignId, 100),
+        ])
+        if (cancelled) return
+        setDeliveryStatus(nextStatus)
+        setAttempts(nextAttempts)
+        setDeliveryError(null)
+      } catch (reason) {
+        if (!cancelled) setDeliveryError(errorMessage(reason, 'Could not refresh SMS callback status.'))
+      }
+    }
+    void poll()
+    const timer = window.setInterval(() => void poll(), 5_000)
+    return () => { cancelled = true; window.clearInterval(timer) }
+  }, [workspace, campaignId, dispatch?.dispatchId])
+
+  async function requestRecovery(action: MessageRecoveryAction) {
+    if (!workspace || !campaignId || !dispatch || recoveryBusy) return
+    const message = action === 'safe_retry'
+      ? 'Request explicit retry only for failures where Android received terminal SENT failures for every SMS part and zero parts reported SENT? UNKNOWN or mixed outcomes will NOT be retried.'
+      : 'Resolve all current UNKNOWN jobs without resending them? This clears the Android safety pause so remaining jobs can continue, but the UNKNOWN recipients will not be sent again.'
+    if (!window.confirm(message)) return
+    setRecoveryBusy(true)
+    setDeliveryError(null)
+    try {
+      const count = await requestCampaignMessageRecovery(workspace.id, campaignId, action)
+      if (count === 0) {
+        setDeliveryError(action === 'safe_retry' ? 'No new safe-retry eligible failures were found.' : 'No unresolved UNKNOWN attempts were found.')
+      }
+      await refreshDelivery()
+    } catch (reason) {
+      setDeliveryError(errorMessage(reason, 'Could not request message recovery.'))
+    } finally {
+      setRecoveryBusy(false)
+    }
+  }
 
   async function refreshSafety() {
     if (!workspace || !campaignId) return
@@ -138,7 +210,7 @@ export function CampaignDetailPage() {
 
   async function sendToPhone() {
     if (!workspace || !campaignId || dispatch) return
-    if (!window.confirm('Send this confirmed campaign to the paired Android phone? BulkText will re-run exact-SIM preflight, issue a short-lived authorization and create the durable queue. Android 0.17 still requires explicit execution on the phone.')) return
+    if (!window.confirm('Send this confirmed campaign through the paired Android gateway? BulkText will re-run exact-SIM preflight, create the durable queue, and the enabled Android 0.18 background gateway will execute it without requiring you to return to the phone.')) return
     setSafetyBusy(true)
     setSafetyError(null)
     try {
@@ -192,7 +264,7 @@ export function CampaignDetailPage() {
       <section className="panel simple-send-panel">
         <div className="panel-heading"><div><p className="eyebrow">Simple send</p><h2>{dispatch ? 'Campaign is queued on Android' : 'Send to Android'}</h2></div><span className={`badge ${dispatch ? 'badge-success' : preflight?.ready ? 'badge-success' : 'badge-warning'}`}>{dispatch ? 'Queued' : preflight?.ready ? 'Ready' : 'Check required'}</span></div>
         {safetyError ? <div className="notice error-notice">{safetyError}</div> : null}
-        {dispatch ? <><p className="muted-copy">The durable cloud queue has been created for the exact confirmed SIM. Android 0.17.1 automatically checks for new cloud jobs while the gateway app is open. When the campaign is Ready on Android, use <strong>Send campaign</strong> once; manual queue sync remains available only for recovery/diagnostics.</p><p className="muted-copy">{dispatchSummary(dispatch)}</p></> : <><p className="muted-copy">One click re-runs current eligibility, phone/SIM freshness and exact SIM identity, then creates the authorized durable queue. It never falls back to another SIM.</p><div className="button-row"><button className="primary-button" type="button" disabled={safetyBusy} onClick={() => void sendToPhone()}>{safetyBusy ? 'Checking & queueing…' : 'Send to Android'}</button></div></>}
+        {dispatch ? <><p className="muted-copy">The durable cloud queue has been created for the exact confirmed SIM. Android 0.18 background gateway can execute newly authorized jobs automatically while the phone stays in the background; manual queue/send controls are recovery tools only.</p><p className="muted-copy">{dispatchSummary(dispatch)}</p></> : <><p className="muted-copy">One click re-runs current eligibility, phone/SIM freshness and exact SIM identity, then creates the authorized durable queue. It never falls back to another SIM.</p><div className="button-row"><button className="primary-button" type="button" disabled={safetyBusy} onClick={() => void sendToPhone()}>{safetyBusy ? 'Checking & queueing…' : 'Send to Android'}</button></div></>}
         <details className="advanced-send-details"><summary>Advanced send controls</summary><p className="muted-copy">The detailed preflight, authorization and queue panels below remain available for diagnostics and recovery.</p></details>
       </section>
 
@@ -239,9 +311,40 @@ export function CampaignDetailPage() {
         </>}
       </section>
 
+      {dispatch ? <section className="panel delivery-attempts-panel">
+        <div className="panel-heading">
+          <div><p className="eyebrow">SMS callbacks &amp; recovery</p><h2>SENT / DELIVERED status</h2></div>
+          <span className={`badge ${deliveryStatus?.unresolvedUnknownJobs ? 'badge-warning' : deliveryStatus?.deliveredJobs === deliveryStatus?.recipientCount && deliveryStatus?.recipientCount ? 'badge-success' : 'badge-muted'}`}>{deliveryStatus?.unresolvedUnknownJobs ? 'Recovery required' : deliveryStatus ? 'Tracking' : 'Waiting'}</span>
+        </div>
+        {deliveryError ? <div className="notice error-notice">{deliveryError}</div> : null}
+        <p className="muted-copy">{deliverySummary(deliveryStatus)}</p>
+        {deliveryStatus ? <>
+          <div className="metric-grid confirmation-metrics">
+            <article className="metric-card"><span>Awaiting attempt</span><h2>{deliveryStatus.awaitingAttemptJobs.toLocaleString()}</h2><p>Downloaded but not yet registered at the SmsManager boundary.</p></article>
+            <article className="metric-card"><span>Submitted</span><h2>{(deliveryStatus.preparedJobs + deliveryStatus.submittedJobs).toLocaleString()}</h2><p>Attempt registered / waiting for complete SENT callbacks.</p></article>
+            <article className="metric-card"><span>Known sent</span><h2>{(deliveryStatus.sentJobs + deliveryStatus.deliveredJobs).toLocaleString()}</h2><p>{sentProgress(deliveryStatus).toFixed(0)}% of recipients have complete SENT success.</p></article>
+            <article className="metric-card"><span>Delivered</span><h2>{deliveryStatus.deliveredJobs.toLocaleString()}</h2><p>{deliveryProgress(deliveryStatus).toFixed(0)}% reported DELIVERED.</p></article>
+            <article className="metric-card"><span>Failed</span><h2>{deliveryStatus.failedJobs.toLocaleString()}</h2><p>{deliveryStatus.retryableFailedJobs.toLocaleString()} safe-retry eligible.</p></article>
+            <article className="metric-card"><span>Unresolved UNKNOWN</span><h2>{deliveryStatus.unresolvedUnknownJobs.toLocaleString()}</h2><p>Never automatically retried.</p></article>
+          </div>
+          {deliveryStatus.recoveryRequestedJobs > 0 ? <div className="notice warning-notice"><strong>Recovery queued.</strong> {deliveryStatus.recoveryRequestedJobs.toLocaleString()} request{deliveryStatus.recoveryRequestedJobs === 1 ? '' : 's'} waiting for the paired Android gateway.</div> : null}
+          <div className="button-row">
+            {deliveryStatus.retryableFailedJobs > 0 ? <button className="primary-button" type="button" disabled={recoveryBusy} onClick={() => void requestRecovery('safe_retry')}>{recoveryBusy ? 'Working…' : `Retry ${deliveryStatus.retryableFailedJobs} safe failure${deliveryStatus.retryableFailedJobs === 1 ? '' : 's'}`}</button> : null}
+            {deliveryStatus.unresolvedUnknownJobs > 0 ? <button className="secondary-button" type="button" disabled={recoveryBusy} onClick={() => void requestRecovery('skip_unknown')}>{recoveryBusy ? 'Working…' : `Continue without resending ${deliveryStatus.unresolvedUnknownJobs} UNKNOWN`}</button> : null}
+            <button className="secondary-button" type="button" disabled={recoveryBusy} onClick={() => void refreshDelivery()}>Refresh callbacks</button>
+          </div>
+        </> : <p className="muted-copy">No Android attempt has been registered yet. Android 0.18 registers every attempt in cloud before calling SmsManager.</p>}
+
+        <details className="advanced-send-details" open={Boolean(deliveryStatus?.failedJobs || deliveryStatus?.unknownJobs)}>
+          <summary>Attempt history</summary>
+          <p className="muted-copy">Every retry receives a new immutable attempt number. SENT success and DELIVERED are separate outcomes; delivery failure never authorizes a resend.</p>
+          {attempts.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Row</th><th>Recipient</th><th>Attempt</th><th>State</th><th>Retry</th><th>Updated</th></tr></thead><tbody>{attempts.map((attempt) => <tr key={attempt.attemptId}><td>{attempt.sourceRowNumber}</td><td>{attempt.normalizedE164}</td><td>#{attempt.attemptNumber}</td><td><span className={`badge ${attemptBadgeClass(attempt.state)}`}>{attempt.state.toUpperCase()}</span>{attempt.terminalReason ? <small>{attempt.terminalReason}</small> : null}{attempt.resolution === 'skip_without_retry' ? <small>Resolved without resend.</small> : null}</td><td>{attempt.safeRetryEligible ? <span className="badge badge-success">Safe retry</span> : <span className="badge badge-muted">No auto retry</span>}</td><td>{dateTime(attempt.deliveredAt || attempt.sentAt || attempt.failedAt || attempt.unknownAt || attempt.submittedAt || attempt.createdAt)}</td></tr>)}</tbody></table></div> : <p className="muted-copy">No attempt history yet.</p>}
+        </details>
+      </section> : null}
+
       <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Recipients</p><h2>Frozen personalized messages</h2></div><span className="badge badge-muted">First {Math.min(100, campaign.recipientCount)}</span></div>{recipients.length === 0 ? <EmptyState title="No recipients">This campaign has no stored recipients.</EmptyState> : <div className="table-wrap"><table className="data-table campaign-recipient-table"><thead><tr><th>Recipient</th><th>Message</th><th>SMS</th><th>Eligibility</th></tr></thead><tbody>{recipients.map((recipient) => <tr key={recipient.recipientId}><td><strong>{recipient.displayName || 'Recipient'}</strong><small>{recipient.normalizedE164}</small></td><td className="campaign-message-cell">{recipient.renderedMessage}</td><td>{recipient.smsEncoding}<small>{recipient.segmentCount} segment{recipient.segmentCount === 1 ? '' : 's'} · {recipient.characterCount} chars</small></td><td><span className="badge badge-success">Eligible at confirmation</span><small>Current eligibility is rechecked by preflight.</small></td></tr>)}</tbody></table></div>}{campaign.recipientCount > recipients.length ? <p className="muted-copy">Showing the first {recipients.length} recipients. The full snapshot contains {campaign.recipientCount} recipients.</p> : null}</section>
 
-      <section className="notice warning-notice"><strong>0.16.4 / Android 0.17.1 boundary:</strong> Web prepares and queues the confirmed campaign; Android 0.17.1 auto-syncs while the app is foregrounded and can submit a READY campaign in a bounded sequential batch on the exact bound SIM. Cloud SENT/DELIVERED callbacks, attempt history and safe retry workflows remain for 0.18.</section>
+      <section className="notice warning-notice"><strong>0.18 safety boundary:</strong> Android registers an immutable attempt before SmsManager, reports per-part SENT/DELIVERED callbacks, and never automatically retries UNKNOWN or mixed multipart outcomes. Safe retry requires an explicit Web request and only applies when every SENT callback failed with zero successful parts.</section>
     </div>
   )
 }
