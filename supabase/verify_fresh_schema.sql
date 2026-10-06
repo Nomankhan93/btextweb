@@ -1,6 +1,6 @@
--- BulkText Individual-First schema verification through migration 20261001000340.
+-- BulkText Individual-First schema verification through migration 20261006000180.
 -- Structural/metadata checks only; this script does not create or modify application data.
--- Web/Cloud 0.18 adds delivery callback attempt history and explicit safe recovery while preserving queue/exact-SIM semantics.
+-- Web/Cloud 0.18.1 hardens callback recovery: post-SmsManager callback failure is UNKNOWN and callback-derived resend is disabled.
 
 do $$
 declare
@@ -14,8 +14,8 @@ begin
     raise exception 'Missing app_meta schema metadata';
   end if;
 
-  if coalesce(v_meta ->> 'version', '') <> '0.18.0' then
-    raise exception 'Expected app_meta schema version 0.18.0 from migration 00340, got %', v_meta;
+  if coalesce(v_meta ->> 'version', '') <> '0.18.1' then
+    raise exception 'Expected app_meta schema version 0.18.1 from migration 00180, got %', v_meta;
   end if;
 
   if coalesce(v_meta ->> 'tenant_model', '') <> 'hidden_personal_workspace' then
@@ -171,8 +171,11 @@ begin
   if coalesce((v_meta ->> 'delivery_callbacks_enabled')::boolean, false) is not true then
     raise exception 'Delivery callbacks must be enabled after 00340';
   end if;
-  if coalesce((v_meta ->> 'safe_retry_requires_explicit_web_request')::boolean, false) is not true then
-    raise exception 'Safe retry must require an explicit Web request';
+  if coalesce((v_meta ->> 'post_smsmanager_callback_failure_is_unknown')::boolean, false) is not true then
+    raise exception 'Post-SmsManager callback failure must be UNKNOWN in 0.18.1';
+  end if;
+  if coalesce((v_meta ->> 'callback_derived_safe_retry_enabled')::boolean, true) is not false then
+    raise exception 'Callback-derived safe retry must be disabled in 0.18.1';
   end if;
   if coalesce((v_meta ->> 'unknown_auto_retry_enabled')::boolean, true) is not false then
     raise exception 'UNKNOWN automatic retry must remain disabled';
@@ -205,7 +208,7 @@ begin
     raise exception 'Legacy list_my_organizations() RPC should not exist';
   end if;
 
-  raise notice 'BulkText schema structural verification through 20261001000340 PASS';
+  raise notice 'BulkText schema structural verification through 20261006000180 PASS';
 end;
 $$;
 

@@ -26,6 +26,6 @@ describe('0.18 delivery status', () => {
 
   it('surfaces only explicit safe-retry failures', () => {
     const failed = { ...status, failedJobs: 2, retryableFailedJobs: 2, unresolvedUnknownJobs: 0 }
-    expect(deliverySummary(failed)).toContain('explicit safe retry')
+    expect(deliverySummary(failed)).toContain('does not authorize callback-derived resend')
   })
 })

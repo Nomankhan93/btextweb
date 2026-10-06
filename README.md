@@ -1,4 +1,7 @@
-# BulkText Web 0.18.0
+# BulkText Web 0.18.1
+
+> **0.18.1 safety stabilization:** real-device acceptance proved that all-failed Android SENT callbacks can coexist with actual SMS delivery. Post-SmsManager callback failure is now UNKNOWN and callback-derived resend is disabled. See `docs/CALLBACK_RETRY_SAFETY_0181.md`.
+
 
 Web 0.18 adds authoritative SMS attempt history, SENT/DELIVERED callback status, and explicit recovery controls on top of the certified 0.16.4 Simple Send UX.
 

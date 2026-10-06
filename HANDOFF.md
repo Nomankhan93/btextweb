@@ -1,4 +1,9 @@
-# BulkText 0.18.0 Web / Cloud Handoff
+# BulkText 0.18.1 Web / Cloud Handoff
+
+## 0.18.1 certification note
+
+0.18.0 real-device acceptance exposed a duplicate-risk condition: SMS was physically received while SENT callbacks were classified as failed. 0.18.1 therefore converts callback-derived FAILED to UNKNOWN and disables callback-derived safe retry. Hosted migration and real-device re-certification are required before 0.19.
+
 
 Baseline: certified Web 0.16.4, Android 0.17.2 background gateway, and cloud migration head 00330.
 

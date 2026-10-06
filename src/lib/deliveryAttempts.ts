@@ -53,7 +53,7 @@ export function deliverySummary(status: CampaignDeliveryStatus | null): string {
     return `${status.unresolvedUnknownJobs.toLocaleString()} UNKNOWN job${status.unresolvedUnknownJobs === 1 ? '' : 's'} require recovery. No automatic retry is permitted.`
   }
   if (status.failedJobs > 0) {
-    return `${status.failedJobs.toLocaleString()} failed job${status.failedJobs === 1 ? '' : 's'} · ${status.retryableFailedJobs.toLocaleString()} currently eligible for explicit safe retry.`
+    return `${status.failedJobs.toLocaleString()} failed job${status.failedJobs === 1 ? '' : 's'} require review. 0.18.1 does not authorize callback-derived resend.`
   }
   const resolvedUnknown = Math.max(0, status.unknownJobs - status.unresolvedUnknownJobs)
   if (resolvedUnknown > 0) {
