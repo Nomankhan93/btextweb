@@ -1,33 +1,23 @@
-# BulkText Web / Cloud 0.18.1 Patch
+# Web 0.18.5 — Delivery & Recovery Contract Hardening
 
-Safety stabilization after real-device 0.18 acceptance exposed callback-derived duplicate risk.
+Current version 0.18.5; baseline 0.18.4. See docs/DELIVERY_RECOVERY_CONTRACT_0185.md for exact RPCs and transition rules, and VALIDATION_RESULTS.md for validation limits.
 
-## Changes
+After applying the source patch:
 
-- Adds forward migration `20261006000180_callback_retry_safety_stabilization.sql`.
-- Reclassifies all 00340 callback-derived `FAILED` attempts to `UNKNOWN`.
-- Disables callback-derived `safe_retry` server-side, including for old Web clients.
-- Consumes pending legacy safe-retry requests.
-- Keeps late complete SENT callbacks capable of resolving UNKNOWN to SENT/DELIVERED.
-- Removes Safe retry action/badge from Campaign detail UX.
-- Separates PREPARED/SUBMITTED wording from carrier SENT.
-- Adds preflight markers and 0.18.1 schema metadata verification.
+```bash
+npm ci
+npm run validate
+npm run test:delivery-contract
+supabase migration list --linked
+supabase db push --linked --dry-run
+```
 
-## Safety rule
+This project uses hosted Supabase. No `supabase start`, local migration or reset is required. The SQL contract test uses an isolated in-memory database only.
 
-After `SmsManager` invocation, callback failure is ambiguous. Do not resend. UNKNOWN may only be continued without resending.
+Verify the linked project and migration history. If the dry run lists only `20261010000100_delivery_recovery_contract_hardening.sql`, apply with `supabase db push --linked`. If other pending migrations or a different project appear, stop and review those first. Do not reset the database, edit old migrations or force migration-history repairs.
 
-## Deploy order
+Apply the database migration BEFORE deploying this Web build. Then execute supabase/verify_fresh_schema.sql in the hosted SQL editor for read-only metadata/grant checks.
 
-1. Validate locally.
-2. Confirm `supabase db push --dry-run` shows only `20261006000180_callback_retry_safety_stabilization.sql`.
-3. Push migration.
-4. Revalidate.
-5. Re-run controlled real-device acceptance without pressing any legacy Safe retry path.
+Keep Android 0.18.4 installed until the next consumer patch. SENT reporting remains supported. Legacy delivery callbacks are now unverified; historical unsupported DELIVERED claims become SENT without enabling resend. Phone-side recovery/outbox/blocked-job behavior requires Android 0.18.5.
 
-## 0.18.2 — Safe campaign/history delete
-
-- Per-campaign Delete action on Campaign history and Campaign detail.
-- `Delete safe history` bulk cleanup.
-- Database-enforced guards prevent deletion while Android execution, callbacks, UNKNOWN recovery, leases, or unsafe downloaded jobs are still active.
-- Never-downloaded queued jobs may be cancelled by an intentional delete.
+Migration rollback is forward-fix only: do not drop conflict/tombstone/recovery data or restore unsafe result-code-only delivery aggregation. If the Web deployment fails, the old Web can operate against retained v1 RPCs while the Web issue is fixed.

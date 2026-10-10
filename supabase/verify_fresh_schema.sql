@@ -1,6 +1,6 @@
--- BulkText Individual-First schema verification through migration 20261006000180.
+-- BulkText Individual-First schema verification through migration 20261010000100.
 -- Structural/metadata checks only; this script does not create or modify application data.
--- Web/Cloud 0.18.1 hardens callback recovery: post-SmsManager callback failure is UNKNOWN and callback-derived resend is disabled.
+-- Web/Cloud 0.18.5 removes production test-purge RPCs and adds a final compliance gate before attempt creation.
 
 do $$
 declare
@@ -14,8 +14,8 @@ begin
     raise exception 'Missing app_meta schema metadata';
   end if;
 
-  if coalesce(v_meta ->> 'version', '') <> '0.18.1' then
-    raise exception 'Expected app_meta schema version 0.18.1 from migration 00180, got %', v_meta;
+  if coalesce(v_meta ->> 'version', '') <> '0.18.5' then
+    raise exception 'Expected app_meta schema version 0.18.5 from migration 20261010000100, got %', v_meta;
   end if;
 
   if coalesce(v_meta ->> 'tenant_model', '') <> 'hidden_personal_workspace' then
@@ -185,6 +185,29 @@ begin
     raise exception 'Campaign deletion must block in-flight Android work';
   end if;
 
+
+
+  -- 0.18.5 production hardening: historical purge migration remains in history,
+  -- but the effective schema must not expose either destructive RPC.
+  if to_regprocedure('public.get_test_campaign_purge_status(uuid)') is not null then
+    raise exception 'Production schema must not expose get_test_campaign_purge_status(uuid)';
+  end if;
+  if to_regprocedure('public.purge_test_campaign_data(uuid,text)') is not null then
+    raise exception 'Production schema must not expose purge_test_campaign_data(uuid,text)';
+  end if;
+  if coalesce((v_meta ->> 'test_campaign_purge_enabled')::boolean, true) is not false then
+    raise exception 'Test campaign purge must be disabled in 0.18.5';
+  end if;
+  if coalesce((v_meta ->> 'production_test_purge_removed')::boolean, false) is not true then
+    raise exception '0.18.5 production purge removal marker is missing';
+  end if;
+  if coalesce((v_meta ->> 'final_compliance_gate_before_attempt')::boolean, false) is not true then
+    raise exception 'Final compliance gate before attempt must be enabled in 0.18.5';
+  end if;
+  if coalesce((v_meta ->> 'suppression_rechecked_at_attempt_start')::boolean, false) is not true then
+    raise exception 'Suppression must be rechecked at attempt start in 0.18.5';
+  end if;
+
   if coalesce((v_meta ->> 'delivery_callbacks_enabled')::boolean, false) is not true then
     raise exception 'Delivery callbacks must be enabled after 00340';
   end if;
@@ -225,8 +248,19 @@ begin
     raise exception 'Legacy list_my_organizations() RPC should not exist';
   end if;
 
-  raise notice 'BulkText schema structural verification through 20261006000200 PASS';
+  raise notice 'BulkText schema structural verification through 20261006000210 PASS';
 end;
 $$;
 
 select key, value from public.app_meta where key = 'schema';
+
+-- Additive contract, grants and RLS checks for 0.18.5.
+do $$
+begin
+ if (select value->>'gateway_contract_version' from public.app_meta where key='schema') is distinct from '2' then raise exception 'Missing v2 gateway contract'; end if;
+ if to_regprocedure('public.report_gateway_message_attempt_event_v2(uuid,text,uuid,uuid,text,integer,integer,bigint,text,integer,text)') is null then raise exception 'Missing callback v2'; end if;
+ if to_regprocedure('public.acknowledge_gateway_message_recovery_v2(uuid,text,uuid,text)') is null then raise exception 'Missing recovery v2'; end if;
+ if has_function_privilege('anon','public.retire_gateway_recoveries_internal(uuid)','execute') or has_function_privilege('authenticated','public.retire_gateway_recoveries_internal(uuid)','execute') then raise exception 'Recovery helper exposed'; end if;
+ if has_table_privilege('authenticated','public.gateway_attempt_tombstones','select') or has_table_privilege('anon','public.gateway_attempt_tombstones','select') then raise exception 'Tombstones exposed'; end if;
+ if not (select relrowsecurity from pg_class where oid='public.campaign_callback_conflicts'::regclass) then raise exception 'Conflict RLS disabled'; end if;
+end $$;

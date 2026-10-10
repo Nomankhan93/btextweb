@@ -19,10 +19,11 @@ FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 EXCLUDED_DIR_NAMES = {
     '.git', 'node_modules', 'dist', 'coverage', '.cache', '__pycache__',
     '.pytest_cache', '.mypy_cache', '.ruff_cache', '.vite', '.turbo',
-    '.supabase', '.patch-backups', 'release', 'releases',
+    '.supabase', '.patch-backups', '.artifacts', '.vercel', 'release', 'releases',
 }
 EXCLUDED_FILE_NAMES = {
     '.env', '.env.local', '.DS_Store', 'docker.env', 'SHA256SUMS.txt',
+    'supabase.db',
 }
 SECRET_ASSIGNMENT = re.compile(
     rb'(?im)^\s*(?:SUPABASE_SERVICE_ROLE_KEY|BULKTEXT_SUPABASE_SERVICE_ROLE_KEY|'
@@ -30,6 +31,7 @@ SECRET_ASSIGNMENT = re.compile(
 )
 JWT_LIKE = re.compile(rb'eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}')
 SUPABASE_SECRET_LIKE = re.compile(rb'\bsb_secret_[A-Za-z0-9_-]{16,}\b')
+CREDENTIAL_DB_URL = re.compile(rb'(?i)\bpostgres(?:ql)?://[^\s/:]+:[^\s@/]+@[^\s]+')
 
 
 def sha256_file(path: Path) -> str:
@@ -54,6 +56,8 @@ def relative_excluded(rel: PurePosixPath) -> bool:
     if len(parts) >= 2 and parts[0] == 'supabase' and fnmatch.fnmatch(name, 'config.toml.before-*'):
         return True
     if name.endswith(('.pyc', '.pyo', '.swp', '.tmp', '.temp', '~')):
+        return True
+    if name.lower().endswith(('.zip', '.apk', '.aab', '.jks', '.keystore', '.p12', '.pfx', '.sqlite', '.sqlite3', '.db')):
         return True
     return False
 
@@ -100,6 +104,8 @@ def scan_content_bytes(name: str, data: bytes) -> list[str]:
         issues.append(f'JWT-like secret value in {name}')
     if SUPABASE_SECRET_LIKE.search(data):
         issues.append(f'Supabase secret-like value in {name}')
+    if CREDENTIAL_DB_URL.search(data):
+        issues.append(f'credential-bearing PostgreSQL URL in {name}')
     for match in SECRET_ASSIGNMENT.finditer(data):
         if not assignment_is_placeholder(match.group(1)):
             issues.append(f'non-placeholder service/JWT secret assignment in {name}')
@@ -181,9 +187,20 @@ def main() -> int:
 
     root = Path(args.root).resolve()
     package = json.loads((root / 'package.json').read_text(encoding='utf-8'))
-    version = package['version']
-    if version != '0.16.4':
-        raise SystemExit(f'Release packager expects version 0.16.4, found {version}')
+    version = str(package.get('version', '')).strip()
+    if not re.fullmatch(r'\d+\.\d+\.\d+', version):
+        raise SystemExit(f'package.json contains an invalid release version: {version!r}')
+
+    migrations = sorted((root / 'supabase' / 'migrations').glob('*.sql'))
+    if not migrations:
+        raise SystemExit('No Supabase migrations found; release version cannot be verified')
+    latest_migration = migrations[-1]
+    latest_text = latest_migration.read_text(encoding='utf-8')
+    version_marker = f"'version', '{version}'"
+    if version_marker not in latest_text:
+        raise SystemExit(
+            f'Latest migration {latest_migration.name} does not declare app_meta version {version}'
+        )
 
     output_dir = Path(args.output_dir).resolve() if args.output_dir else root.parent / 'release'
     output_dir.mkdir(parents=True, exist_ok=True)

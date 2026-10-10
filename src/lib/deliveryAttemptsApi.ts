@@ -1,3 +1,4 @@
+import { mapContractHealth } from './deliveryContract'
 import type { CampaignDeliveryStatus, CampaignMessageAttempt, MessageRecoveryAction } from './deliveryAttempts'
 import { errorMessage } from './errors'
 import { supabase } from './supabase'
@@ -82,4 +83,12 @@ export async function requestCampaignMessageRecovery(
   })
   if (error) throw new Error(errorMessage(error, 'Could not request SMS recovery.'))
   return Number(data ?? 0)
+}
+
+export async function getCampaignContractHealth(organizationId: string, campaignId: string) {
+  const { data, error } = await client().rpc('get_campaign_contract_health', {
+    p_organization_id: organizationId, p_campaign_id: campaignId,
+  })
+  if (error) throw new Error(errorMessage(error, 'Could not load delivery contract health. Apply the 0.18.5 database migration first.'))
+  return mapContractHealth(data as Record<string, unknown>)
 }

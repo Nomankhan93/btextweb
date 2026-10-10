@@ -1,3 +1,4 @@
+import { contractNotices, type DeliveryContractHealth } from '../lib/deliveryContract'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState, LoadingState } from '../components/StateViews'
@@ -5,7 +6,7 @@ import { deleteCampaign, getCampaignConfirmation, listCampaignConfirmationRecipi
 import { canCreateDurableQueue, dispatchProgress, dispatchSummary, type CampaignDispatch } from '../lib/durableQueue'
 import { enqueueCampaignDispatch, getCampaignDispatch } from '../lib/durableQueueApi'
 import { attemptBadgeClass, deliveryProgress, deliverySummary, sentProgress, type CampaignDeliveryStatus, type CampaignMessageAttempt, type MessageRecoveryAction } from '../lib/deliveryAttempts'
-import { getCampaignDeliveryStatus, listCampaignMessageAttempts, requestCampaignMessageRecovery } from '../lib/deliveryAttemptsApi'
+import { getCampaignContractHealth, getCampaignDeliveryStatus, listCampaignMessageAttempts, requestCampaignMessageRecovery } from '../lib/deliveryAttemptsApi'
 import { errorMessage } from '../lib/errors'
 import { authorizationIsActive, canAuthorizeCampaign, preflightSummary, type CampaignSendAuthorization, type CampaignSendPreflight } from '../lib/gatewayPreflight'
 import { authorizeCampaignSend, getCampaignSendPreflight, getLatestCampaignSendAuthorization, revokeCampaignSendAuthorization } from '../lib/gatewayPreflightApi'
@@ -26,6 +27,7 @@ export function CampaignDetailPage() {
   const [authorization, setAuthorization] = useState<CampaignSendAuthorization | null>(null)
   const [dispatch, setDispatch] = useState<CampaignDispatch | null>(null)
   const [deliveryStatus, setDeliveryStatus] = useState<CampaignDeliveryStatus | null>(null)
+  const [contractHealth, setContractHealth] = useState<DeliveryContractHealth | null>(null)
   const [attempts, setAttempts] = useState<CampaignMessageAttempt[]>([])
   const [loading, setLoading] = useState(true)
   const [safetyBusy, setSafetyBusy] = useState(false)
@@ -70,16 +72,19 @@ export function CampaignDetailPage() {
   async function refreshDelivery() {
     if (!workspace || !campaignId || !dispatch) {
       setDeliveryStatus(null)
+      setContractHealth(null)
       setAttempts([])
       return
     }
     try {
-      const [nextStatus, nextAttempts] = await Promise.all([
+      const [nextStatus, nextAttempts, nextHealth] = await Promise.all([
         getCampaignDeliveryStatus(workspace.id, campaignId),
         listCampaignMessageAttempts(workspace.id, campaignId, 100),
+        getCampaignContractHealth(workspace.id, campaignId),
       ])
       setDeliveryStatus(nextStatus)
       setAttempts(nextAttempts)
+      setContractHealth(nextHealth)
       setDeliveryError(null)
     } catch (reason) {
       setDeliveryError(errorMessage(reason, 'Could not refresh SMS callback status.'))
@@ -89,19 +94,22 @@ export function CampaignDetailPage() {
   useEffect(() => {
     if (!workspace || !campaignId || !dispatch) {
       setDeliveryStatus(null)
+      setContractHealth(null)
       setAttempts([])
       return
     }
     let cancelled = false
     const poll = async () => {
       try {
-        const [nextStatus, nextAttempts] = await Promise.all([
+        const [nextStatus, nextAttempts, nextHealth] = await Promise.all([
           getCampaignDeliveryStatus(workspace.id, campaignId),
           listCampaignMessageAttempts(workspace.id, campaignId, 100),
+          getCampaignContractHealth(workspace.id, campaignId),
         ])
         if (cancelled) return
         setDeliveryStatus(nextStatus)
         setAttempts(nextAttempts)
+        setContractHealth(nextHealth)
         setDeliveryError(null)
       } catch (reason) {
         if (!cancelled) setDeliveryError(errorMessage(reason, 'Could not refresh SMS callback status.'))
@@ -114,16 +122,14 @@ export function CampaignDetailPage() {
 
   async function requestRecovery(action: MessageRecoveryAction) {
     if (!workspace || !campaignId || !dispatch || recoveryBusy) return
-    const message = action === 'safe_retry'
-      ? 'Request explicit retry only for failures where Android received terminal SENT failures for every SMS part and zero parts reported SENT? UNKNOWN or mixed outcomes will NOT be retried.'
-      : 'Resolve all current UNKNOWN jobs without resending them? This clears the Android safety pause so remaining jobs can continue, but the UNKNOWN recipients will not be sent again.'
+    const message = 'Resolve all current UNKNOWN jobs without resending them? This clears the Android safety pause so remaining jobs can continue, but the UNKNOWN recipients will not be sent again.'
     if (!window.confirm(message)) return
     setRecoveryBusy(true)
     setDeliveryError(null)
     try {
       const count = await requestCampaignMessageRecovery(workspace.id, campaignId, action)
       if (count === 0) {
-        setDeliveryError(action === 'safe_retry' ? 'No new safe-retry eligible failures were found.' : 'No unresolved UNKNOWN attempts were found.')
+        setDeliveryError('No new unresolved UNKNOWN attempts were found; existing pending requests are retained.')
       }
       await refreshDelivery()
     } catch (reason) {
@@ -337,13 +343,15 @@ export function CampaignDetailPage() {
         </div>
         {deliveryError ? <div className="notice error-notice">{deliveryError}</div> : null}
         <p className="muted-copy">{deliverySummary(deliveryStatus)}</p>
+        {contractHealth ? contractNotices(contractHealth).map((notice) => <div className="notice warning-notice" key={notice}>{notice}</div>) : null}
+        {contractHealth?.blockReasons.length ? <ul>{contractHealth.blockReasons.map((reason) => <li key={reason.code}>{reason.code === 'recipient_ineligible' ? 'Consent / suppression check' : reason.code === 'segment_mismatch' ? 'SMS segment mismatch' : reason.code}: {reason.jobs} jobs</li>)}</ul> : null}
         {deliveryStatus ? <>
           <div className="metric-grid confirmation-metrics">
-            <article className="metric-card"><span>Awaiting attempt</span><h2>{deliveryStatus.awaitingAttemptJobs.toLocaleString()}</h2><p>Downloaded but not yet registered at the SmsManager boundary.</p></article>
+            <article className="metric-card"><span>Awaiting attempt</span><h2>{deliveryStatus.awaitingAttemptJobs.toLocaleString()}</h2><p>No server attempt yet; may include queued or blocked work.</p></article>
             <article className="metric-card"><span>Prepared / submitted</span><h2>{(deliveryStatus.preparedJobs + deliveryStatus.submittedJobs).toLocaleString()}</h2><p>{deliveryStatus.preparedJobs.toLocaleString()} prepared · {deliveryStatus.submittedJobs.toLocaleString()} submitted. Neither means carrier SENT.</p></article>
             <article className="metric-card"><span>Known sent</span><h2>{(deliveryStatus.sentJobs + deliveryStatus.deliveredJobs).toLocaleString()}</h2><p>{sentProgress(deliveryStatus).toFixed(0)}% of recipients have complete SENT success.</p></article>
             <article className="metric-card"><span>Delivered</span><h2>{deliveryStatus.deliveredJobs.toLocaleString()}</h2><p>{deliveryProgress(deliveryStatus).toFixed(0)}% reported DELIVERED.</p></article>
-            <article className="metric-card"><span>Failed</span><h2>{deliveryStatus.failedJobs.toLocaleString()}</h2><p>Callback-derived failure never authorizes resend in 0.18.1.</p></article>
+            <article className="metric-card"><span>Failed</span><h2>{deliveryStatus.failedJobs.toLocaleString()}</h2><p>Callback-derived failure never authorizes resend.</p></article>
             <article className="metric-card"><span>Unresolved UNKNOWN</span><h2>{deliveryStatus.unresolvedUnknownJobs.toLocaleString()}</h2><p>Never automatically retried.</p></article>
           </div>
           {deliveryStatus.recoveryRequestedJobs > 0 ? <div className="notice warning-notice"><strong>Recovery queued.</strong> {deliveryStatus.recoveryRequestedJobs.toLocaleString()} request{deliveryStatus.recoveryRequestedJobs === 1 ? '' : 's'} waiting for the paired Android gateway.</div> : null}

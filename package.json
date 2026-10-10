@@ -1,12 +1,12 @@
 {
   "name": "bulktext-web",
   "private": true,
-  "version": "0.18.2",
+  "version": "0.18.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "check": "tsc --noEmit",
+    "check": "tsc -b --pretty false",
     "test": "vitest run",
     "test:watch": "vitest",
     "preflight": "node scripts/preflight.mjs",
@@ -21,7 +21,8 @@
     "test:composer-local": "node scripts/test-composer-local.mjs",
     "test:account-local": "node scripts/test-individual-account-local.mjs",
     "test:durable-queue-local": "node scripts/test-durable-queue-local.mjs",
-    "test:recipient-completeness-local": "node scripts/test-recipient-completeness-local.mjs"
+    "test:recipient-completeness-local": "node scripts/test-recipient-completeness-local.mjs",
+    "test:delivery-contract": "node scripts/test-delivery-contract0185.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
@@ -36,6 +37,7 @@
     "@vitejs/plugin-react": "^5.0.3",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "@electric-sql/pglite": "0.5.8"
   }
 }

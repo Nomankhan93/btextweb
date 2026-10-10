@@ -1,5 +1,5 @@
 export type MessageAttemptState = 'prepared' | 'submitted' | 'sent' | 'delivered' | 'failed' | 'unknown'
-export type MessageRecoveryAction = 'safe_retry' | 'skip_unknown'
+export type MessageRecoveryAction = 'skip_unknown'
 
 export interface CampaignDeliveryStatus {
   dispatchId: string
@@ -53,7 +53,7 @@ export function deliverySummary(status: CampaignDeliveryStatus | null): string {
     return `${status.unresolvedUnknownJobs.toLocaleString()} UNKNOWN job${status.unresolvedUnknownJobs === 1 ? '' : 's'} require recovery. No automatic retry is permitted.`
   }
   if (status.failedJobs > 0) {
-    return `${status.failedJobs.toLocaleString()} failed job${status.failedJobs === 1 ? '' : 's'} require review. 0.18.1 does not authorize callback-derived resend.`
+    return `${status.failedJobs.toLocaleString()} failed job${status.failedJobs === 1 ? '' : 's'} require review. This gateway does not authorize callback-derived resend.`
   }
   const resolvedUnknown = Math.max(0, status.unknownJobs - status.unresolvedUnknownJobs)
   if (resolvedUnknown > 0) {
