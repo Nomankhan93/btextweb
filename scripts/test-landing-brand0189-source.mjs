@@ -19,7 +19,7 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.3', 'frontend version must be 0.20.3 while preserving the 0.18.9 landing contract')
+check(pkg.version === '0.20.3-r1', 'frontend version must be 0.20.3 while preserving the 0.18.9 landing contract')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain pinned to 0.18.5')
 check(Boolean(pkg.scripts?.['test:landing-0189']), 'targeted landing test script must exist')
 check(app.includes('PublicHomeRoute') && app.includes('<LandingPage />'), 'public root must render the landing page for signed-out visitors')
@@ -48,7 +48,7 @@ check(!css.includes('@keyframes marketing'), 'marketing page must avoid ornament
 check(index.includes('BulkText — Send business SMS from your own SIM'), 'SEO title required')
 check(index.includes('og:title') && index.includes('twitter:card'), 'social metadata required')
 check(manifest.theme_color === '#071B4A' && manifest.background_color === '#F5FAFD', 'PWA manifest must use final brand colors')
-check(serviceWorker.includes("const VERSION = '0.20.3'"), 'service worker cache version must be 0.20.3')
+check(serviceWorker.includes("const VERSION = '0.20.3-r1'"), 'service worker cache version must be 0.20.3')
 check(serviceWorker.includes("'/branding/bulktext-logo.png'"), 'final logo must be included in the static app-shell precache')
 check(!fs.existsSync('supabase/migrations/20261012000000_landing_brand.sql'), 'landing release must not introduce a database migration')
 

@@ -171,7 +171,10 @@ it('downloads updates in the background, honors Later for the same worker, and a
   expect(await screen.findByRole('button', { name: 'Update now' })).toBeTruthy()
 
   fireEvent.click(screen.getByRole('button', { name: 'Update now' }))
+  expect(secondPostMessage).toHaveBeenCalledTimes(1)
   expect(secondPostMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' })
+  expect(await screen.findByRole('button', { name: 'Updating…' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Later' }).hasAttribute('disabled')).toBe(true)
 })
 
 it('checks for an update after registration and again when connectivity returns', async () => {

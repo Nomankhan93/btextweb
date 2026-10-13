@@ -10,9 +10,10 @@ const buildManifest = JSON.stringify({
   'src/pages/CampaignsPage.tsx': { file: 'assets/CampaignsPage-lazy.js', isDynamicEntry: true },
 })
 
-function createHarness({ failUrl = null } = {}) {
+function createHarness({ failUrl = null, throwUrl = null } = {}) {
   const listeners = new Map()
   const stores = new Map()
+  const fetchedPaths = []
 
   function normalize(input) {
     if (typeof input === 'string') return new URL(input, origin).pathname
@@ -43,10 +44,12 @@ function createHarness({ failUrl = null } = {}) {
 
   const fetch = async (input) => {
     const path = normalize(input)
+    fetchedPaths.push(path)
+    if (path === throwUrl) throw new TypeError('network failed')
     if (path === failUrl) return new Response('missing', { status: 404 })
     if (path === '/') return new Response(installShell, { status: 200, headers: { 'content-type': 'text/html' } })
     if (path === '/asset-manifest.json') return new Response(buildManifest, { status: 200, headers: { 'content-type': 'application/json' } })
-    if (path === '/campaigns/new') return new Response('<html>network-new-build</html>', { status: 200, headers: { 'content-type': 'text/html' } })
+    if (path === '/campaigns/new' || path === '/dashboard') return new Response('<html>network-new-build</html>', { status: 200, headers: { 'content-type': 'text/html' } })
     return new Response(`asset:${path}`, { status: 200 })
   }
 
@@ -57,8 +60,8 @@ function createHarness({ failUrl = null } = {}) {
     addEventListener(type, handler) { listeners.set(type, handler) },
   }
 
-  vm.runInNewContext(source, { self, caches, fetch, Response, URL, console, Promise, Set, Error })
-  return { listeners, stores, caches }
+  vm.runInNewContext(source, { self, caches, fetch, Response, URL, console, Promise, Set, Error, TypeError })
+  return { listeners, stores, caches, fetchedPaths }
 }
 
 async function runInstall(harness) {
@@ -68,17 +71,27 @@ async function runInstall(harness) {
   return pending
 }
 
+async function navigate(harness, path) {
+  let responsePromise
+  harness.listeners.get('fetch')({
+    request: { method: 'GET', mode: 'navigate', url: `${origin}${path}` },
+    respondWith(value) { responsePromise = value },
+  })
+  assert.ok(responsePromise, `navigation ${path} must be handled by the service worker`)
+  return responsePromise
+}
+
 {
   const harness = createHarness({ failUrl: '/assets/main.js' })
   await assert.rejects(runInstall(harness), /Required offline shell asset failed/)
-  assert.equal([...harness.stores.keys()].some((name) => name.includes('shell-0.20.3')), false, 'failed required asset must not commit a shell cache')
+  assert.equal([...harness.stores.keys()].some((name) => name.includes('shell-0.20.3-r1')), false, 'failed required asset must not commit a shell cache')
 }
 
 {
   const harness = createHarness()
   await runInstall(harness)
-  const shellName = [...harness.stores.keys()].find((name) => name.includes('shell-0.20.3'))
-  assert.ok(shellName, 'successful install must create the versioned shell cache')
+  const shellName = [...harness.stores.keys()].find((name) => name.includes('shell-0.20.3-r1'))
+  assert.ok(shellName, 'successful install must create the corrective-release shell cache')
   const shellStore = harness.stores.get(shellName)
   assert.ok(shellStore.has('/'), 'installed shell HTML must be cached')
   assert.ok(shellStore.has('/assets/main.js'), 'referenced build JavaScript must be cached')
@@ -86,14 +99,31 @@ async function runInstall(harness) {
   assert.ok(shellStore.has('/assets/CampaignsPage-lazy.js'), 'manifest-discovered lazy route JavaScript must be cached')
   assert.ok(shellStore.has('/asset-manifest.json'), 'build asset manifest must be cached with the installed shell')
 
-  let responsePromise
-  harness.listeners.get('fetch')({
-    request: { method: 'GET', mode: 'navigate', url: `${origin}/campaigns/new` },
-    respondWith(value) { responsePromise = value },
-  })
-  const response = await responsePromise
-  assert.match(await response.text(), /network-new-build/, 'online navigation should use the network response')
-  assert.match(await shellStore.get('/').clone().text(), /main\.js/, 'online navigation must not replace the immutable installed shell')
+  const fetchesBeforeNavigation = harness.fetchedPaths.length
+  const response = await navigate(harness, '/campaigns/new')
+  assert.match(await response.text(), /main\.js/, 'controlled online navigation must keep the installed versioned shell until explicit update activation')
+  assert.equal(harness.fetchedPaths.length, fetchesBeforeNavigation, 'version-pinned navigation must not fetch a newer deployment while the active shell is healthy')
 }
 
-console.log('Web 0.20.3 service-worker shell integrity: PASS (10 assertions)')
+{
+  const harness = createHarness({ failUrl: '/dashboard' })
+  await runInstall(harness)
+  const shellName = [...harness.stores.keys()].find((name) => name.includes('shell-0.20.3-r1'))
+  const shellStore = harness.stores.get(shellName)
+  shellStore.delete('/')
+  const response = await navigate(harness, '/dashboard')
+  assert.equal(response.status, 200, 'a host 404 must fall back to the cached offline document when the installed shell is unexpectedly missing')
+  assert.match(await response.text(), /asset:\/offline\.html/, 'host 404 fallback must not expose the hosting provider 404 page inside the installed app')
+}
+
+{
+  const harness = createHarness({ throwUrl: '/dashboard' })
+  await runInstall(harness)
+  const shellName = [...harness.stores.keys()].find((name) => name.includes('shell-0.20.3-r1'))
+  const shellStore = harness.stores.get(shellName)
+  shellStore.delete('/')
+  const response = await navigate(harness, '/dashboard')
+  assert.match(await response.text(), /asset:\/offline\.html/, 'network failure must retain offline navigation recovery')
+}
+
+console.log('Web 0.20.3-r1 service-worker controlled-update shell integrity: PASS (16 assertions)')

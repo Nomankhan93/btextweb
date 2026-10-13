@@ -1,10 +1,10 @@
-/* BulkText Web 0.20.3 service worker.
+/* BulkText Web 0.20.3-r1 service worker.
  * Safety boundary: cache only the same-origin app shell and static assets.
  * Supabase/auth/queue/delivery/gateway requests are never cached or replayed.
  * The installed shell is immutable for this worker version so its hashed JS/CSS
  * always stays paired with the HTML that referenced it at installation time.
  */
-const VERSION = '0.20.3'
+const VERSION = '0.20.3-r1'
 const CACHE_PREFIX = 'bulktext-pwa-'
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${VERSION}`
 const RUNTIME_CACHE = `${CACHE_PREFIX}runtime-${VERSION}`
@@ -87,16 +87,28 @@ function isStaticAsset(url) {
     || url.pathname === '/apple-touch-icon.png'
 }
 
-async function networkFirstNavigation(request) {
+async function installedShellNavigation(request) {
+  const cache = await caches.open(SHELL_CACHE)
+  const installedShell = await cache.match(APP_SHELL)
+
+  // A controlled client stays pinned to the HTML/assets installed by its
+  // active worker. A newer deployment may download a waiting worker, but the
+  // running app does not switch builds until the user chooses Update now.
+  if (installedShell) return installedShell
+
+  // The shell cache should exist after a successful install. If it is missing
+  // or damaged, recover from the network without treating HTTP 4xx/5xx as a
+  // successful app-shell navigation. This also avoids surfacing a host 404 in
+  // an installed app when an offline fallback is available.
+  let networkResponse
   try {
-    // Successful navigations are returned directly. They must not replace the
-    // installed shell HTML, otherwise that HTML could reference assets from a
-    // different deployment than the versioned offline cache.
-    return await fetch(request)
+    networkResponse = await fetch(request)
+    if (networkResponse.ok) return networkResponse
   } catch {
-    const cache = await caches.open(SHELL_CACHE)
-    return (await cache.match(APP_SHELL)) || (await cache.match(OFFLINE_FALLBACK)) || Response.error()
+    // Fall through to the offline fallback below.
   }
+
+  return (await cache.match(OFFLINE_FALLBACK)) || networkResponse || Response.error()
 }
 
 async function cacheFirstStatic(request) {
@@ -116,7 +128,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return
 
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirstNavigation(request))
+    event.respondWith(installedShellNavigation(request))
     return
   }
 

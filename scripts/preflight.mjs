@@ -14,6 +14,7 @@ const requiredFiles = [
   'src/components/PwaExperiencePrompts.tsx','src/test/pwaInstallUpdate0201.test.tsx','scripts/test-pwa-install-update0201-source.mjs','scripts/certify-production0201.mjs','docs/PWA_INSTALL_UPDATE_EXPERIENCE_0201.md','VALIDATION_0_20_1.md','PATCH_0_20_1_README.md','HANDOFF_0_20_1.md','CHANGED_FILES_0_20_1.txt',
   'src/test/landingConversion0202.test.tsx','scripts/test-landing-conversion0202-source.mjs','scripts/certify-production0202.mjs','docs/LANDING_CONVERSION_MOBILE_UX_0202.md','VALIDATION_0_20_2.md','PATCH_0_20_2_README.md','HANDOFF_0_20_2.md','CHANGED_FILES_0_20_2.txt',
   'src/auth/PasswordField.tsx','src/test/authMobilePolish0203.test.tsx','scripts/test-auth-mobile-polish0203-source.mjs','scripts/certify-production0203.mjs','docs/AUTH_SCREEN_MOBILE_POLISH_0203.md','VALIDATION_0_20_3.md','PATCH_0_20_3_README.md','HANDOFF_0_20_3.md','CHANGED_FILES_0_20_3.txt',
+  'vercel.json','scripts/test-routing-pwa0203r1-source.mjs','scripts/certify-production0203r1.mjs','docs/PRODUCTION_ROUTING_PWA_CONTROLLED_UPDATE_0203R1.md','VALIDATION_0_20_3_R1.md','PATCH_0_20_3_R1_README.md','HANDOFF_0_20_3_R1.md','CHANGED_FILES_0_20_3_R1.txt',
   'src/test/routeLoading0196.test.tsx','scripts/test-route-loading0196-source.mjs','scripts/test-route-loading0196-build.mjs','scripts/test-bootstrap-split0196r1-source.mjs','src/AppBootstrap.tsx','vite.config.ts',
   'docs/DRAFT_IMPORT_CAMPAIGN_UX_0186.md','docs/OFFLINE_DRAFT_WORKSPACE_01810.md',
   'supabase/migrations/20261010000100_delivery_recovery_contract_hardening.sql',
@@ -69,7 +70,34 @@ if (/service[_-]?role|jwt[_-]?secret|sb_secret_/i.test(envExample)) {
   process.exit(1)
 }
 
-if (packageJson.version !== '0.20.3') { console.error(`Preflight failed. Expected package version 0.20.3, got ${packageJson.version}`); process.exit(1) }
+if (packageJson.version !== '0.20.3-r1') { console.error(`Preflight failed. Expected package version 0.20.3-r1, got ${packageJson.version}`); process.exit(1) }
+
+
+const vercelConfig = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'))
+const correctiveRoutingContract = await readFile(new URL('../scripts/test-routing-pwa0203r1-source.mjs', import.meta.url), 'utf8')
+const correctiveCertifier = await readFile(new URL('../scripts/certify-production0203r1.mjs', import.meta.url), 'utf8')
+const correctivePrompts = await readFile(new URL('../src/components/PwaExperiencePrompts.tsx', import.meta.url), 'utf8')
+if (
+  !Array.isArray(vercelConfig.rewrites)
+  || vercelConfig.rewrites.length !== 1
+  || vercelConfig.rewrites[0]?.source !== '/(.*)'
+  || vercelConfig.rewrites[0]?.destination !== '/index.html'
+) {
+  console.error('Preflight failed. 0.20.3-r1 Vercel SPA fallback is missing or broadened unexpectedly.')
+  process.exit(1)
+}
+if (!correctiveRoutingContract.includes('production routing & controlled PWA update source contract')) {
+  console.error('Preflight failed. 0.20.3-r1 routing/PWA source contract marker is missing.')
+  process.exit(1)
+}
+if (!correctiveCertifier.includes("'test:routing-pwa-source-0203r1'") || !correctiveCertifier.includes("'certify:0203'")) {
+  console.error('Preflight failed. 0.20.3-r1 corrective certification chain is incomplete.')
+  process.exit(1)
+}
+if (!correctivePrompts.includes("updating ? 'Updating…' : 'Update now'") || !correctivePrompts.includes('disabled={updating}')) {
+  console.error('Preflight failed. 0.20.3-r1 explicit update progress UI is incomplete.')
+  process.exit(1)
+}
 
 const appShell = await readFile(new URL('../src/components/AppShell.tsx', import.meta.url), 'utf8')
 const mobileDialogFocusMarkers = [
@@ -110,7 +138,7 @@ const observabilitySource = await readFile(new URL('../src/lib/observability.ts'
 const appErrorBoundarySource = await readFile(new URL('../src/components/AppErrorBoundary.tsx', import.meta.url), 'utf8')
 const settingsSource = await readFile(new URL('../src/pages/SettingsPage.tsx', import.meta.url), 'utf8')
 const observabilityMarkers = [
-  "OBSERVABILITY_RELEASE = '0.20.3'",
+  "OBSERVABILITY_RELEASE = '0.20.3-r1'",
   "STORAGE_KEY = 'bulktext:diagnostics:v1'",
   'MAX_EVENTS = 25',
   "window.addEventListener('error'",
@@ -213,8 +241,12 @@ const routeLoadingMarkers = [
 const missingRouteLoadingMarkers = routeLoadingMarkers.filter((marker) => !appSource.includes(marker))
 if (missingRouteLoadingMarkers.length) { console.error(`Preflight failed. 0.20.3 route-loading markers missing: ${missingRouteLoadingMarkers.join(', ')}`); process.exit(1) }
 if (!viteSource.includes("manifest: 'asset-manifest.json'")) { console.error('Preflight failed. 0.20.3 Vite asset manifest output is missing.'); process.exit(1) }
-for (const marker of ["const VERSION = '0.20.3'", "'/asset-manifest.json'", 'buildManifestAssets', 'cold-start offline route coverage after code splitting']) {
-  if (!serviceWorkerSource.includes(marker)) { console.error(`Preflight failed. 0.20.3 lazy-route offline marker missing: ${marker}`); process.exit(1) }
+for (const marker of ["const VERSION = '0.20.3-r1'", "'/asset-manifest.json'", 'buildManifestAssets', 'cold-start offline route coverage after code splitting', 'async function installedShellNavigation(request)', 'if (installedShell) return installedShell', 'if (networkResponse.ok) return networkResponse']) {
+  if (!serviceWorkerSource.includes(marker)) { console.error(`Preflight failed. 0.20.3-r1 PWA shell marker missing: ${marker}`); process.exit(1) }
+}
+if (serviceWorkerSource.includes('async function networkFirstNavigation(request)')) {
+  console.error('Preflight failed. 0.20.3-r1 must not restore network-first controlled HTML navigation.')
+  process.exit(1)
 }
 
 
@@ -479,6 +511,6 @@ for (const marker of ["version', '') <> '0.18.5'", 'Production schema must not e
   if (!freshVerifier.includes(marker)) { console.error(`Preflight failed. Fresh-schema 0.18.4 marker missing: ${marker}`); process.exit(1) }
 }
 
-console.log('BulkText Web 0.20.3 / backend 0.18.5 preflight PASS')
+console.log('BulkText Web 0.20.3-r1 / backend 0.18.5 preflight PASS')
 
-if (packageJson.bulktext?.backendContractVersion !== '0.18.5') { console.error('Expected backend contract 0.18.5 for Web 0.20.3'); process.exit(1) }
+if (packageJson.bulktext?.backendContractVersion !== '0.18.5') { console.error('Expected backend contract 0.18.5 for Web 0.20.3-r1'); process.exit(1) }

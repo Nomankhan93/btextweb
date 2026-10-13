@@ -11,6 +11,7 @@ export function PwaExperiencePrompts() {
     dismissUpdate,
   } = usePwa()
   const [installing, setInstalling] = useState(false)
+  const [updating, setUpdating] = useState(false)
 
   async function installApp() {
     setInstalling(true)
@@ -19,6 +20,12 @@ export function PwaExperiencePrompts() {
     } finally {
       setInstalling(false)
     }
+  }
+
+  function applyReadyUpdate() {
+    if (updating) return
+    setUpdating(true)
+    applyUpdate()
   }
 
   if (updateAvailable) {
@@ -31,8 +38,10 @@ export function PwaExperiencePrompts() {
             <span>A newer version has downloaded. Update when you’re ready; the current page will reload once.</span>
           </div>
           <div className="pwa-experience-actions">
-            <button className="secondary-button" type="button" onClick={dismissUpdate}>Later</button>
-            <button className="primary-button" type="button" onClick={applyUpdate}>Update now</button>
+            <button className="secondary-button" type="button" disabled={updating} onClick={dismissUpdate}>Later</button>
+            <button className="primary-button" type="button" disabled={updating} onClick={applyReadyUpdate}>
+              {updating ? 'Updating…' : 'Update now'}
+            </button>
           </div>
         </section>
       </aside>

@@ -1,14 +1,12 @@
-# Current Handoff — Web 0.20.3
+# Current Handoff — Web 0.20.3-r1
 
-Current frontend release: `0.20.3`
+Current frontend release: `0.20.3-r1`
 Backend contract: `0.18.5`
 
-`0.20.3 — Auth Screen Mobile Polish` is a presentation-focused authentication UI patch on top of the certified `0.20.2` landing release.
+This corrective release fixes Vercel SPA deep-route 404s and the misleading PWA update lifecycle where network-first HTML could load the new frontend before **Update now** was chosen.
 
-Sign in and create account now share the same top-aligned mobile shell, compact spacing, 56px input/button rhythm, unified white input states and softer card treatment. Create-account copy is shorter. Password fields on these two screens use one shared visibility control with explicit Show/Hide labels, `aria-pressed`, a 44px target, and no submit behavior. Pending sign-in/signup states disable form controls while preserving the existing AuthProvider calls and redirects.
+Root `vercel.json` now rewrites client routes to `/index.html`. An already controlled client is pinned to the active worker's immutable cached shell; a newer worker may download in the background but remains waiting until **Update now** sends `SKIP_WAITING`. **Later** only dismisses the prompt for the current provider session. Update activation keeps the existing controller-change single reload and now shows **Updating…** while applying.
 
-The auth/session boundary, Supabase calls, password rules, recovery/verification behavior, public landing page, PWA install/update lifecycle, campaigns, Android gateway and database are unchanged.
+No database migration or Android release is included. Campaign delivery, queue, callback/recovery, exact-SIM authorization, auth/session and workspace contracts are unchanged.
 
-Primary certification command: `npm run certify:0203`. After it passes, run `git diff --check` and `./scripts/release-package.sh`.
-
-No database migration is included.
+Primary certification: `npm run certify:0203r1`. After it passes, run `git diff --check`, deploy, and smoke-test direct-route refresh plus explicit update activation on desktop and installed mobile PWA.

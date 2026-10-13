@@ -1,11 +1,13 @@
-# Web 0.20.3 — Auth Screen Mobile Polish
+# Web 0.20.3-r1 — Production Routing & Controlled PWA Updates
 
-BulkText Web `0.20.3` polishes the mobile sign-in and create-account experience while preserving the certified authentication/session contract. The release aligns both screens to one top-aligned auth shell, reduces signup vertical bulk, unifies input states, adds accessible password visibility controls, improves pending/loading presentation, and softens secondary-link hierarchy.
+BulkText Web `0.20.3-r1` is a narrow corrective release over the certified `0.20.3` frontend. It fixes production deep-route `404_NOT_FOUND` responses on Vercel and restores the intended user-controlled PWA update lifecycle.
 
-The existing BulkText navy/blue/cyan identity, logo, tagline, Supabase authentication calls, redirects, password requirements, verification flow, recovery flow, session handling, public landing page, `0.20.1` PWA install/update lifecycle, and `0.20.2` landing conversion work remain intact.
+The deployment now owns an SPA fallback through root `vercel.json`, so direct/refreshed routes such as `/dashboard`, `/campaigns`, `/devices`, `/settings` and `/auth/login` reach React Router instead of a hosting-provider 404 page.
 
-Frontend version is `0.20.3`; backend contract remains `0.18.5`. No database migration or Android change is included. The service-worker cache version advances only so installed clients receive the updated static auth assets.
+For clients already controlled by a service worker, navigation now uses the immutable installed app shell rather than network-first HTML. A newer worker can download and wait in the background, but the active frontend stays version-consistent until the user chooses **Update now**. The prompt shows **Updating…** while explicit activation is requested. **Later** continues to dismiss the prompt without changing the current controlled session.
 
-Run `npm run certify:0203` in WSL on Node `24.21.0`, then `git diff --check` and `./scripts/release-package.sh`.
+Frontend version is `0.20.3-r1`; backend contract remains `0.18.5`. No Supabase migration, database contract change, campaign/send change, exact-SIM change or Android gateway release is included.
 
-See `PATCH_0_20_3_README.md`, `HANDOFF_0_20_3.md`, `VALIDATION_0_20_3.md` and `docs/AUTH_SCREEN_MOBILE_POLISH_0203.md`.
+Run `npm run certify:0203r1` in WSL on Node `24.21.0`, then `git diff --check` before deployment.
+
+See `PATCH_0_20_3_R1_README.md`, `HANDOFF_0_20_3_R1.md`, `VALIDATION_0_20_3_R1.md` and `docs/PRODUCTION_ROUTING_PWA_CONTROLLED_UPDATE_0203R1.md`.
