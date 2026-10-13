@@ -1,0 +1,53 @@
+BulkText Web 0.20.4 — Recipient Import Reliability & Scale
+
+Release/documentation
+- README.md
+- HANDOFF.md
+- PATCH_README.md
+- VALIDATION_RESULTS.md
+- CHANGED_FILES_0_20_4.txt
+- HANDOFF_0_20_4.md
+- PATCH_0_20_4_README.md
+- VALIDATION_0_20_4.md
+- docs/RECIPIENT_IMPORT_RELIABILITY_SCALE_0204.md
+- docs/EXCEL_CSV_IMPORT.md
+- docs/DRAFT_IMPORT_CAMPAIGN_UX_0186.md
+
+Import implementation
+- src/lib/importFiles.ts
+- src/lib/importsApi.ts
+- src/lib/pagedRpc.ts
+- src/lib/campaignDraftStorage.ts
+- src/pages/ImportsPage.tsx
+- src/pages/SimpleCampaignPage.tsx
+- src/styles/app.css
+- supabase/migrations/20261013000100_recipient_import_reliability_scale.sql
+
+Regression tests / certification
+- src/test/importFiles.test.ts
+- src/test/importsApi0204.test.ts
+- src/test/recipientCompleteness.test.ts
+- scripts/test-import-scale0204-source.mjs
+- scripts/test-import-scale-local0204.mjs
+- scripts/test-recipient-completeness-local.mjs
+- scripts/certify-production0204.mjs
+- scripts/preflight.mjs
+
+Release identity / retained source-contract updates
+- package.json
+- package-lock.json
+- SHA256SUMS.txt
+- public/service-worker.js
+- src/lib/observability.ts
+- src/test/observability0197.test.ts
+- retained source-contract scripts under scripts/test-*-source.mjs that assert the current frontend identity
+- scripts/test-pwa-shell01810r1.mjs
+- scripts/test-routing-pwa0203r1-source.mjs
+- scripts/certify-production0203r1.mjs
+
+Unchanged by contract
+- Android gateway source
+- campaign confirmation/send authorization semantics
+- exact-SIM authorization
+- durable queue/callback/recovery semantics
+- consent/suppression enforcement

@@ -51,7 +51,6 @@ const storeName = 'campaignDrafts'
 const databaseVersion = 1
 const persistentSchemaVersion = 1
 const sessionSchemaVersion = 2
-const persistentJsonBudget = 20_000_000
 let persistentOperationQueue: Promise<unknown> = Promise.resolve()
 
 function enqueuePersistentOperation<T>(operation: () => Promise<T>): Promise<T> {
@@ -90,7 +89,7 @@ function validParsedFile(file: unknown): file is ParsedImportFile {
   if (!file || typeof file !== 'object') return false
   const value = file as Record<string, unknown>
   if (!Array.isArray(value.headers) || value.headers.length > 100 || !value.headers.every((header) => typeof header === 'string')) return false
-  if (!Array.isArray(value.rows) || value.rows.length > 5000) return false
+  if (!Array.isArray(value.rows)) return false
   if (!value.rows.every((row) => {
     if (!row || typeof row !== 'object') return false
     const candidate = row as { sourceRowNumber?: unknown; values?: unknown }
@@ -119,7 +118,7 @@ function validPrepared(value: unknown): value is PreparedCampaignRecipients {
 
 function validPersonalizationRows(value: unknown): value is PersonalizationSourceRow[] {
   if (value === undefined) return true
-  if (!Array.isArray(value) || value.length > 5000) return false
+  if (!Array.isArray(value)) return false
   return value.every((row) => {
     if (!row || typeof row !== 'object') return false
     const candidate = row as Record<string, unknown>
@@ -279,12 +278,32 @@ export async function readCampaignDraftPersistent(key: string): Promise<Persiste
   return result.status === 'found' ? result.record : null
 }
 
+// Device-quota guard only: 0.20.4 intentionally has no fixed import-row or
+// file-size product ceiling. When the Storage API is available, keep enough
+// headroom so one unusually large local draft cannot exhaust the browser's
+// origin quota. Browsers without quota estimates fall back to IndexedDB's own
+// recoverable quota error.
+async function persistentJsonBudget(): Promise<number | null> {
+  try {
+    const estimate = await navigator.storage?.estimate?.()
+    const quota = estimate?.quota
+    const usage = estimate?.usage ?? 0
+    if (!quota || quota <= usage) return null
+    return Math.floor((quota - usage) * 0.5)
+  } catch {
+    return null
+  }
+}
+
 async function saveCampaignDraftPersistentNow(key: string, draft: CampaignLocalDraft, expectedRevision: number): Promise<PersistentDraftSaveResult> {
   let database: IDBDatabase | null = null
   try {
     if (!validateCampaignDraft(draft) || !validRevision(expectedRevision)) return { status: 'unavailable', error: 'The local campaign draft is invalid.' }
     const json = JSON.stringify(draft)
-    if (json.length > persistentJsonBudget) return { status: 'unavailable', error: 'The local campaign draft exceeds the device storage budget.' }
+    const storageBudget = await persistentJsonBudget()
+    if (storageBudget !== null && new Blob([json]).size > storageBudget) {
+      return { status: 'unavailable', error: 'This device does not have enough local storage for the current offline draft.' }
+    }
     // JSON cloning normalizes null-prototype import row objects before structured clone.
     const normalized = JSON.parse(json) as CampaignLocalDraft
     database = await openDraftDatabase()

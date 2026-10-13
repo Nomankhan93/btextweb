@@ -21,8 +21,8 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.3-r1', 'frontend version must be 0.20.3')
-check(lock.version === '0.20.3-r1' && lock.packages?.['']?.version === '0.20.3-r1', 'package-lock must match 0.20.3')
+check(pkg.version === '0.20.4', 'frontend version must be 0.20.3')
+check(lock.version === '0.20.4' && lock.packages?.['']?.version === '0.20.4', 'package-lock must match 0.20.3')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
 check(pkg.scripts?.['test:pwa-install-update-source-0201'] === 'node scripts/test-pwa-install-update0201-source.mjs', 'source contract command must exist')
 check(Boolean(pkg.scripts?.['test:pwa-install-update-0201']), 'runtime install/update test command must exist')
@@ -66,7 +66,7 @@ check(landing.includes('canInstall ? <button className="marketing-install-link"'
 check(landing.includes('>Install App</button>'), 'landing install action must be clearly labelled')
 check(!status.includes('BulkText update available.'), 'authenticated status bar must not duplicate the global update prompt')
 
-check(sw.includes("const VERSION = '0.20.3-r1'"), 'service-worker cache version must be 0.20.3')
+check(sw.includes("const VERSION = '0.20.4'"), 'service-worker cache version must be 0.20.3')
 check(sw.includes("event.data?.type === 'SKIP_WAITING'"), 'service worker must support explicit user-approved activation')
 check(!/addEventListener\('install'[\s\S]{0,180}skipWaiting\(/.test(sw), 'service worker install must not force activation')
 check(styles.includes('.pwa-experience-stack') && styles.includes('.pwa-experience-prompt'), 'global install/update prompt styles required')

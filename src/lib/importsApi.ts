@@ -64,13 +64,31 @@ export async function listContactImports(organizationId: string): Promise<Contac
   return ((data ?? []) as ContactImportRow[]).map(mapSummary)
 }
 
-export async function createContactImport(
-  organizationId: string,
-  file: ParsedImportFile,
-  mapping: ImportColumnMapping,
-  rows: ImportPreviewRow[],
-): Promise<string> {
-  const payload = rows.map((row) => ({
+export const CONTACT_IMPORT_BATCH_ROWS = 250
+
+export interface ContactImportProgress {
+  phase: 'starting' | 'staging' | 'finalizing'
+  completedRows: number
+  totalRows: number
+}
+
+export interface CreateContactImportOptions {
+  signal?: AbortSignal
+  onProgress?: (progress: ContactImportProgress) => void
+}
+
+function importAbortError(): Error {
+  const error = new Error('Import cancelled.')
+  error.name = 'AbortError'
+  return error
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) throw importAbortError()
+}
+
+function rowPayload(row: ImportPreviewRow) {
+  return {
     sourceRowNumber: row.sourceRowNumber,
     rawData: row.rawData,
     rawPhone: row.rawPhone,
@@ -78,9 +96,21 @@ export async function createContactImport(
     lastName: row.lastName,
     displayName: row.displayName,
     customFields: row.customFields,
-  }))
+  }
+}
 
-  const { data, error } = await client().rpc('create_contact_import', {
+export async function createContactImport(
+  organizationId: string,
+  file: ParsedImportFile,
+  mapping: ImportColumnMapping,
+  rows: ImportPreviewRow[],
+  options: CreateContactImportOptions = {},
+): Promise<string> {
+  if (rows.length < 1) throw new Error('Import must contain at least one recipient row.')
+  throwIfAborted(options.signal)
+  options.onProgress?.({ phase: 'starting', completedRows: 0, totalRows: rows.length })
+
+  const { data, error } = await client().rpc('begin_contact_import', {
     p_organization_id: organizationId,
     p_source_filename: file.fileName,
     p_source_type: file.fileType,
@@ -89,11 +119,51 @@ export async function createContactImport(
     p_sheet_name: file.sheetName,
     p_headers: file.headers,
     p_column_mapping: mapping,
-    p_rows: payload,
   })
-  if (error) throw new Error(errorMessage(error, 'Could not stage the import.'))
+  if (error) throw new Error(errorMessage(error, 'Could not start the recipient import.'))
   if (typeof data !== 'string' || !data) throw new Error('Import staging returned an invalid identifier.')
-  return data
+  const importId = data
+
+  try {
+    for (let offset = 0; offset < rows.length; offset += CONTACT_IMPORT_BATCH_ROWS) {
+      throwIfAborted(options.signal)
+      const batch = rows.slice(offset, offset + CONTACT_IMPORT_BATCH_ROWS).map(rowPayload)
+      const { error: appendError } = await client().rpc('append_contact_import_rows', {
+        p_organization_id: organizationId,
+        p_import_id: importId,
+        p_rows: batch,
+      })
+      if (appendError) throw new Error(errorMessage(appendError, 'Could not stage recipient rows.'))
+      throwIfAborted(options.signal)
+      options.onProgress?.({
+        phase: 'staging',
+        completedRows: Math.min(offset + batch.length, rows.length),
+        totalRows: rows.length,
+      })
+    }
+
+    throwIfAborted(options.signal)
+    options.onProgress?.({ phase: 'finalizing', completedRows: rows.length, totalRows: rows.length })
+    const { error: finalizeError } = await client().rpc('finalize_contact_import', {
+      p_organization_id: organizationId,
+      p_import_id: importId,
+      p_expected_total_rows: rows.length,
+    })
+    if (finalizeError) throw new Error(errorMessage(finalizeError, 'Could not finalize the recipient import.'))
+    return importId
+  } catch (reason) {
+    // Incomplete staging sessions are never exposed as usable imports. Best-effort
+    // cleanup avoids leaving large abandoned batches if the user cancels or a request fails.
+    try {
+      await client().rpc('abort_contact_import', {
+        p_organization_id: organizationId,
+        p_import_id: importId,
+      })
+    } catch {
+      // The original staging error remains authoritative.
+    }
+    throw reason
+  }
 }
 
 export async function deleteContactImport(organizationId: string, importId: string): Promise<void> {

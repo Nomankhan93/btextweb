@@ -1,12 +1,13 @@
-# Current Handoff — Web 0.20.3-r1
+# Current Handoff — Web 0.20.4
 
-Current frontend release: `0.20.3-r1`
-Backend contract: `0.18.5`
+Current frontend release: `0.20.4`
+Backend send/delivery contract: `0.18.5`
+Database migration: `20261013000100_recipient_import_reliability_scale.sql`
 
-This corrective release fixes Vercel SPA deep-route 404s and the misleading PWA update lifecycle where network-first HTML could load the new frontend before **Update now** was chosen.
+`0.20.4 — Recipient Import Reliability & Scale` fixes XLSX compatibility and removes the historical 5 MB / 5,000-row import product caps. CSV/XLSX parsing now keeps the complete parsed row set, exposes progress/cancel state, and XLSX has a bounded JavaScript raw-DEFLATE fallback when native browser decompression is unavailable or fails.
 
-Root `vercel.json` now rewrites client routes to `/index.html`. An already controlled client is pinned to the active worker's immutable cached shell; a newer worker may download in the background but remains waiting until **Update now** sends `SKIP_WAITING`. **Later** only dismisses the prompt for the current provider session. Update activation keeps the existing controller-change single reload and now shows **Updating…** while applying.
+Database staging is now bounded and retry-safe across row batches: `begin_contact_import`, `append_contact_import_rows`, `finalize_contact_import`, and `abort_contact_import`. Incomplete `staging` imports stay out of history and cannot create recipient previews. The legacy `create_contact_import` RPC remains as a compatibility wrapper without the retired product caps.
 
-No database migration or Android release is included. Campaign delivery, queue, callback/recovery, exact-SIM authorization, auth/session and workspace contracts are unchanged.
+Campaign confirmation, send authorization, exact-SIM selection, durable queueing, callbacks, UNKNOWN recovery, consent/suppression behavior, and Android gateway behavior are unchanged.
 
-Primary certification: `npm run certify:0203r1`. After it passes, run `git diff --check`, deploy, and smoke-test direct-route refresh plus explicit update activation on desktop and installed mobile PWA.
+Deployment order: validate locally, push the migration, then deploy the frontend. Primary web certification is `npm run certify:0204`; local DB acceptance is `npm run test:import-scale-local-0204` after the migration is applied to local Supabase.

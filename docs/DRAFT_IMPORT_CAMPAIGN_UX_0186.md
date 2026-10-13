@@ -19,6 +19,7 @@ Frontend release 0.18.6 targets backend contract 0.18.5. There is no new SQL mig
 - CSV supports CRLF/LF/CR line endings and BOM-marked UTF-16, plus UTF-8. Invalid encoding and malformed quoted-field suffixes fail with actionable errors.
 - Duplicate/generated headers remain unique, prototype-named fields are preserved, and extra data columns get generated headers. More than 100 columns is rejected rather than silently discarded. Recognizable headerless phone lists are rejected with instructions to add headers.
 - XLSX no longer stops at an internal run of 1,000 blank rows or undercounts overflow after title rows. More than 5,000 recipient rows remains blocked. Nonempty columns beyond the supported width fail explicitly.
+- **Superseded by Web 0.20.4:** the historical 5,000-row / 5 MB product caps are removed; large imports now use bounded database staging batches.
 - XLSX validates directory/data bounds and duplicate entries, rejects encrypted archives, caps advertised expanded archive size at 40 MB and each read entry at 20 MB, and checks actual streamed decompression sizes.
 - Existing first-sheet-only XLSX behavior is now stated visibly. To import another sheet, move it first or export it as CSV. Legacy XLS, arbitrary legacy CSV encodings and headerless mode remain unsupported.
 

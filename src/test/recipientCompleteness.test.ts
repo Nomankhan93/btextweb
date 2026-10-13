@@ -11,15 +11,16 @@ function numberedRows(count: number) {
 }
 
 describe('recipient completeness pagination', () => {
-  for (const count of [10, 1000, 1001, 1400, 5000]) {
+  for (const count of [10, 1000, 1001, 1400, 5000, 12000]) {
     it(`collects all ${count} rows without a 1000-row truncation`, async () => {
       const source = numberedRows(count)
       await expect(collectPagedRows(pageFetcher(source))).resolves.toEqual(source)
     })
   }
 
-  it('rejects a result that exceeds the 5000-row product limit', async () => {
-    await expect(collectPagedRows(pageFetcher(numberedRows(5001)))).rejects.toThrow(/5,000/)
+  it('has no default 5,000-row product ceiling but honors an explicit caller safety ceiling', async () => {
+    await expect(collectPagedRows(pageFetcher(numberedRows(5001)))).resolves.toHaveLength(5001)
+    await expect(collectPagedRows(pageFetcher(numberedRows(501)), { maxRows: 500 })).rejects.toThrow(/safety ceiling/)
   })
 
   it('keeps duplicate classification correct across the 1000/1001 boundary', () => {

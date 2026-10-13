@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { errorMessage } from '../lib/errors'
-import { MAX_IMPORT_ROWS, parseSpreadsheetFile, type ParsedImportFile } from '../lib/importFiles'
+import { parseSpreadsheetFile, type ParsedImportFile } from '../lib/importFiles'
 import {
   buildImportPreview,
   detectSmartImportMapping,
@@ -77,6 +77,7 @@ function CampaignForm({ storageKey }: { storageKey: string }) {
   const [restoring, setRestoring] = useState(Boolean(initialDraft?.prepared && online && serverAuthorized))
   const preparation = useRef<{ signature: string; importId?: string; previewId?: string; snapshotId?: string; grants?: number }>({ signature: '' })
   const fileRef = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
   const [campaignName, setCampaignName] = useState(initialDraft?.campaignName ?? '')
   const [parsed, setParsed] = useState<ParsedImportFile | null>(initialDraft?.parsed ?? null)
   const [detection, setDetection] = useState<SmartImportDetection | null>(() => initialDraft?.parsed ? detectSmartImportMapping(initialDraft.parsed) : null)
@@ -87,8 +88,15 @@ function CampaignForm({ storageKey }: { storageKey: string }) {
   const [messageTemplate, setMessageTemplate] = useState(initialDraft?.messageTemplate ?? '')
   const [personalizationRows, setPersonalizationRows] = useState<Awaited<ReturnType<typeof getMessagePersonalizationSourceRows>>>(initialDraft?.personalizationRows ?? [])
   const [busy, setBusy] = useState(false)
+  const [workProgress, setWorkProgress] = useState<{ label: string; completed: number; total: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(sessionRestored ? 'Checking this tab draft against the durable device copy before editing.' : null)
+
+  useEffect(() => () => abortRef.current?.abort(), [])
+
+  function cancelCurrentWork() {
+    abortRef.current?.abort()
+  }
 
   function localDraftValue(): CampaignLocalDraft {
     return {
@@ -336,7 +344,7 @@ function CampaignForm({ storageKey }: { storageKey: string }) {
   const templateAnalysis = useMemo(() => analyzeMessageTemplate(messageTemplate), [messageTemplate])
   const usage = useMemo(() => estimatePersonalizedSmsUsage(messageTemplate, personalizationRows), [messageTemplate, personalizationRows])
   const canPrepare = Boolean(
-    online && serverAuthorized && workspace && parsed && mapping.phone && !parsed.truncated && uniqueReady > 0 && consentConfirmed && campaignName.trim(),
+    online && serverAuthorized && workspace && parsed && mapping.phone && uniqueReady > 0 && consentConfirmed && campaignName.trim(),
   )
   const canReview = Boolean(
     online && serverAuthorized && !restoring && !restoreFailed && prepared && campaignName.trim() && messageTemplate.trim() && !templateAnalysis.malformed && templateAnalysis.unsupportedTokens.length === 0 && usage.readyRecipients > 0 && usage.blockedRecipients === 0,
@@ -349,11 +357,21 @@ function CampaignForm({ storageKey }: { storageKey: string }) {
 
   async function selectFile(file: File | null) {
     if (!file || !operation.start()) return
+    const controller = new AbortController()
+    abortRef.current = controller
     setError(null)
     setNotice(null)
     setBusy(true)
+    setWorkProgress({ label: 'Reading file…', completed: 0, total: Math.max(file.size, 1) })
     try {
-      const next = await parseSpreadsheetFile(file)
+      const next = await parseSpreadsheetFile(file, {
+        signal: controller.signal,
+        onProgress: (progress) => {
+          if (!operation.active.current) return
+          const label = progress.phase === 'reading' ? 'Reading file…' : progress.phase === 'hashing' ? 'Checking file…' : 'Reading spreadsheet…'
+          setWorkProgress({ label, completed: progress.loadedBytes, total: Math.max(progress.totalBytes, 1) })
+        },
+      })
       operation.check()
       preparation.current = { signature: '' }
       setPrepared(null); setDraftId(null); setPersonalizationRows([]); setConsentConfirmed(false)
@@ -364,9 +382,12 @@ function CampaignForm({ storageKey }: { storageKey: string }) {
       setEvidenceReference(`Imported list: ${file.name}`)
     } catch (reason) {
       if (!operation.active.current) return
-      setError(errorMessage(reason, 'Could not read the recipient file.'))
+      if (reason instanceof Error && reason.name === 'AbortError') setNotice('File processing was cancelled.')
+      else setError(errorMessage(reason, 'Could not read the recipient file.'))
       if (fileRef.current) fileRef.current.value = ''
     } finally {
+      if (abortRef.current === controller) abortRef.current = null
+      setWorkProgress(null)
       operation.finish()
       if (operation.active.current) setBusy(false)
     }
@@ -383,9 +404,28 @@ function CampaignForm({ storageKey }: { storageKey: string }) {
       const signature = JSON.stringify([parsed.fileSha256, mapping, campaignName, evidenceReference])
       if (preparation.current.signature !== signature) preparation.current = { signature }
       const progress = preparation.current
-      const importId = progress.importId ?? await createContactImport(workspace.id, parsed, mapping, preview.rows)
-      progress.importId = importId
+      let importId = progress.importId
+      if (!importId) {
+        const controller = new AbortController()
+        abortRef.current = controller
+        setWorkProgress({ label: 'Starting recipient import…', completed: 0, total: Math.max(preview.rows.length, 1) })
+        try {
+          importId = await createContactImport(workspace.id, parsed, mapping, preview.rows, {
+            signal: controller.signal,
+            onProgress: (state) => {
+              if (!operation.active.current) return
+              const label = state.phase === 'starting' ? 'Starting recipient import…' : state.phase === 'finalizing' ? 'Finalizing recipient import…' : `Staging ${state.completedRows.toLocaleString()} of ${state.totalRows.toLocaleString()} rows…`
+              setWorkProgress({ label, completed: state.completedRows, total: Math.max(state.totalRows, 1) })
+            },
+          })
+          progress.importId = importId
+        } finally {
+          if (abortRef.current === controller) abortRef.current = null
+        }
+      }
+      if (!importId) throw new Error('Recipient import did not return an identifier.')
       operation.check()
+      setWorkProgress({ label: 'Validating recipients…', completed: 0, total: Math.max(preview.rows.length, 1) })
       const validationRows = await listImportValidationRows(workspace.id, importId)
       operation.check()
       const selected = [...defaultRecipientSelection(validationRows)].sort((a, b) => a - b)
@@ -423,8 +463,10 @@ function CampaignForm({ storageKey }: { storageKey: string }) {
       setNotice(`${eligibleRows.toLocaleString()} recipient${eligibleRows === 1 ? '' : 's'} ready for this campaign. ${progress.grants.toLocaleString()} consent grant${progress.grants === 1 ? '' : 's'} recorded; ${suppressedRows.toLocaleString()} suppressed.`)
     } catch (reason) {
       if (!operation.active.current) return
-      setError(errorMessage(reason, 'Could not prepare campaign recipients.'))
+      if (reason instanceof Error && reason.name === 'AbortError') setNotice('Recipient import was cancelled; incomplete staged rows were discarded.')
+      else setError(errorMessage(reason, 'Could not prepare campaign recipients.'))
     } finally {
+      setWorkProgress(null)
       operation.finish()
       if (operation.active.current) setBusy(false)
     }
@@ -524,7 +566,7 @@ function CampaignForm({ storageKey }: { storageKey: string }) {
       </section>
 
       <section className="panel simple-campaign-section">
-        <div className="panel-heading"><div><p className="eyebrow">Step 2</p><h2>Upload recipient list</h2><p className="muted-copy">We primarily need the mobile-number column. Names and other fields are optional.</p></div><span className="badge badge-muted">CSV · XLSX · max 5 MB / {MAX_IMPORT_ROWS.toLocaleString()} rows</span></div>
+        <div className="panel-heading"><div><p className="eyebrow">Step 2</p><h2>Upload recipient list</h2><p className="muted-copy">We primarily need the mobile-number column. Names and other fields are optional.</p></div><span className="badge badge-muted">CSV · XLSX</span></div>
         <div className="import-upload-zone" aria-busy={busy && !parsed}>
           <label className="import-file-label">
             <strong>{busy && !parsed ? 'Reading file…' : 'Choose CSV or XLSX'}</strong>
@@ -532,6 +574,11 @@ function CampaignForm({ storageKey }: { storageKey: string }) {
             <input ref={fileRef} aria-describedby="simple-import-file-help" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy || restoring || Boolean(prepared)} onChange={(event) => void selectFile(event.target.files?.[0] ?? null)} />
           </label>
         </div>
+        {workProgress ? <div className="import-work-progress" role="status" aria-live="polite">
+          <div><strong>{workProgress.label}</strong><span>{Math.min(workProgress.completed, workProgress.total).toLocaleString()} / {workProgress.total.toLocaleString()}</span></div>
+          <progress max={workProgress.total} value={Math.min(workProgress.completed, workProgress.total)} />
+          {abortRef.current ? <button type="button" className="secondary-button compact-button" onClick={cancelCurrentWork}>Cancel</button> : null}
+        </div> : null}
 
         {parsed && preview && detection ? <>
           <section className="simple-import-file-card" aria-label="Imported recipient file summary">
@@ -552,7 +599,6 @@ function CampaignForm({ storageKey }: { storageKey: string }) {
           {parsed.sheetName ? <p className="muted-copy">Only worksheet “{parsed.sheetName}” is imported. Move the intended sheet first or export it as CSV to use another sheet.</p> : null}
           <details className="mobile-data-details"><summary>Preview first {Math.min(preview.rows.length, 10)} recipient rows</summary><div className="table-wrap"><table className="data-table"><thead><tr><th>Row</th><th>Name</th><th>Number</th><th>Status</th></tr></thead><tbody>{preview.rows.slice(0, 10).map((row) => <tr key={row.sourceRowNumber}><td>{row.sourceRowNumber}</td><td>{row.displayName ?? '—'}</td><td>{row.normalization.normalizedE164 ?? row.rawPhone}</td><td>{row.duplicateInFile ? 'Duplicate — excluded' : row.normalization.validationStatus}</td></tr>)}</tbody></table></div></details>
           {prepared ? <button type="button" className="secondary-button" disabled={busy || restoring} onClick={changeRecipients}>Change recipient list</button> : null}
-          {parsed.truncated ? <div className="notice error-notice" role="alert">This file has more than {MAX_IMPORT_ROWS.toLocaleString()} data rows. Split it before continuing.</div> : null}
 
           <details className="advanced-mapping" open={!mapping.phone || detection.confidence === 'low'}>
             <summary>Advanced column mapping</summary>

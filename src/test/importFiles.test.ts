@@ -1,5 +1,6 @@
+import { deflateRawSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
-import { decodeCsvBuffer, detectCsvDelimiter, parseCsvText, parseDelimitedText, parseXlsxArrayBuffer } from '../lib/importFiles'
+import { decodeCsvBuffer, detectCsvDelimiter, inflateRawFallback, parseCsvText, parseDelimitedText, parseXlsxArrayBuffer } from '../lib/importFiles'
 
 function concat(chunks: Uint8Array[]): Uint8Array {
   const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
@@ -83,6 +84,21 @@ describe('CSV import parsing', () => {
   })
 })
 
+
+it('parses more than 5,000 CSV recipients without truncation', () => {
+  const rows = Array.from({ length: 12000 }, (_, index) => `Recipient ${index + 1},03${String(100000000 + index).slice(-9)}`)
+  const parsed = parseCsvText(`Name,Mobile\n${rows.join('\n')}`, { fileSha256: 'd'.repeat(64) })
+  expect(parsed.rows).toHaveLength(12000)
+  expect(parsed.sourceRowCount).toBe(12000)
+  expect(parsed.truncated).toBe(false)
+})
+
+it('inflates raw DEFLATE data with the browser-independent XLSX fallback', () => {
+  const source = new TextEncoder().encode('BulkText XLSX fallback '.repeat(250))
+  const compressed = new Uint8Array(deflateRawSync(source))
+  expect(inflateRawFallback(compressed, source.length)).toEqual(source)
+})
+
 describe('XLSX import parsing', () => {
   it('reads the first worksheet without a third-party parser', async () => {
     const workbook = '<?xml version="1.0"?><workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Recipients" sheetId="1" r:id="rId1"/></sheets></workbook>'
@@ -164,13 +180,13 @@ describe('0.18.6 import regressions', () => {
     const parsed = await parseXlsxArrayBuffer(workbook(row(1, 'Mobile') + row(2, '03001234567') + blanks + row(1004, '03111234567')), { fileSha256: 'x' })
     expect(parsed.rows.map((r) => r.sourceRowNumber)).toEqual([2, 1004])
   })
-  it('detects overflow after a preamble instead of accepting an incomplete worksheet', async () => {
+  it('keeps all rows beyond the former 5,000-row ceiling', async () => {
     const preamble = Array.from({ length: 19 }, (_, i) => row(i + 1, 'Export title')).join('')
     const data = Array.from({ length: 5001 }, (_, i) => row(i + 21, '03001234567')).join('')
     const parsed = await parseXlsxArrayBuffer(workbook(preamble + row(20, 'Mobile') + data), { fileSha256: 'x' })
-    expect(parsed.truncated).toBe(true)
+    expect(parsed.truncated).toBe(false)
     expect(parsed.sourceRowCount).toBe(5001)
-    expect(parsed.rows).toHaveLength(5000)
+    expect(parsed.rows).toHaveLength(5001)
   })
   it('rejects out-of-bounds XLSX directories and oversized expanded entries', async () => {
     const buffer = workbook(row(1, 'Mobile'))
@@ -180,8 +196,8 @@ describe('0.18.6 import regressions', () => {
     const large = workbook(row(1, 'Mobile'))
     const bytes = new DataView(large)
     const central = bytes.getUint32(large.byteLength - 6, true)
-    bytes.setUint32(central + 24, 50 * 1024 * 1024, true)
-    await expect(parseXlsxArrayBuffer(large)).rejects.toThrow(/40 MB/)
+    bytes.setUint32(central + 24, 300 * 1024 * 1024, true)
+    await expect(parseXlsxArrayBuffer(large)).rejects.toThrow(/unsafe/)
   })
 })
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState, LoadingState } from '../components/StateViews'
-import { MAX_IMPORT_ROWS, parseSpreadsheetFile, type ParsedImportFile } from '../lib/importFiles'
+import { parseSpreadsheetFile, type ParsedImportFile } from '../lib/importFiles'
 import { buildImportPreview, detectSmartImportMapping, type ImportColumnMapping, type SmartImportDetection } from '../lib/importMapping'
 import { createContactImport, deleteContactImport, listContactImports, type ContactImportSummary } from '../lib/importsApi'
 import { errorMessage } from '../lib/errors'
@@ -36,9 +36,11 @@ function ImportForm() {
   const [imports, setImports] = useState<ContactImportSummary[]>([])
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [workProgress, setWorkProgress] = useState<{ label: string; completed: number; total: number } | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
   const canImport = true
   const operation = useOperationGuard()
   const historyGeneration = useRef(0)
@@ -73,13 +75,29 @@ function ImportForm() {
     void refreshHistory().catch((reason) => setError(errorMessage(reason, 'Could not load import history.')))
   }, [refreshHistory])
 
+  useEffect(() => () => abortRef.current?.abort(), [])
+
+  function cancelCurrentWork() {
+    abortRef.current?.abort()
+  }
+
   async function selectFile(file: File | null) {
     if (!file || !operation.start()) return
+    const controller = new AbortController()
+    abortRef.current = controller
     setError(null)
     setMessage(null)
     setBusy(true)
+    setWorkProgress({ label: 'Reading file…', completed: 0, total: Math.max(file.size, 1) })
     try {
-      const next = await parseSpreadsheetFile(file)
+      const next = await parseSpreadsheetFile(file, {
+        signal: controller.signal,
+        onProgress: (progress) => {
+          if (!operation.active.current) return
+          const label = progress.phase === 'reading' ? 'Reading file…' : progress.phase === 'hashing' ? 'Checking file…' : 'Reading spreadsheet…'
+          setWorkProgress({ label, completed: progress.loadedBytes, total: Math.max(progress.totalBytes, 1) })
+        },
+      })
       operation.check()
       const smart = detectSmartImportMapping(next)
       setParsed(next)
@@ -87,9 +105,12 @@ function ImportForm() {
       setMapping(smart.mapping)
     } catch (reason) {
       if (!operation.active.current) return
-      setError(errorMessage(reason, 'Could not read the import file.'))
+      if (reason instanceof Error && reason.name === 'AbortError') setMessage('File processing was cancelled.')
+      else setError(errorMessage(reason, 'Could not read the import file.'))
       if (inputRef.current) inputRef.current.value = ''
     } finally {
+      if (abortRef.current === controller) abortRef.current = null
+      setWorkProgress(null)
       operation.finish()
       if (operation.active.current) setBusy(false)
     }
@@ -103,15 +124,20 @@ function ImportForm() {
       setError('Select the column that contains recipient phone numbers.')
       return
     }
-    if (parsed.truncated) {
-      setError(`This file contains more than ${MAX_IMPORT_ROWS.toLocaleString()} rows. Split it into smaller files before continuing.`)
-      return
-    }
-
     if (!operation.start()) return
+    const controller = new AbortController()
+    abortRef.current = controller
     setBusy(true)
+    setWorkProgress({ label: 'Starting recipient import…', completed: 0, total: Math.max(preview.rows.length, 1) })
     try {
-      await createContactImport(workspace.id, parsed, mapping, preview.rows)
+      await createContactImport(workspace.id, parsed, mapping, preview.rows, {
+        signal: controller.signal,
+        onProgress: (progress) => {
+          if (!operation.active.current) return
+          const label = progress.phase === 'starting' ? 'Starting recipient import…' : progress.phase === 'finalizing' ? 'Finalizing recipient import…' : `Staging ${progress.completedRows.toLocaleString()} of ${progress.totalRows.toLocaleString()} rows…`
+          setWorkProgress({ label, completed: progress.completedRows, total: Math.max(progress.totalRows, 1) })
+        },
+      })
       operation.check()
       setMessage(`${parsed.fileName} is ready for review. Use Validate & preview to resolve invalid or duplicate numbers.`)
       setParsed(null)
@@ -121,8 +147,11 @@ function ImportForm() {
       await refreshHistory()
     } catch (reason) {
       if (!operation.active.current) return
-      setError(errorMessage(reason, 'Could not prepare the upload.'))
+      if (reason instanceof Error && reason.name === 'AbortError') setMessage('Recipient import was cancelled; incomplete staged rows were discarded.')
+      else setError(errorMessage(reason, 'Could not prepare the upload.'))
     } finally {
+      if (abortRef.current === controller) abortRef.current = null
+      setWorkProgress(null)
       operation.finish()
       if (operation.active.current) setBusy(false)
     }
@@ -172,16 +201,23 @@ function ImportForm() {
       <section className="panel">
         <div className="panel-heading">
           <div><p className="eyebrow">Step 1</p><h2>Choose a source file</h2></div>
-          <span className="badge badge-muted">CSV · XLSX · max 5 MB / {MAX_IMPORT_ROWS.toLocaleString()} rows</span>
+          <span className="badge badge-muted">CSV · XLSX</span>
         </div>
         {canImport ? (
-          <div className="import-upload-zone" aria-busy={busy}>
-            <label className="import-file-label">
-              <strong>{busy ? 'Reading file…' : 'Select CSV or XLSX'}</strong>
-              <span id="import-file-help">Legacy .xls is intentionally rejected; save it as .xlsx or CSV first.</span>
-              <input ref={inputRef} aria-describedby="import-file-help" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} onChange={(event) => void selectFile(event.target.files?.[0] ?? null)} />
-            </label>
-          </div>
+          <>
+            <div className="import-upload-zone" aria-busy={busy}>
+              <label className="import-file-label">
+                <strong>{busy ? 'Reading file…' : 'Select CSV or XLSX'}</strong>
+                <span id="import-file-help">Legacy .xls is intentionally rejected; save it as .xlsx or CSV first.</span>
+                <input ref={inputRef} aria-describedby="import-file-help" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} onChange={(event) => void selectFile(event.target.files?.[0] ?? null)} />
+              </label>
+            </div>
+            {workProgress ? <div className="import-work-progress" role="status" aria-live="polite">
+              <div><strong>{workProgress.label}</strong><span>{Math.min(workProgress.completed, workProgress.total).toLocaleString()} / {workProgress.total.toLocaleString()}</span></div>
+              <progress max={workProgress.total} value={Math.min(workProgress.completed, workProgress.total)} />
+              <button type="button" className="secondary-button compact-button" onClick={cancelCurrentWork}>Cancel</button>
+            </div> : null}
+          </>
         ) : null}
       </section>
 
@@ -194,7 +230,6 @@ function ImportForm() {
           </section>
 
           {parsed.sheetName ? <p className="notice">Only worksheet “{parsed.sheetName}” is imported. Move the intended sheet first or export it as CSV to use another sheet.</p> : null}
-          {parsed.truncated ? <div className="notice warning-notice" role="alert">The file contains more than {MAX_IMPORT_ROWS.toLocaleString()} data rows. Preview is capped and staging is disabled; split the source file first.</div> : null}
 
           <section className="panel">
             <div className="panel-heading"><div><p className="eyebrow">Step 2</p><h2>Smart number detection</h2></div><span className={mapping.phone ? 'badge badge-success' : 'badge badge-warning'}>{mapping.phone ? 'Phone found' : 'Phone needs mapping'}</span></div>
@@ -212,7 +247,7 @@ function ImportForm() {
           </section>
 
           <section className="panel">
-            <div className="panel-heading"><div><p className="eyebrow">Step 3</p><h2>Preview first {Math.min(preview.rows.length, 25)} rows</h2></div><button className="primary-button" type="button" disabled={busy || !mapping.phone || parsed.truncated || preview.rows.length === 0} onClick={() => void stageImport()}>{busy ? 'Preparing…' : 'Prepare recipients'}</button></div>
+            <div className="panel-heading"><div><p className="eyebrow">Step 3</p><h2>Preview first {Math.min(preview.rows.length, 25)} rows</h2></div><button className="primary-button" type="button" disabled={busy || !mapping.phone || preview.rows.length === 0} onClick={() => void stageImport()}>{busy ? 'Preparing…' : 'Prepare recipients'}</button></div>
             {mapping.phone ? (
               <div className="table-wrap">
                 <table className="data-table import-preview-table">

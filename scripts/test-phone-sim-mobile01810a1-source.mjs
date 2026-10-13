@@ -6,7 +6,7 @@ const css = await readFile(new URL('../src/styles/app.css', import.meta.url), 'u
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
 
 const assertions = [
-  [packageJson.version === '0.20.3-r1', 'frontend version is 0.20.3'],
+  [packageJson.version === '0.20.4', 'frontend version is 0.20.3'],
   [packageJson.bulktext?.backendContractVersion === '0.18.5', 'backend contract remains 0.18.5'],
   [devices.includes('className="page-stack devices-page"'), 'Phone & SIM page has scoped mobile containment root'],
   [devices.includes('className="data-table device-history-table"'), 'pairing history table has scoped class'],

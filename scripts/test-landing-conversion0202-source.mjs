@@ -15,8 +15,8 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.3-r1', 'frontend version must be 0.20.3')
-check(lock.version === '0.20.3-r1' && lock.packages?.['']?.version === '0.20.3-r1', 'package-lock release version must match package.json')
+check(pkg.version === '0.20.4', 'frontend version must be 0.20.3')
+check(lock.version === '0.20.4' && lock.packages?.['']?.version === '0.20.4', 'package-lock release version must match package.json')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain pinned to 0.18.5')
 check(Boolean(pkg.scripts?.['test:landing-conversion-source-0202']), '0.20.3 landing source contract script must exist')
 check(Boolean(pkg.scripts?.['test:landing-conversion-0202']), '0.20.3 landing runtime script must exist')
@@ -57,7 +57,7 @@ check(css.includes("content: '↓'"), 'mobile Android architecture flow must bec
 check(css.includes("color: #cbd9e6 !important"), 'dark gateway supporting text contrast correction required')
 check(!css.includes('@keyframes marketing'), 'landing patch must not add ornamental marketing animations')
 
-check(serviceWorker.includes("const VERSION = '0.20.3-r1'"), 'service-worker cache version must advance to 0.20.3')
+check(serviceWorker.includes("const VERSION = '0.20.4'"), 'service-worker cache version must advance to 0.20.3')
 check(preflight.includes('test-landing-conversion0202-source.mjs'), 'preflight must require the 0.20.3 landing contract')
 check(!landing.includes('Pricing') && !landing.includes('Start Free'), 'unlaunched pricing/free-tier claims must remain absent')
 check(landing.includes('No third-party gateway fee') && landing.includes('carrier balance or bundle'), 'cost wording must remain scoped and disclose carrier cost')

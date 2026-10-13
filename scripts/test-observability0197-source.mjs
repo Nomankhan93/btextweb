@@ -21,12 +21,12 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.3-r1', 'frontend version must be 0.20.3')
+check(pkg.version === '0.20.4', 'frontend version must be 0.20.3')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
-check(lock.version === '0.20.3-r1' && lock.packages?.['']?.version === '0.20.3-r1', 'package-lock release version must match package.json')
+check(lock.version === '0.20.4' && lock.packages?.['']?.version === '0.20.4', 'package-lock release version must match package.json')
 check(pkg.scripts?.['test:observability-source-0197'] === 'node scripts/test-observability0197-source.mjs', 'source contract command must exist')
 check(pkg.scripts?.['test:observability-0197']?.includes('src/test/observability0197.test.ts'), 'focused observability Vitest command must exist')
-check(observability.includes("OBSERVABILITY_RELEASE = '0.20.3-r1'"), 'diagnostic events must carry the 0.20.3 release marker')
+check(observability.includes("OBSERVABILITY_RELEASE = '0.20.4'"), 'diagnostic events must carry the 0.20.3 release marker')
 check(observability.includes("STORAGE_KEY = 'bulktext:diagnostics:v1'"), 'diagnostic storage must use a dedicated namespaced key')
 check(observability.includes('MAX_EVENTS = 25'), 'diagnostic buffer must be bounded to 25 events')
 check(observability.includes("'handled-error'"), 'handled failures must be representable')
@@ -63,7 +63,7 @@ check(tests.includes('does not record expected user-safe domain validation messa
 check(tests.includes('keeps only the latest 25 sanitized events'), 'bounded-buffer regression must be covered')
 check(tests.includes('exports a support snapshot containing sanitized events only'), 'support export regression must be covered')
 check(preflight.includes('test-observability0197-source.mjs'), 'preflight must require the 0.20.3 observability source contract')
-check(sw.includes("const VERSION = '0.20.3-r1'"), 'service-worker cache marker must match 0.20.3')
+check(sw.includes("const VERSION = '0.20.4'"), 'service-worker cache marker must match 0.20.3')
 check(!fs.existsSync('supabase/migrations/20261012001970_production_observability.sql'), '0.20.3 must not add a database migration')
 
 console.log(`Web 0.20.3 production observability source contract: PASS (${assertions} assertions)`)

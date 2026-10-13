@@ -18,9 +18,9 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.3-r1', 'frontend version must be 0.20.3')
+check(pkg.version === '0.20.4', 'frontend version must be 0.20.3')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
-check(lock.version === '0.20.3-r1' && lock.packages?.['']?.version === '0.20.3-r1', 'package-lock release version must match package.json')
+check(lock.version === '0.20.4' && lock.packages?.['']?.version === '0.20.4', 'package-lock release version must match package.json')
 check(Boolean(pkg.scripts?.['test:bootstrap-split-source-0196r1']), 'r1 source-contract command must exist')
 check(Boolean(pkg.scripts?.['test:bootstrap-split-0196r1']), 'r1 focused runtime command must exist')
 check(pkg.scripts?.['test:bundle-0196'] === 'node scripts/test-route-loading0196-build.mjs', 'original bundle gate command must remain authoritative')
@@ -51,7 +51,7 @@ check(
 )
 check(buildTest.includes('!initialFiles.has(bootstrapEntry[1].file)'), 'build gate must prove bootstrap is outside the initial static graph')
 check(vite.includes("manifest: 'asset-manifest.json'"), 'asset manifest must remain enabled for offline chunk precaching')
-check(sw.includes("const VERSION = '0.20.3-r1'"), 'service-worker cache marker must match corrective release')
+check(sw.includes("const VERSION = '0.20.4'"), 'service-worker cache marker must match corrective release')
 check(sw.includes('buildManifestAssets'), 'lazy bootstrap and route chunks must remain included in PWA manifest precaching')
 check(preflight.includes('test-bootstrap-split0196r1-source.mjs'), 'preflight must require the r1 source contract')
 check(preflight.includes("'src/AppBootstrap.tsx'"), 'preflight required-file list must include the bootstrap module')

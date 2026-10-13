@@ -39,13 +39,13 @@ function assertNoError(result, label) {
 function userClient(url, key) {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
 }
-async function collectRpcRows(client, fn, args, maxRows = 5000) {
+async function collectRpcRows(client, fn, args, maxRows = null) {
   const rows = []
   for (let from = 0; ; from += PAGE_SIZE) {
     const result = await client.rpc(fn, args).range(from, from + PAGE_SIZE - 1)
     const page = assertNoError(result, `${fn} page ${from}-${from + PAGE_SIZE - 1}`) ?? []
     assert(Array.isArray(page), `${fn} returned a non-array page`)
-    assert(rows.length + page.length <= maxRows, `${fn} exceeded ${maxRows} rows`)
+    if (maxRows !== null) assert(rows.length + page.length <= maxRows, `${fn} exceeded ${maxRows} rows`)
     rows.push(...page)
     if (page.length < PAGE_SIZE) return rows
   }

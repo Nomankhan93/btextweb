@@ -84,13 +84,13 @@ async function navigate(harness, path) {
 {
   const harness = createHarness({ failUrl: '/assets/main.js' })
   await assert.rejects(runInstall(harness), /Required offline shell asset failed/)
-  assert.equal([...harness.stores.keys()].some((name) => name.includes('shell-0.20.3-r1')), false, 'failed required asset must not commit a shell cache')
+  assert.equal([...harness.stores.keys()].some((name) => name.includes('shell-0.20.4')), false, 'failed required asset must not commit a shell cache')
 }
 
 {
   const harness = createHarness()
   await runInstall(harness)
-  const shellName = [...harness.stores.keys()].find((name) => name.includes('shell-0.20.3-r1'))
+  const shellName = [...harness.stores.keys()].find((name) => name.includes('shell-0.20.4'))
   assert.ok(shellName, 'successful install must create the corrective-release shell cache')
   const shellStore = harness.stores.get(shellName)
   assert.ok(shellStore.has('/'), 'installed shell HTML must be cached')
@@ -108,7 +108,7 @@ async function navigate(harness, path) {
 {
   const harness = createHarness({ failUrl: '/dashboard' })
   await runInstall(harness)
-  const shellName = [...harness.stores.keys()].find((name) => name.includes('shell-0.20.3-r1'))
+  const shellName = [...harness.stores.keys()].find((name) => name.includes('shell-0.20.4'))
   const shellStore = harness.stores.get(shellName)
   shellStore.delete('/')
   const response = await navigate(harness, '/dashboard')
@@ -119,11 +119,11 @@ async function navigate(harness, path) {
 {
   const harness = createHarness({ throwUrl: '/dashboard' })
   await runInstall(harness)
-  const shellName = [...harness.stores.keys()].find((name) => name.includes('shell-0.20.3-r1'))
+  const shellName = [...harness.stores.keys()].find((name) => name.includes('shell-0.20.4'))
   const shellStore = harness.stores.get(shellName)
   shellStore.delete('/')
   const response = await navigate(harness, '/dashboard')
   assert.match(await response.text(), /asset:\/offline\.html/, 'network failure must retain offline navigation recovery')
 }
 
-console.log('Web 0.20.3-r1 service-worker controlled-update shell integrity: PASS (16 assertions)')
+console.log('Web 0.20.4 service-worker controlled-update shell integrity: PASS (16 assertions)')

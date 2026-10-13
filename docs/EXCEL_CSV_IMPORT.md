@@ -8,8 +8,8 @@
 
 - `.csv`
 - `.xlsx` (modern Office Open XML workbook)
-- Maximum file size: 5 MB
-- Maximum staged data rows: 5,000
+- No fixed product file-size cap. Browser/device capacity still applies, and malformed XLSX archives are rejected by decompression safety guards.
+- No fixed product recipient-row cap. Large imports are staged to Supabase in bounded batches instead of one giant request.
 - Maximum columns: 100
 - The first non-empty row is treated as the header row.
 - XLSX imports read the first worksheet only in this phase.
@@ -19,7 +19,7 @@
 
 CSV parsing supports quoted fields, escaped quotes, embedded newlines, comma/semicolon/tab delimiter detection, duplicate-header disambiguation, and UTF-8 BOM removal.
 
-XLSX parsing is implemented without an external online service. The browser reads the workbook ZIP structure, first worksheet, shared strings, inline strings, text/numeric/boolean cell values, and preserves values as import text. No spreadsheet is uploaded to a third-party parser.
+XLSX parsing is implemented without an external online service. The browser reads the workbook ZIP structure, first worksheet, shared strings, inline strings, text/numeric/boolean cell values, and preserves values as import text. Native raw-DEFLATE decompression is used where available, with a built-in fallback for browser/webview compatibility. No spreadsheet is uploaded to a third-party parser.
 
 ## Mapping
 
@@ -57,7 +57,11 @@ Tables are read-only to authenticated clients under RLS. Staging/deletion is per
 ## RPCs
 
 - `can_stage_contact_imports(organization_id)`
-- `create_contact_import(...)`
+- `begin_contact_import(...)`
+- `append_contact_import_rows(...)`
+- `finalize_contact_import(...)`
+- `abort_contact_import(...)`
+- `create_contact_import(...)` (compatibility wrapper)
 - `list_contact_imports(organization_id)`
 - `delete_contact_import(organization_id, import_id)`
 

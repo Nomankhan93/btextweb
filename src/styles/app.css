@@ -251,6 +251,11 @@ a { color: inherit; }
 .import-file-label strong { color: var(--ink); font-size: 1.02rem; }
 .import-file-label span { color: var(--muted); font-size: .86rem; line-height: 1.5; }
 .import-file-label input { margin-top: 8px; max-width: 100%; }
+.import-work-progress { margin-top: 12px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px 12px; align-items: center; padding: 12px 14px; border: 1px solid #dbe8e7; border-radius: 12px; background: #fbfdfd; }
+.import-work-progress > div { min-width: 0; display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: .82rem; }
+.import-work-progress > div strong { color: var(--ink); }
+.import-work-progress progress { grid-column: 1 / 2; width: 100%; height: 10px; accent-color: var(--primary); }
+.import-work-progress button { grid-column: 2; grid-row: 1 / span 2; }
 .import-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .import-mapping-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
 .import-mapping-grid label { display: grid; gap: 7px; color: #385057; font-size: .84rem; font-weight: 750; }
@@ -763,6 +768,9 @@ details > summary {
   .simple-import-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .import-file-label { padding: 18px 15px; }
   .import-file-label input { width: 100%; }
+  .import-work-progress { grid-template-columns: 1fr; }
+  .import-work-progress button { grid-column: 1; grid-row: auto; width: 100%; }
+  .import-work-progress progress { grid-column: 1; }
   .simple-message-field textarea { min-height: 200px; font-size: 16px; }
   .simple-campaign-name-field input { font-size: 16px; }
   .simple-message-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }

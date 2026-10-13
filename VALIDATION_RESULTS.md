@@ -1,7 +1,9 @@
-# Validation — Web 0.20.3-r1
+# Validation — Web 0.20.4
 
-Web `0.20.3-r1` preserves the certified `0.20.3` application/backend behavior and adds production routing plus controlled-update gates.
+Web `0.20.4` adds recipient-import reliability/scale gates while retaining the certified `0.20.3-r1` production-routing/PWA baseline and backend send contract `0.18.5`.
 
-The release is accepted only after `npm run certify:0203r1` passes. The focused checks protect the Vercel SPA rewrite, immutable active service-worker shell, host-404/offline fallback, explicit `SKIP_WAITING` activation and **Updating…** UI state. The corrective certifier then runs the existing `0.20.3` production certification to retain auth, landing, accessibility, observability, route loading, TypeScript, full Vitest, build and bundle regressions.
+Primary web certification: `npm run certify:0204`.
 
-Deployment smoke remains mandatory because Vercel routing and browser service-worker activation are hosting/browser behaviors: direct `/dashboard` and other deep routes must refresh without `404_NOT_FOUND`, and an older controlled build must not silently adopt a newer deployment before **Update now** is selected.
+Because this release introduces a database migration and new staged-import RPCs, database acceptance is a separate mandatory gate: apply `20261013000100_recipient_import_reliability_scale.sql` locally and run `npm run test:import-scale-local-0204` before any hosted database push.
+
+Production deployment order is database first, frontend second. After deployment, smoke-test CSV, XLSX, a >5,000-row import, cancellation cleanup, direct React routes, and the controlled PWA update path.
