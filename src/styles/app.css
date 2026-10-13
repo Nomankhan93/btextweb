@@ -1524,3 +1524,790 @@ body { background: var(--light-bg); }
     flex: 1 1 0;
   }
 }
+
+/* 0.20.2 — Landing page conversion and mobile UX */
+.marketing-site {
+  overflow-x: clip;
+}
+
+.marketing-menu-backdrop {
+  display: none;
+}
+
+.marketing-hero-grid {
+  min-height: 0;
+  gap: 48px;
+  padding-block: 58px 66px;
+}
+
+.marketing-hero h1 {
+  max-width: 650px;
+  font-size: clamp(2.55rem, 4.8vw, 4.5rem);
+  line-height: 1.02;
+}
+
+.marketing-lead {
+  max-width: 620px;
+  margin-top: 18px;
+  font-size: clamp(1rem, 1.45vw, 1.14rem);
+  line-height: 1.62;
+}
+
+.marketing-hero-actions,
+.final-cta-actions {
+  margin-top: 22px;
+}
+
+.marketing-trust-row {
+  margin-top: 20px;
+  gap: 8px 16px;
+}
+
+.dashboard-showcase {
+  transform: none;
+  border-radius: 22px;
+  box-shadow: 0 22px 60px rgba(7,27,74,.15);
+}
+
+.showcase-app-shell {
+  min-height: 330px;
+}
+
+.showcase-main {
+  padding: 20px;
+}
+
+.showcase-campaign-progress {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 9px;
+}
+
+.showcase-campaign-progress > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e0eaf0;
+  border-radius: 11px;
+  background: #fbfdff;
+}
+
+.showcase-campaign-progress span,
+.showcase-campaign-progress strong {
+  display: block;
+}
+
+.showcase-campaign-progress span {
+  color: var(--muted);
+  font-size: .66rem;
+}
+
+.showcase-campaign-progress strong {
+  margin-top: 5px;
+  color: var(--brand-dark);
+  font-size: 1.04rem;
+}
+
+.showcase-campaign-progress i {
+  display: block;
+  height: 5px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg,var(--brand),var(--brand-cyan));
+}
+
+.showcase-device-row {
+  margin-top: 14px;
+}
+
+.showcase-caveat {
+  margin: 12px 0 0;
+  color: #6a7f8e;
+  font-size: .69rem;
+  line-height: 1.45;
+}
+
+.value-grid {
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  padding-block: 22px;
+}
+
+.marketing-block {
+  padding-block: 76px;
+}
+
+.marketing-section-heading {
+  margin-bottom: 34px;
+}
+
+.marketing-section-heading h2,
+.marketing-final-cta h2 {
+  font-size: clamp(1.9rem, 3.2vw, 2.8rem);
+  line-height: 1.1;
+}
+
+.marketing-section-heading > p:last-child,
+.marketing-final-cta p {
+  margin-top: 13px;
+  line-height: 1.6;
+}
+
+.workflow-grid {
+  gap: 12px;
+}
+
+.workflow-grid article {
+  min-height: 164px;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr);
+  align-content: start;
+  gap: 14px;
+  border-radius: 16px;
+}
+
+.workflow-grid article > span {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+.workflow-grid h3 {
+  margin: 2px 0 6px;
+}
+
+.feature-grid {
+  gap: 8px 24px;
+}
+
+.feature-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 6px;
+  border: 0;
+  border-top: 1px solid #dce8ef;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.feature-icon {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.feature-card-copy {
+  min-width: 0;
+}
+
+.feature-card h3 {
+  margin: 0 0 5px;
+}
+
+.feature-card p {
+  line-height: 1.52;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 14px;
+}
+
+.comparison-card {
+  overflow: hidden;
+  border: 1px solid #d9e6ed;
+  border-radius: 17px;
+  background: #fff;
+}
+
+.comparison-card h3 {
+  margin: 0;
+  padding: 17px 18px;
+  color: #fff;
+  background: linear-gradient(135deg,#0b63f6,#159ed8);
+  font-size: 1rem;
+}
+
+.comparison-card > div {
+  padding: 15px 18px;
+}
+
+.comparison-card > div + div {
+  border-top: 1px solid #e4edf2;
+}
+
+.comparison-card span {
+  display: block;
+  margin-bottom: 5px;
+  color: #607688;
+  font-size: .7rem;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.comparison-card p {
+  margin: 0;
+  color: #50697a;
+  font-size: .86rem;
+  line-height: 1.5;
+}
+
+.comparison-card .comparison-bulktext {
+  background: #f6fbff;
+}
+
+.comparison-card .comparison-bulktext span,
+.comparison-card .comparison-bulktext p {
+  color: #173f68;
+}
+
+.gateway-grid {
+  grid-template-columns: minmax(0,1.15fr) minmax(260px,.85fr);
+  gap: 64px;
+}
+
+.gateway-section .marketing-section-heading > p:last-child {
+  color: #d0dce8;
+}
+
+.gateway-phone-visual {
+  width: min(310px,100%);
+  border-width: 8px;
+  border-radius: 42px;
+}
+
+.gateway-phone-visual img {
+  width: 104px;
+  height: 104px;
+  border-radius: 25px;
+}
+
+.gateway-flow {
+  margin-top: 22px;
+  gap: 8px;
+}
+
+.gateway-flow b {
+  font-size: 0;
+}
+
+.gateway-flow b::before {
+  content: '→';
+  font-size: .9rem;
+}
+
+.gateway-note {
+  color: #c0d0df !important;
+}
+
+.faq-grid {
+  grid-template-columns: .9fr 1.1fr;
+  gap: 54px;
+}
+
+.faq-list {
+  gap: 9px;
+}
+
+.faq-item {
+  border-radius: 13px;
+}
+
+.faq-item h3 {
+  margin: 0;
+}
+
+.faq-item h3 > button {
+  width: 100%;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 17px;
+  border: 0;
+  background: #fff;
+  color: var(--brand-dark);
+  text-align: left;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.faq-item h3 > button > span:last-child {
+  flex: 0 0 auto;
+  color: var(--brand);
+  font-size: 1.28rem;
+  line-height: 1;
+}
+
+.faq-item [role='region'] > p {
+  margin: 0;
+  padding: 0 17px 17px;
+  color: var(--muted);
+  line-height: 1.58;
+}
+
+.marketing-menu-button:focus-visible,
+.marketing-navigation a:focus-visible,
+.marketing-navigation button:focus-visible,
+.marketing-primary-cta:focus-visible,
+.marketing-secondary-cta:focus-visible,
+.marketing-secondary-dark:focus-visible,
+.faq-item button:focus-visible {
+  outline: 3px solid rgba(11,99,246,.34);
+  outline-offset: 3px;
+}
+
+.marketing-final-cta {
+  padding-block: 64px;
+}
+
+.marketing-footer {
+  padding-block: 44px 22px;
+}
+
+.marketing-footer-bottom {
+  margin-top: 30px;
+  padding-top: 18px;
+}
+
+@media (max-width: 1100px) {
+  .marketing-hero-grid {
+    gap: 34px;
+    padding-block: 48px 54px;
+  }
+
+  .dashboard-showcase {
+    width: min(780px,100%);
+  }
+}
+
+@media (max-width: 900px) {
+  .marketing-menu-backdrop {
+    position: fixed;
+    inset: 66px 0 0;
+    z-index: 78;
+    display: block;
+    width: 100%;
+    height: calc(100dvh - 66px);
+    border: 0;
+    padding: 0;
+    background: rgba(6,21,56,.22);
+    cursor: default;
+  }
+
+  .marketing-navigation {
+    z-index: 82;
+    top: 58px;
+    left: auto;
+    right: 0;
+    width: min(340px,calc(100vw - 28px));
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .marketing-navigation a,
+  .marketing-navigation .marketing-install-link {
+    min-height: 48px;
+    padding: 10px 12px;
+  }
+
+  .marketing-navigation .marketing-signin-link {
+    margin-top: 5px;
+    border-top: 1px solid #e3ebf0;
+    border-radius: 0;
+    padding-top: 14px;
+  }
+
+  .marketing-navigation .marketing-primary-link {
+    margin-top: 2px;
+    border-radius: 11px;
+  }
+
+  .value-grid {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+
+  .value-grid article,
+  .value-grid article:first-child,
+  .value-grid article:last-child {
+    padding: 10px 16px;
+    border-bottom: 0;
+  }
+
+  .value-grid article:nth-child(2) {
+    border-right: 1px solid #e5edf2;
+  }
+
+  .workflow-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .feature-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .gateway-grid,
+  .faq-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .gateway-phone-visual {
+    order: 2;
+    width: min(270px,72vw);
+  }
+}
+
+@media (max-width: 700px) {
+  .marketing-section,
+  .marketing-nav-shell {
+    width: min(100% - 32px,1180px);
+  }
+
+  .marketing-block {
+    padding-block: 60px;
+  }
+
+  .marketing-hero-grid {
+    gap: 30px;
+    padding-block: 34px 42px;
+  }
+
+  .marketing-kicker {
+    margin-bottom: 10px;
+    font-size: .7rem;
+    letter-spacing: .12em;
+  }
+
+  .marketing-hero h1 {
+    font-size: clamp(2.5rem,11vw,2.75rem);
+    line-height: 1.03;
+    letter-spacing: -.042em;
+  }
+
+  .marketing-lead {
+    margin-top: 16px;
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  .marketing-hero-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .marketing-primary-cta,
+  .marketing-secondary-cta,
+  .marketing-secondary-dark {
+    min-height: 48px;
+    padding: 10px 14px;
+  }
+
+  .marketing-trust-row {
+    display: flex;
+    margin-top: 17px;
+    gap: 7px 13px;
+    font-size: .78rem;
+  }
+
+  .dashboard-showcase {
+    border-radius: 19px;
+    box-shadow: 0 18px 46px rgba(7,27,74,.13);
+  }
+
+  .showcase-browser-bar {
+    height: 39px;
+    padding-inline: 13px;
+  }
+
+  .showcase-app-shell {
+    min-height: 0;
+  }
+
+  .showcase-main {
+    padding: 15px;
+  }
+
+  .showcase-heading {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .showcase-heading h2 {
+    font-size: 1.12rem;
+  }
+
+  .showcase-campaign-progress {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  .showcase-campaign-progress > div {
+    padding: 9px;
+  }
+
+  .showcase-campaign-progress strong {
+    font-size: .92rem;
+  }
+
+  .showcase-device-row {
+    align-items: center;
+    flex-direction: row;
+    margin-top: 11px;
+    padding: 11px 12px;
+  }
+
+  .showcase-caveat {
+    margin-top: 10px;
+    font-size: .66rem;
+  }
+
+  .value-grid {
+    grid-template-columns: 1fr;
+    padding-block: 8px;
+  }
+
+  .value-grid article,
+  .value-grid article:first-child,
+  .value-grid article:last-child {
+    padding: 13px 2px;
+    border-right: 0;
+    border-bottom: 1px solid #e5edf2;
+  }
+
+  .value-grid article:nth-child(2) {
+    border-right: 0;
+  }
+
+  .value-grid article:last-child {
+    border-bottom: 0;
+  }
+
+  .marketing-section-heading {
+    margin-bottom: 27px;
+  }
+
+  .marketing-section-heading h2,
+  .marketing-final-cta h2 {
+    font-size: clamp(2rem,9vw,2.25rem);
+    line-height: 1.1;
+  }
+
+  .marketing-section-heading > p:last-child,
+  .marketing-final-cta p {
+    font-size: .96rem;
+    line-height: 1.55;
+  }
+
+  .workflow-grid,
+  .feature-grid,
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-grid {
+    gap: 10px;
+  }
+
+  .workflow-grid article {
+    min-height: 0;
+    padding: 16px;
+    grid-template-columns: 42px minmax(0,1fr);
+    gap: 13px;
+  }
+
+  .workflow-grid h3 {
+    margin-top: 1px;
+    font-size: 1rem;
+  }
+
+  .workflow-grid p {
+    font-size: .85rem;
+  }
+
+  .feature-grid {
+    gap: 0;
+  }
+
+  .feature-card {
+    padding: 15px 0;
+  }
+
+  .feature-card h3 {
+    font-size: 1rem;
+  }
+
+  .feature-card p {
+    font-size: .85rem;
+  }
+
+  .comparison-grid {
+    gap: 11px;
+  }
+
+  .comparison-card h3 {
+    padding: 14px 16px;
+  }
+
+  .comparison-card > div {
+    padding: 13px 16px;
+  }
+
+  .gateway-section {
+    padding-block: 62px;
+  }
+
+  .gateway-grid {
+    gap: 34px;
+  }
+
+  .gateway-flow {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 20px;
+  }
+
+  .gateway-flow span {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .gateway-flow b {
+    height: 16px;
+    display: grid;
+    place-items: center;
+  }
+
+  .gateway-flow b::before {
+    content: '↓';
+  }
+
+  .gateway-note {
+    margin-top: 18px !important;
+    color: #cbd9e6 !important;
+  }
+
+  .gateway-phone-visual {
+    width: min(240px,72vw);
+    border-width: 7px;
+    border-radius: 38px;
+  }
+
+  .gateway-phone-visual img {
+    width: 92px;
+    height: 92px;
+    border-radius: 22px;
+  }
+
+  .faq-grid {
+    gap: 28px;
+  }
+
+  .faq-item h3 > button {
+    min-height: 56px;
+    padding: 13px 15px;
+    font-size: .96rem;
+  }
+
+  .faq-item [role='region'] > p {
+    padding: 0 15px 15px;
+    font-size: .9rem;
+  }
+
+  .marketing-final-cta {
+    padding-block: 56px;
+  }
+
+  .final-cta-inner {
+    gap: 26px;
+  }
+
+  .final-cta-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .marketing-footer {
+    padding-block: 36px 20px;
+  }
+
+  .marketing-footer-grid {
+    gap: 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  .marketing-nav-shell,
+  .marketing-header {
+    min-height: 66px;
+  }
+
+  .marketing-navigation {
+    top: 57px;
+    right: -2px;
+  }
+
+  .marketing-hero-actions,
+  .final-cta-actions {
+    align-items: stretch;
+    flex-direction: initial;
+  }
+
+  .marketing-primary-cta,
+  .marketing-secondary-cta,
+  .marketing-secondary-dark {
+    width: 100%;
+  }
+
+  .marketing-trust-row {
+    display: flex;
+  }
+}
+
+@media (max-width: 360px) {
+  .marketing-section,
+  .marketing-nav-shell {
+    width: min(100% - 24px,1180px);
+  }
+
+  .marketing-hero h1 {
+    font-size: 2.35rem;
+  }
+
+  .marketing-hero-actions,
+  .final-cta-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .showcase-campaign-progress {
+    grid-template-columns: 1fr;
+  }
+
+  .showcase-campaign-progress > div {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 10px;
+  }
+
+  .showcase-campaign-progress i {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+  }
+}

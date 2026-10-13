@@ -3,8 +3,8 @@ import process from 'node:process'
 
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const gates = [
-  ['0.20.1 PWA install/update source contract', npm, ['run', 'test:pwa-install-update-source-0201']],
-  ['0.20.1 PWA install/update runtime', npm, ['run', 'test:pwa-install-update-0201']],
+  ['0.20.2 PWA install/update source contract', npm, ['run', 'test:pwa-install-update-source-0201']],
+  ['0.20.2 PWA install/update runtime', npm, ['run', 'test:pwa-install-update-0201']],
   ['launch source contract', npm, ['run', 'test:launch-source-0200']],
   ['preflight', npm, ['run', 'preflight']],
   ['accessibility/forms', npm, ['run', 'test:accessibility-forms-0199']],
@@ -19,7 +19,7 @@ const gates = [
 ]
 
 for (const [label, command, args] of gates) {
-  console.log(`\n=== 0.20.1 certification: ${label} ===`)
+  console.log(`\n=== 0.20.2 certification: ${label} ===`)
   const result = spawnSync(command, args, { stdio: 'inherit', env: process.env })
   if (result.error) {
     console.error(`Certification failed to start ${label}: ${result.error.message}`)
@@ -31,5 +31,5 @@ for (const [label, command, args] of gates) {
   }
 }
 
-console.log('\nBulkText Web 0.20.1 automated production certification: PASS')
+console.log('\nBulkText Web 0.20.2 automated production certification: PASS')
 console.log('Next: git diff --check && ./scripts/release-package.sh, then verify install/update UX in deployed mobile Chrome/PWA.')

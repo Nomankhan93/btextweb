@@ -21,12 +21,12 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.1', 'frontend version must be 0.20.1')
-check(lock.version === '0.20.1' && lock.packages?.['']?.version === '0.20.1', 'package-lock must match 0.20.1')
+check(pkg.version === '0.20.2', 'frontend version must be 0.20.2')
+check(lock.version === '0.20.2' && lock.packages?.['']?.version === '0.20.2', 'package-lock must match 0.20.2')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
 check(pkg.scripts?.['test:pwa-install-update-source-0201'] === 'node scripts/test-pwa-install-update0201-source.mjs', 'source contract command must exist')
 check(Boolean(pkg.scripts?.['test:pwa-install-update-0201']), 'runtime install/update test command must exist')
-check(pkg.scripts?.['certify:0201'] === 'node scripts/certify-production0201.mjs', '0.20.1 certification command must exist')
+check(pkg.scripts?.['certify:0201'] === 'node scripts/certify-production0201.mjs', '0.20.2 certification command must exist')
 
 for (const marker of [
   "beforeinstallprompt",
@@ -66,7 +66,7 @@ check(landing.includes('canInstall ? <button className="marketing-install-link"'
 check(landing.includes('>Install App</button>'), 'landing install action must be clearly labelled')
 check(!status.includes('BulkText update available.'), 'authenticated status bar must not duplicate the global update prompt')
 
-check(sw.includes("const VERSION = '0.20.1'"), 'service-worker cache version must be 0.20.1')
+check(sw.includes("const VERSION = '0.20.2'"), 'service-worker cache version must be 0.20.2')
 check(sw.includes("event.data?.type === 'SKIP_WAITING'"), 'service worker must support explicit user-approved activation')
 check(!/addEventListener\('install'[\s\S]{0,180}skipWaiting\(/.test(sw), 'service worker install must not force activation')
 check(styles.includes('.pwa-experience-stack') && styles.includes('.pwa-experience-prompt'), 'global install/update prompt styles required')
@@ -79,11 +79,11 @@ check(runtimeTest.includes('honors Later for the same worker'), 'runtime coverag
 check(runtimeTest.includes("SKIP_WAITING"), 'runtime coverage must protect explicit update activation')
 check(runtimeTest.includes('connectivity returns'), 'runtime coverage must protect background update checking')
 
-check(preflight.includes('test-pwa-install-update0201-source.mjs'), 'preflight must require the 0.20.1 PWA source contract')
+check(preflight.includes('test-pwa-install-update0201-source.mjs'), 'preflight must require the 0.20.2 PWA source contract')
 check(preflight.includes('PwaExperiencePrompts.tsx'), 'preflight must require the global prompt component')
-check(certifier.includes("'test:pwa-install-update-source-0201'"), '0.20.1 certifier must include source contract')
-check(certifier.includes("'test:pwa-install-update-0201'"), '0.20.1 certifier must include runtime install/update tests')
-check(certifier.includes("'test:bundle-0196'") && certifier.includes("'test:pwa-shell-01810r1'"), '0.20.1 must preserve bundle and offline shell certification')
-check(!fs.existsSync('supabase/migrations/20261013002010_pwa_install_update.sql'), '0.20.1 must not add a database migration')
+check(certifier.includes("'test:pwa-install-update-source-0201'"), '0.20.2 certifier must include source contract')
+check(certifier.includes("'test:pwa-install-update-0201'"), '0.20.2 certifier must include runtime install/update tests')
+check(certifier.includes("'test:bundle-0196'") && certifier.includes("'test:pwa-shell-01810r1'"), '0.20.2 must preserve bundle and offline shell certification')
+check(!fs.existsSync('supabase/migrations/20261013002010_pwa_install_update.sql'), '0.20.2 must not add a database migration')
 
-console.log(`Web 0.20.1 PWA install & update source contract: PASS (${assertions} assertions)`)
+console.log(`Web 0.20.2 PWA install & update source contract: PASS (${assertions} assertions)`)

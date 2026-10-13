@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BrandLockup } from '../components/BrandLockup'
 import { usePwa } from '../pwa/PwaProvider'
@@ -14,11 +14,11 @@ function FeatureIcon({ kind }: { kind: 'campaign' | 'contacts' | 'sim' | 'device
 
 const featureCards = [
   { kind: 'campaign' as const, title: 'Campaign Messaging', copy: 'Prepare, review and send business SMS campaigns from one focused workspace.' },
-  { kind: 'contacts' as const, title: 'Recipient & CSV/Excel Import', copy: 'Import recipient files, validate phone numbers and review the exact audience before sending.' },
-  { kind: 'sim' as const, title: 'Exact SIM1 / SIM2 Routing', copy: 'Choose the exact paired Android phone and SIM that BulkText is allowed to use.' },
-  { kind: 'device' as const, title: 'Android Device Management', copy: 'Pair gateway phones, inspect SIM readiness and keep device inventory visible from the web.' },
-  { kind: 'delivery' as const, title: 'Delivery & Recovery Tracking', copy: 'Follow queued, downloaded, sent, delivered, failed and recovery states without hiding uncertainty.' },
-  { kind: 'sync' as const, title: 'Background Gateway Sync', copy: 'Keep cloud queue and phone status synchronized while preserving strict no-duplicate send rules.' },
+  { kind: 'contacts' as const, title: 'Recipient & CSV/Excel Import', copy: 'Validate phone numbers and review the exact audience before sending.' },
+  { kind: 'sim' as const, title: 'Exact SIM1 / SIM2 Routing', copy: 'Choose the exact paired Android phone and SIM BulkText is allowed to use.' },
+  { kind: 'device' as const, title: 'Android Device Management', copy: 'Pair gateway phones and keep SIM readiness visible from the web.' },
+  { kind: 'delivery' as const, title: 'Delivery & Recovery Tracking', copy: 'Keep queued, sent, delivered, failed and recovery states distinct.' },
+  { kind: 'sync' as const, title: 'Background Gateway Sync', copy: 'Keep cloud queue and phone status synchronized without duplicate sends.' },
 ]
 
 const faqs = [
@@ -40,13 +40,55 @@ const faqs = [
   },
 ]
 
+const comparisons = [
+  {
+    title: 'Infrastructure',
+    traditional: 'Provider-hosted messaging infrastructure',
+    bulktext: 'Your paired Android phone and selected SIM',
+  },
+  {
+    title: 'Gateway cost model',
+    traditional: 'Provider per-message gateway pricing',
+    bulktext: 'Your carrier balance or bundle, without a third-party per-message gateway fee',
+  },
+  {
+    title: 'Routing control',
+    traditional: 'Provider-controlled routing',
+    bulktext: 'Exact phone + SIM routing selected in BulkText',
+  },
+]
+
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
   const { canInstall, install } = usePwa()
 
-  function closeMenu() {
+  function closeMenu(restoreFocus = false) {
     setMenuOpen(false)
+    if (restoreFocus) {
+      menuButtonRef.current?.focus()
+    }
   }
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      closeMenu(true)
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [menuOpen])
 
   async function installApp() {
     closeMenu()
@@ -59,6 +101,7 @@ export function LandingPage() {
         <div className="marketing-nav-shell">
           <BrandLockup compact />
           <button
+            ref={menuButtonRef}
             className="marketing-menu-button"
             type="button"
             aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
@@ -68,14 +111,23 @@ export function LandingPage() {
           >
             <span aria-hidden="true">{menuOpen ? '×' : '☰'}</span>
           </button>
+          {menuOpen ? (
+            <button
+              className="marketing-menu-backdrop"
+              type="button"
+              tabIndex={-1}
+              aria-label="Dismiss navigation overlay"
+              onClick={() => closeMenu(true)}
+            />
+          ) : null}
           <nav id="marketing-navigation" className={menuOpen ? 'marketing-navigation open' : 'marketing-navigation'} aria-label="Public navigation">
-            <a href="#features" onClick={closeMenu}>Features</a>
-            <a href="#how-it-works" onClick={closeMenu}>How it works</a>
-            <a href="#why-bulktext" onClick={closeMenu}>Why BulkText</a>
-            <a href="#faq" onClick={closeMenu}>FAQ</a>
+            <a href="#features" onClick={() => closeMenu()}>Features</a>
+            <a href="#how-it-works" onClick={() => closeMenu()}>How it works</a>
+            <a href="#why-bulktext" onClick={() => closeMenu()}>Why BulkText</a>
+            <a href="#faq" onClick={() => closeMenu()}>FAQ</a>
             {canInstall ? <button className="marketing-install-link" type="button" onClick={() => void installApp()}>Install App</button> : null}
-            <Link className="marketing-signin-link" to="/auth/login" onClick={closeMenu}>Sign in</Link>
-            <Link className="marketing-primary-link" to="/auth/signup" onClick={closeMenu}>Get Started</Link>
+            <Link className="marketing-signin-link" to="/auth/login" onClick={() => closeMenu()}>Sign in</Link>
+            <Link className="marketing-primary-link" to="/auth/signup" onClick={() => closeMenu()}>Get Started</Link>
           </nav>
         </div>
       </header>
@@ -85,16 +137,16 @@ export function LandingPage() {
           <div className="marketing-section marketing-hero-grid">
             <div className="marketing-hero-copy">
               <p className="marketing-kicker">Your SIM. Your Messages. Your Reach.</p>
-              <h1 id="hero-title">Send business SMS directly from your own SIM</h1>
-              <p className="marketing-lead">Manage recipients, campaigns, Android gateway devices, exact SIM routing and delivery status from one simple workspace—without a third-party SMS gateway.</p>
+              <h1 id="hero-title">Business SMS, sent from your own SIM.</h1>
+              <p className="marketing-lead">Create campaigns on the web and send through your paired Android phone using the exact SIM you choose.</p>
               <div className="marketing-hero-actions">
                 <Link className="marketing-primary-cta" to="/auth/signup">Get Started</Link>
                 <a className="marketing-secondary-cta" href="#how-it-works">See How It Works</a>
               </div>
               <div className="marketing-trust-row" aria-label="Key benefits">
-                <span>Own SIM &amp; carrier bundle</span>
-                <span>Dual-SIM routing</span>
-                <span>Live send and delivery status</span>
+                <span>Own SIM</span>
+                <span>Exact routing</span>
+                <span>Live delivery status</span>
               </div>
             </div>
 
@@ -102,24 +154,24 @@ export function LandingPage() {
               <div className="showcase-browser-bar"><span></span><span></span><span></span><strong>BulkText Dashboard</strong></div>
               <div className="showcase-app-shell">
                 <aside>
-                  <div className="showcase-mini-brand"><img src="/icons/icon-192.png" alt="" /><span>BulkText</span></div>
+                  <div className="showcase-mini-brand"><img src="/icons/icon-192.png" alt="" width="25" height="25" /><span>BulkText</span></div>
                   <b>Dashboard</b><span>Campaigns</span><span>Phone &amp; SIM</span><span>Tools</span>
                 </aside>
                 <div className="showcase-main">
-                  <div className="showcase-heading"><div><small>Campaign overview</small><h2>October Offers</h2></div><span className="showcase-ready">Gateway ready</span></div>
-                  <div className="showcase-metrics">
-                    <div><small>Recipients</small><strong>1,284</strong></div>
-                    <div><small>Sent</small><strong>1,271</strong></div>
-                    <div><small>Delivered</small><strong>1,243</strong></div>
-                    <div><small>Needs review</small><strong>28</strong></div>
+                  <div className="showcase-heading">
+                    <div><small>Campaign overview</small><h2>October Offers</h2></div>
+                    <span className="showcase-ready">Gateway ready</span>
                   </div>
-                  <div className="showcase-progress">
-                    <div><span>Queued</span><strong>1,284</strong></div>
-                    <div><span>Downloaded</span><strong>1,284</strong></div>
-                    <div><span>Sent</span><strong>1,271</strong></div>
-                    <div><span>Delivered</span><strong>1,243</strong></div>
+                  <div className="showcase-campaign-progress" aria-label="Campaign delivery progress">
+                    <div><span>Recipients</span><strong>1,284</strong><i style={{ width: '100%' }} /></div>
+                    <div><span>Sent</span><strong>1,271</strong><i style={{ width: '98%' }} /></div>
+                    <div><span>Delivered</span><strong>1,243</strong><i style={{ width: '96%' }} /></div>
                   </div>
-                  <div className="showcase-device-row"><span><b>Android Gateway</b><small>Galaxy A54 · SIM 1</small></span><span className="showcase-device-pill">Online</span></div>
+                  <div className="showcase-device-row">
+                    <span><b>Android Gateway</b><small>SIM 1 · Online</small></span>
+                    <span className="showcase-device-pill">Ready</span>
+                  </div>
+                  <p className="showcase-caveat">Delivery evidence depends on device and network callbacks; unknown and recovery states stay explicit.</p>
                 </div>
               </div>
             </div>
@@ -130,8 +182,7 @@ export function LandingPage() {
           <div className="marketing-section value-grid">
             <article><strong>Use your own SIM</strong><span>Send through your Android phone and mobile carrier.</span></article>
             <article><strong>No third-party gateway fee</strong><span>Use your existing SIM balance or carrier bundle.</span></article>
-            <article><strong>Exact SIM routing</strong><span>Select the specific phone and SIM used for sending.</span></article>
-            <article><strong>Track every campaign</strong><span>Follow queue, send, delivery and recovery states.</span></article>
+            <article><strong>Choose the exact SIM</strong><span>Select the specific phone and SIM used for sending.</span></article>
           </div>
         </section>
 
@@ -140,13 +191,13 @@ export function LandingPage() {
             <div className="marketing-section-heading">
               <p className="marketing-kicker">How it works</p>
               <h2>Connect, prepare, send and track</h2>
-              <p>BulkText keeps the web workspace simple while the Android companion app acts as the messaging gateway for your selected SIM.</p>
+              <p>BulkText keeps the web workspace simple while your Android phone performs the actual SMS sending.</p>
             </div>
             <div className="workflow-grid">
-              <article><span>01</span><h3>Connect Android Gateway</h3><p>Pair your phone securely and confirm the available SIM inventory.</p></article>
-              <article><span>02</span><h3>Create &amp; review campaign</h3><p>Import recipients, compose the message and confirm the exact send snapshot.</p></article>
-              <article><span>03</span><h3>Send through your SIM</h3><p>Authorize the exact Android phone and SIM. BulkText does not silently switch routing.</p></article>
-              <article><span>04</span><h3>Track live status</h3><p>Follow queued, downloaded, sent, delivered, failed and recovery outcomes.</p></article>
+              <article><span>01</span><div><h3>Connect your phone</h3><p>Pair Android and confirm the available SIM inventory.</p></div></article>
+              <article><span>02</span><div><h3>Build your campaign</h3><p>Import recipients, compose the message and review the send snapshot.</p></div></article>
+              <article><span>03</span><div><h3>Select the exact SIM</h3><p>Choose the phone and SIM authorized to send. Routing never silently switches.</p></div></article>
+              <article><span>04</span><div><h3>Track delivery</h3><p>Follow queued, sent, delivered, failed and recovery outcomes.</p></div></article>
             </div>
           </div>
         </section>
@@ -155,78 +206,56 @@ export function LandingPage() {
           <div className="marketing-section">
             <div className="marketing-section-heading">
               <p className="marketing-kicker">Core features</p>
-              <h2>One workspace for SIM-powered messaging operations</h2>
-              <p>Campaign preparation, exact device routing and operational status stay visible without hiding the Android gateway underneath.</p>
+              <h2>Everything needed to run SIM-powered campaigns</h2>
+              <p>Campaign preparation, device routing and delivery status stay visible without turning the workspace into a technical console.</p>
             </div>
             <div className="feature-grid">
               {featureCards.map((feature) => (
                 <article key={feature.title} className="feature-card">
                   <div className="feature-icon"><FeatureIcon kind={feature.kind} /></div>
-                  <h3>{feature.title}</h3>
-                  <p>{feature.copy}</p>
+                  <div className="feature-card-copy"><h3>{feature.title}</h3><p>{feature.copy}</p></div>
                 </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="marketing-block">
-          <div className="marketing-section dashboard-detail-grid">
-            <div className="marketing-section-heading left-aligned">
-              <p className="marketing-kicker">Product visibility</p>
-              <h2>See the sending workflow without digging through technical screens</h2>
-              <p>BulkText separates the customer-facing campaign story from deeper diagnostics while keeping queue, phone, SIM and recovery evidence available when you need it.</p>
-              <ul className="marketing-check-list">
-                <li>Campaign and recipient overview</li>
-                <li>Exact phone and SIM selection</li>
-                <li>Queued, sent and delivered states kept distinct</li>
-                <li>Technical diagnostics available without dominating the workflow</li>
-              </ul>
-            </div>
-            <div className="product-panel-preview">
-              <div className="product-panel-title"><span>Campaign progress</span><b>Live send and delivery status</b></div>
-              <div className="product-status-row"><span>Queued</span><strong>1,284</strong><i style={{ width: '100%' }} /></div>
-              <div className="product-status-row"><span>Downloaded by phone</span><strong>1,284</strong><i style={{ width: '100%' }} /></div>
-              <div className="product-status-row"><span>Sent</span><strong>1,271</strong><i style={{ width: '98%' }} /></div>
-              <div className="product-status-row"><span>Delivered</span><strong>1,243</strong><i style={{ width: '96%' }} /></div>
-              <small>Delivery evidence depends on device and network callbacks. BulkText keeps unknown and recovery states separate rather than guessing.</small>
-            </div>
-          </div>
-        </section>
-
-        <section id="why-bulktext" className="marketing-block marketing-block-soft marketing-section-anchor">
+        <section id="why-bulktext" className="marketing-block marketing-section-anchor">
           <div className="marketing-section">
             <div className="marketing-section-heading">
               <p className="marketing-kicker">Why BulkText</p>
-              <h2>Your own SIM infrastructure, with a modern web control plane</h2>
+              <h2>More control over the infrastructure you already use</h2>
+              <p>BulkText differs from a traditional hosted gateway in three practical ways.</p>
             </div>
-            <div className="comparison-table" role="table" aria-label="Traditional hosted SMS gateway compared with BulkText">
-              <div className="comparison-row comparison-head" role="row"><span role="columnheader">Traditional hosted SMS gateway</span><span role="columnheader">BulkText</span></div>
-              <div className="comparison-row" role="row"><span role="cell"><b className="comparison-mobile-label">Traditional gateway</b>Provider sends messages through its infrastructure</span><span role="cell"><b className="comparison-mobile-label">BulkText</b>Your paired Android phone sends through your selected SIM</span></div>
-              <div className="comparison-row" role="row"><span role="cell"><b className="comparison-mobile-label">Traditional gateway</b>Provider per-message gateway pricing</span><span role="cell"><b className="comparison-mobile-label">BulkText</b>Your carrier balance or bundle, without a third-party per-message gateway fee</span></div>
-              <div className="comparison-row" role="row"><span role="cell"><b className="comparison-mobile-label">Traditional gateway</b>Provider-controlled routing</span><span role="cell"><b className="comparison-mobile-label">BulkText</b>Exact phone + SIM routing selected in BulkText</span></div>
-              <div className="comparison-row" role="row"><span role="cell"><b className="comparison-mobile-label">Traditional gateway</b>Provider-specific delivery model</span><span role="cell"><b className="comparison-mobile-label">BulkText</b>Android gateway callbacks with explicit delivery and recovery states</span></div>
+            <div className="comparison-grid" aria-label="Traditional hosted SMS gateway compared with BulkText">
+              {comparisons.map((item) => (
+                <article key={item.title} className="comparison-card">
+                  <h3>{item.title}</h3>
+                  <div><span>Traditional gateway</span><p>{item.traditional}</p></div>
+                  <div className="comparison-bulktext"><span>BulkText</span><p>{item.bulktext}</p></div>
+                </article>
+              ))}
             </div>
           </div>
         </section>
 
         <section className="marketing-block gateway-section">
           <div className="marketing-section gateway-grid">
-            <div className="gateway-phone-visual" aria-hidden="true">
-              <div className="gateway-phone-speaker"></div>
-              <img src="/icons/icon-192.png" alt="" />
-              <strong>Android Gateway</strong>
-              <span>SIM 1 · Ready</span>
-              <div className="gateway-signal-lines"><i></i><i></i><i></i><i></i></div>
-            </div>
             <div className="marketing-section-heading left-aligned">
               <p className="marketing-kicker">Android Gateway</p>
               <h2>Turn your Android phone into your SMS gateway</h2>
-              <p>Pair your Android device with BulkText, choose the exact SIM, and securely dispatch approved campaigns from the web workspace through your phone.</p>
-              <div className="gateway-flow" aria-label="BulkText gateway flow">
-                <span>BulkText Web</span><b>→</b><span>Secure cloud queue</span><b>→</b><span>Android Gateway</span><b>→</b><span>SIM 1 / SIM 2</span>
+              <p>Pair your Android device, choose the exact SIM and securely dispatch approved campaigns from the web workspace through your phone.</p>
+              <div className="gateway-flow" aria-label="BulkText Web to secure cloud queue to Android Gateway to SIM 1 or SIM 2">
+                <span>BulkText Web</span><b aria-hidden="true">→</b><span>Secure cloud queue</span><b aria-hidden="true">→</b><span>Android Gateway</span><b aria-hidden="true">→</b><span>SIM 1 / SIM 2</span>
               </div>
-              <p className="gateway-note">The web app coordinates the workflow. The paired Android device and selected SIM perform the actual SMS sending.</p>
+              <p className="gateway-note">The web app coordinates the workflow. Your paired Android device and selected SIM perform the actual SMS sending.</p>
+            </div>
+            <div className="gateway-phone-visual" aria-hidden="true">
+              <div className="gateway-phone-speaker"></div>
+              <img src="/icons/icon-192.png" alt="" width="116" height="116" loading="lazy" />
+              <strong>Android Gateway</strong>
+              <span>SIM 1 · Ready</span>
+              <div className="gateway-signal-lines"><i></i><i></i><i></i><i></i></div>
             </div>
           </div>
         </section>
@@ -236,15 +265,32 @@ export function LandingPage() {
             <div className="marketing-section-heading left-aligned">
               <p className="marketing-kicker">FAQ</p>
               <h2>Questions before you connect a phone</h2>
-              <p>BulkText keeps the business model straightforward: your SIM sends the messages, while the web app manages campaigns and gateway operations.</p>
+              <p>Your SIM sends the messages; the web app manages campaigns, routing and gateway operations.</p>
             </div>
             <div className="faq-list">
-              {faqs.map((item) => (
-                <details key={item.question} className="faq-item">
-                  <summary>{item.question}</summary>
-                  <p>{item.answer}</p>
-                </details>
-              ))}
+              {faqs.map((item, index) => {
+                const isOpen = openFaq === index
+                const buttonId = `faq-question-${index}`
+                const panelId = `faq-answer-${index}`
+                return (
+                  <article key={item.question} className="faq-item">
+                    <h3>
+                      <button
+                        id={buttonId}
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={panelId}
+                        onClick={() => setOpenFaq(isOpen ? null : index)}
+                      >
+                        <span>{item.question}</span><span aria-hidden="true">{isOpen ? '−' : '+'}</span>
+                      </button>
+                    </h3>
+                    <div id={panelId} role="region" aria-labelledby={buttonId} hidden={!isOpen}>
+                      <p>{item.answer}</p>
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           </div>
         </section>
@@ -254,10 +300,10 @@ export function LandingPage() {
             <div>
               <p className="marketing-kicker">Your SIM. Your Messages. Your Reach.</p>
               <h2>Turn your SIM into your business messaging gateway</h2>
-              <p>Create your BulkText account, pair an Android phone and keep exact SIM routing under your control.</p>
+              <p>Create an account, pair Android, choose your SIM and start managing campaigns.</p>
             </div>
             <div className="final-cta-actions">
-              <Link className="marketing-primary-cta" to="/auth/signup">Create Your Account</Link>
+              <Link className="marketing-primary-cta" to="/auth/signup">Create Account</Link>
               <Link className="marketing-secondary-dark" to="/auth/login">Sign In</Link>
             </div>
           </div>

@@ -56,4 +56,4 @@ for (const [, value] of entries) {
   if (typeof value?.file === 'string') assert.ok(fs.existsSync(path.join(DIST, value.file)), `manifest file missing: ${value.file}`)
 }
 
-console.log(`Web 0.20.1 bundle budget: PASS (initial JS ${initialJsBytes} bytes across ${initialJsFiles.length} file(s); ${dynamicEntries.length} dynamic entries; largest ${largestJs.file} ${largestJs.bytes} bytes)`)
+console.log(`Web 0.20.2 bundle budget: PASS (initial JS ${initialJsBytes} bytes across ${initialJsFiles.length} file(s); ${dynamicEntries.length} dynamic entries; largest ${largestJs.file} ${largestJs.bytes} bytes)`)

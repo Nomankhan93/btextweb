@@ -3,7 +3,7 @@ import fs from 'node:fs'
 let assertions = 0
 function check(condition, message) {
   assertions += 1
-  if (!condition) throw new Error(`0.20.1 safe error presentation source contract failed: ${message}`)
+  if (!condition) throw new Error(`0.20.2 safe error presentation source contract failed: ${message}`)
 }
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
@@ -13,9 +13,9 @@ const tests = fs.readFileSync('src/test/errors.test.ts', 'utf8')
 const preflight = fs.readFileSync('scripts/preflight.mjs', 'utf8')
 const serviceWorker = fs.readFileSync('public/service-worker.js', 'utf8')
 
-check(pkg.version === '0.20.1', 'frontend version must be 0.20.1')
+check(pkg.version === '0.20.2', 'frontend version must be 0.20.2')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
-check(lock.version === '0.20.1' && lock.packages?.['']?.version === '0.20.1', 'package-lock release version must match package.json')
+check(lock.version === '0.20.2' && lock.packages?.['']?.version === '0.20.2', 'package-lock release version must match package.json')
 check(Boolean(pkg.scripts?.['test:error-presentation-source-0195']), 'source contract command must exist')
 check(Boolean(pkg.scripts?.['test:error-presentation-0195']), 'focused Vitest command must exist')
 check(errors.includes('errorDiagnosticContext'), 'raw diagnostics must remain available through a dedicated helper')
@@ -39,8 +39,8 @@ check(tests.includes('normalizes network failures into actionable product copy')
 check(tests.includes('normalizes expired authentication failures'), 'authentication regression must be covered')
 check(tests.includes('falls back instead of surfacing internal SQL/schema failures'), 'SQL/internal fallback regression must be covered')
 check(tests.includes('keeps raw backend diagnostics available separately from user-facing copy'), 'diagnostic separation regression must be covered')
-check(preflight.includes('test-error-presentation0195-source.mjs'), 'preflight must require the 0.20.1 source contract')
-check(serviceWorker.includes("const VERSION = '0.20.1'"), 'service-worker cache marker must match 0.20.1')
-check(!fs.existsSync('supabase/migrations/20261012001950_safe_error_presentation.sql'), '0.20.1 must not add a database migration')
+check(preflight.includes('test-error-presentation0195-source.mjs'), 'preflight must require the 0.20.2 source contract')
+check(serviceWorker.includes("const VERSION = '0.20.2'"), 'service-worker cache marker must match 0.20.2')
+check(!fs.existsSync('supabase/migrations/20261012001950_safe_error_presentation.sql'), '0.20.2 must not add a database migration')
 
-console.log(`Web 0.20.1 safe error presentation source contract: PASS (${assertions} assertions)`)
+console.log(`Web 0.20.2 safe error presentation source contract: PASS (${assertions} assertions)`)

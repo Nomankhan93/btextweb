@@ -1,14 +1,14 @@
-# Current Handoff — Web 0.20.1
+# Current Handoff — Web 0.20.2
 
-Current frontend release: `0.20.1`
+Current frontend release: `0.20.2`
 Backend contract: `0.18.5`
 
-`0.20.1 — PWA Install & Update Experience` adds a branded install prompt and user-controlled update activation on top of the certified `0.20.0` launch baseline.
+`0.20.2 — Landing Page Conversion & Mobile UX` is a presentation-focused public-landing patch on top of the certified `0.20.1` PWA install/update release.
 
-Install prompting appears only when the browser provides `beforeinstallprompt`; already-installed standalone mode does not offer installation. **Not now** suppresses automatic prompting for three days without removing the manual landing-navigation **Install App** action while installability remains available.
+The page now leads with **Business SMS, sent from your own SIM.**, shows the campaign/dashboard proof before explanatory sections, removes the separate repetitive product-visibility section, compresses the four-step workflow and six-feature list, limits the comparison to infrastructure/cost/routing, uses a vertical Android architecture flow on narrow screens, and provides an explicit accessible FAQ accordion.
 
-Updates are checked after service-worker registration, reconnect, focus and visible-tab return. A waiting worker shows **Update now / Later** globally. BulkText does not force `skipWaiting()` during service-worker install and does not reload until the user chooses **Update now**.
+The mobile public menu now closes with Escape, restores focus to its trigger, prevents background scrolling while open, and retains the conditional `0.20.1` **Install App** action. No PWA install/update lifecycle logic is changed.
 
-Primary certification command: `npm run certify:0201`. After it passes, run `git diff --check` and `./scripts/release-package.sh`.
+Primary certification command: `npm run certify:0202`. After it passes, run `git diff --check` and `./scripts/release-package.sh`.
 
 No database migration is included.
