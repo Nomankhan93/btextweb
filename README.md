@@ -1,9 +1,9 @@
-# Web 0.19.9 — Accessibility & Form Interaction Audit
+# Web 0.20.0 — Production Release Certification / Launch Baseline
 
-BulkText Web `0.19.9` closes verified form-accessibility gaps on top of the `0.19.6-r1` bootstrap split, `0.19.7` privacy-safe diagnostics and `0.19.8` auth/session/workspace hardening.
+BulkText Web `0.20.0` is the production launch baseline. It freezes the approved `0.19.x` behavior and consolidates the critical release gates for artifact integrity, auth/session/workspace boundaries, privacy-safe observability, accessibility/forms, PWA/offline behavior, route-loading performance and the full frontend regression suite.
 
-Async auth/profile forms now expose busy and live feedback semantics; password, managed-email, upload and phone-number help is programmatically associated; required/invalid states are exposed on key authoring controls; message-template errors are linked to their editors; and phone-number result status/table naming is accessible.
+Frontend version is `0.20.0`; backend contract remains `0.18.5`. No database migration or product-workflow change is included.
 
-Frontend version is `0.19.9`; backend contract remains `0.18.5`. No database migration is included.
+Run `npm run certify:0200` in WSL on Node `24.21.0`, then `git diff --check` and `./scripts/release-package.sh`. Deployment/device smoke remains an explicit post-deploy launch checklist item and is not represented as completed by the source artifact.
 
-See `PATCH_0_19_9_README.md`, `HANDOFF_0_19_9.md`, `VALIDATION_0_19_9.md` and `docs/ACCESSIBILITY_FORM_INTERACTION_0199.md`.
+See `PATCH_0_20_0_README.md`, `HANDOFF_0_20_0.md`, `VALIDATION_0_20_0.md` and `docs/PRODUCTION_LAUNCH_BASELINE_0200.md`.

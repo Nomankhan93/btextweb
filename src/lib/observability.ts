@@ -1,6 +1,6 @@
 import { getRuntimeConfig } from './env'
 
-export const OBSERVABILITY_RELEASE = '0.19.9'
+export const OBSERVABILITY_RELEASE = '0.20.0'
 const STORAGE_KEY = 'bulktext:diagnostics:v1'
 const MAX_EVENTS = 25
 
