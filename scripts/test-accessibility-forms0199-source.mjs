@@ -24,9 +24,9 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.0', 'frontend version must be 0.20.0')
+check(pkg.version === '0.20.1', 'frontend version must be 0.20.1')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
-check(lock.version === '0.20.0' && lock.packages?.['']?.version === '0.20.0', 'package-lock release version must match package.json')
+check(lock.version === '0.20.1' && lock.packages?.['']?.version === '0.20.1', 'package-lock release version must match package.json')
 check(pkg.scripts?.['test:accessibility-forms-source-0199'] === 'node scripts/test-accessibility-forms0199-source.mjs', 'source contract command must exist')
 check(pkg.scripts?.['test:accessibility-forms-0199']?.includes('src/test/accessibilityForms0199.test.tsx'), 'focused accessibility command must include the new regression suite')
 
@@ -76,8 +76,8 @@ check(styles.includes('.sr-only'), 'visually-hidden accessible text utility must
 check(runtimeTests.includes('announces sign-in failures and exposes the async form busy state'), 'runtime coverage must include auth busy/error feedback')
 check(runtimeTests.includes('programmatically associates password guidance'), 'runtime coverage must include password helper association')
 check(runtimeTests.includes('Phone number normalization results'), 'runtime coverage must include phone-table accessible naming')
-check(preflight.includes('test-accessibility-forms0199-source.mjs'), 'preflight must require the 0.20.0 accessibility source contract')
-check(sw.includes("const VERSION = '0.20.0'"), 'service-worker cache marker must match 0.20.0')
-check(!fs.existsSync('supabase/migrations/20261013001990_accessibility_forms.sql'), '0.20.0 must not add a database migration')
+check(preflight.includes('test-accessibility-forms0199-source.mjs'), 'preflight must require the 0.20.1 accessibility source contract')
+check(sw.includes("const VERSION = '0.20.1'"), 'service-worker cache marker must match 0.20.1')
+check(!fs.existsSync('supabase/migrations/20261013001990_accessibility_forms.sql'), '0.20.1 must not add a database migration')
 
-console.log(`Web 0.20.0 accessibility & form interaction source contract: PASS (${assertions} assertions)`)
+console.log(`Web 0.20.1 accessibility & form interaction source contract: PASS (${assertions} assertions)`)

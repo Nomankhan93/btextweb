@@ -1407,3 +1407,120 @@ body { background: var(--light-bg); }
   .draft-storage-status { align-items: flex-start; flex-direction: column; gap: 10px; }
   .draft-storage-status .badge { align-self: flex-start; }
 }
+
+/* 0.20.1 — PWA install and update experience */
+.pwa-experience-stack {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 140;
+  width: min(440px, calc(100vw - 36px));
+  pointer-events: none;
+}
+
+.pwa-experience-prompt {
+  display: grid;
+  grid-template-columns: 52px minmax(0,1fr);
+  gap: 13px 14px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #cfe0ee;
+  border-radius: 18px;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 22px 60px rgba(7,27,74,.22);
+  color: var(--ink);
+  pointer-events: auto;
+  backdrop-filter: blur(16px);
+}
+
+.pwa-experience-prompt > img {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(7,27,74,.14);
+}
+
+.pwa-experience-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.pwa-experience-copy strong {
+  color: var(--brand-dark);
+  font-size: .98rem;
+}
+
+.pwa-experience-copy span {
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.pwa-experience-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.pwa-experience-actions .primary-button,
+.pwa-experience-actions .secondary-button {
+  min-height: 44px;
+}
+
+.pwa-experience-update {
+  border-color: #b8d8f7;
+  background: rgba(247,251,255,.98);
+}
+
+.marketing-navigation .marketing-install-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 11px;
+  background: transparent;
+  color: var(--brand);
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.marketing-navigation .marketing-install-link:hover {
+  background: #eef7ff;
+  color: var(--brand-dark);
+}
+
+@media (max-width: 900px) {
+  .pwa-experience-stack {
+    right: 14px;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    width: calc(100vw - 28px);
+  }
+
+  .marketing-navigation .marketing-install-link {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 520px) {
+  .pwa-experience-prompt {
+    grid-template-columns: 46px minmax(0,1fr);
+    padding: 14px;
+  }
+
+  .pwa-experience-prompt > img {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+  }
+
+  .pwa-experience-actions > * {
+    flex: 1 1 0;
+  }
+}

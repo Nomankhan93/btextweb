@@ -7,12 +7,16 @@ import { PwaProvider } from './pwa/PwaProvider'
 import './styles/app.css'
 
 const AppBootstrap = lazy(() => import('./AppBootstrap'))
+const PwaExperiencePrompts = lazy(() => import('./components/PwaExperiencePrompts').then((module) => ({ default: module.PwaExperiencePrompts })))
 
 installGlobalObservability()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <PwaProvider>
+      <Suspense fallback={null}>
+        <PwaExperiencePrompts />
+      </Suspense>
       <BrowserRouter>
         <AppErrorBoundary>
           <Suspense fallback={<div className="page-state loading-state" role="status">Loading BulkText…</div>}>

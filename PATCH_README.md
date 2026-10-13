@@ -1,7 +1,16 @@
-# Current Patch — Web 0.20.0
+# Current Patch — Web 0.20.1
 
-`0.20.0 — Production Release Certification / Launch Baseline` is a certification-only release on top of Web 0.19.9.
+`0.20.1 — PWA Install & Update Experience` is a post-launch UX patch on top of the certified Web 0.20.0 baseline.
 
-It adds a single launch certification command, a source contract for the frozen launch invariants, and launch handoff/validation documentation. It does not change database schema, campaign/send semantics, gateway/SIM behavior, auth/session/workspace rules, PWA fetch strategy, observability privacy rules, accessibility interactions or the 0.19.6-r1 bundle budgets.
+It adds:
+- a global branded install prompt when the browser genuinely exposes PWA installability;
+- a three-day **Not now** suppression window;
+- a public-navigation **Install App** action that remains available while installable;
+- global update-ready prompting with **Update now / Later**;
+- background update checks after registration, reconnect and foreground return;
+- explicit update activation only after user approval;
+- regression coverage for install visibility, installed-mode hiding, deferral, and `SKIP_WAITING` activation.
 
-Use `npm run certify:0200`, then `git diff --check`, `./scripts/release-package.sh` and the explicit post-deploy smoke checklist.
+It does not change the service-worker fetch strategy, offline send safety, campaign/send semantics, Android gateway behavior, auth/session/workspace rules, database schema, RLS/RPCs, or the bundle budgets.
+
+Use `npm run certify:0201`, then `git diff --check` and `./scripts/release-package.sh`.

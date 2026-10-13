@@ -19,9 +19,9 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.0', 'frontend version must be 0.20.0')
+check(pkg.version === '0.20.1', 'frontend version must be 0.20.1')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
-check(lock.version === '0.20.0' && lock.packages?.['']?.version === '0.20.0', 'package-lock must match 0.20.0')
+check(lock.version === '0.20.1' && lock.packages?.['']?.version === '0.20.1', 'package-lock must match 0.20.1')
 check(pkg.scripts?.['test:launch-source-0200'] === 'node scripts/test-production-launch0200-source.mjs', 'launch source contract command must exist')
 check(pkg.scripts?.['certify:0200'] === 'node scripts/certify-production0200.mjs', 'single launch certification command must exist')
 check(changedFiles.includes('CHANGED_FILES_0_20_0.txt') && changedFiles.includes('SHA256SUMS.txt'), 'launch changed-file manifest must include itself and the checksum manifest')
@@ -45,13 +45,13 @@ for (const command of [
 check(certifier.includes('process.exit'), 'certifier must fail closed when any gate fails')
 check(certifier.includes('automated production certification: PASS'), 'certifier must emit an unambiguous PASS marker only after all gates')
 
-check(preflight.includes("packageJson.version !== '0.20.0'"), 'preflight must enforce frontend 0.20.0')
-check(preflight.includes('test-production-launch0200-source.mjs'), 'preflight must require the 0.20.0 launch source contract')
+check(preflight.includes("packageJson.version !== '0.20.1'"), 'preflight must enforce frontend 0.20.1')
+check(preflight.includes('test-production-launch0200-source.mjs'), 'preflight must require the 0.20.1 launch source contract')
 check(preflight.includes('certify-production0200.mjs'), 'preflight must require the certification orchestrator')
 check(preflight.includes('PRODUCTION_LAUNCH_BASELINE_0200.md'), 'preflight must require launch documentation')
-check(preflight.includes('0.20.0 production launch certification markers'), 'preflight must enforce launch certification markers')
-check(serviceWorker.includes("const VERSION = '0.20.0'"), 'service worker cache version must be 0.20.0')
-check(observability.includes("OBSERVABILITY_RELEASE = '0.20.0'"), 'diagnostic release marker must be 0.20.0')
+check(preflight.includes('0.20.1 production launch certification markers'), 'preflight must enforce launch certification markers')
+check(serviceWorker.includes("const VERSION = '0.20.1'"), 'service worker cache version must be 0.20.1')
+check(observability.includes("OBSERVABILITY_RELEASE = '0.20.1'"), 'diagnostic release marker must be 0.20.1')
 
 for (const marker of [
   "run_preflight(root, 'SOURCE')",
@@ -76,6 +76,6 @@ for (const marker of [
 check(validation.includes('npm run certify:0200'), 'validation must use the consolidated launch certification command')
 check(validation.includes('./scripts/release-package.sh'), 'validation must require deterministic release packaging')
 check(validation.includes('does not replace deployed-browser or physical Android gateway smoke'), 'validation must not overclaim deployment/device certification')
-check(!fs.existsSync('supabase/migrations/20261013002000_production_launch.sql'), '0.20.0 must not add a database migration')
+check(!fs.existsSync('supabase/migrations/20261013002000_production_launch.sql'), '0.20.1 must not add a database migration')
 
-console.log(`Web 0.20.0 production launch source contract: PASS (${assertions} assertions)`)
+console.log(`Web 0.20.1 production launch source contract: PASS (${assertions} assertions)`)

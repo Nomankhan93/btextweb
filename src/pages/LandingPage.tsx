@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BrandLockup } from '../components/BrandLockup'
+import { usePwa } from '../pwa/PwaProvider'
 
 function FeatureIcon({ kind }: { kind: 'campaign' | 'contacts' | 'sim' | 'device' | 'delivery' | 'sync' }) {
   if (kind === 'campaign') return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM7 9h10M7 13h7" /></svg>
@@ -41,9 +42,15 @@ const faqs = [
 
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { canInstall, install } = usePwa()
 
   function closeMenu() {
     setMenuOpen(false)
+  }
+
+  async function installApp() {
+    closeMenu()
+    await install()
   }
 
   return (
@@ -66,6 +73,7 @@ export function LandingPage() {
             <a href="#how-it-works" onClick={closeMenu}>How it works</a>
             <a href="#why-bulktext" onClick={closeMenu}>Why BulkText</a>
             <a href="#faq" onClick={closeMenu}>FAQ</a>
+            {canInstall ? <button className="marketing-install-link" type="button" onClick={() => void installApp()}>Install App</button> : null}
             <Link className="marketing-signin-link" to="/auth/login" onClick={closeMenu}>Sign in</Link>
             <Link className="marketing-primary-link" to="/auth/signup" onClick={closeMenu}>Get Started</Link>
           </nav>

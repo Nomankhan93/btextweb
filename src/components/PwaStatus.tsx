@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { usePwa } from '../pwa/PwaProvider'
 
 export function PwaStatusRegion() {
-  const { online, updateAvailable, applyUpdate, dismissUpdate } = usePwa()
+  const { online } = usePwa()
 
   return (
     <div className="pwa-status-region" aria-live="polite">
@@ -10,15 +10,6 @@ export function PwaStatusRegion() {
         <div className="pwa-status-banner pwa-offline-banner" role="status">
           <strong>You’re offline.</strong>
           <span>Draft editing can continue, but sending, live Phone &amp; SIM status and server updates require a connection.</span>
-        </div>
-      ) : null}
-      {updateAvailable ? (
-        <div className="pwa-status-banner pwa-update-banner" role="status">
-          <div><strong>BulkText update available.</strong><span>Your current tab draft is preserved before the app reloads.</span></div>
-          <div className="pwa-status-actions">
-            <button className="secondary-button" type="button" onClick={dismissUpdate}>Later</button>
-            <button className="primary-button" type="button" onClick={applyUpdate}>Reload &amp; update</button>
-          </div>
         </div>
       ) : null}
     </div>
