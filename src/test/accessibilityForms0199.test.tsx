@@ -48,7 +48,7 @@ it('programmatically associates password guidance with the signup password field
   const password = screen.getByLabelText('Password')
   const describedBy = password.getAttribute('aria-describedby')
   expect(describedBy).toBe('signup-password-help')
-  expect(document.getElementById(describedBy ?? '')?.textContent).toContain('at least 8 characters')
+  expect(document.getElementById(describedBy ?? '')?.textContent).toContain('At least 8 characters')
 })
 
 it('associates phone-number guidance and exposes live validation status plus a table caption', () => {

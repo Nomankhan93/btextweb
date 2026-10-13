@@ -17,7 +17,7 @@ const gates = [
 ]
 
 for (const [label, command, args] of gates) {
-  console.log(`\n=== 0.20.2 certification: ${label} ===`)
+  console.log(`\n=== 0.20.3 certification: ${label} ===`)
   const result = spawnSync(command, args, { stdio: 'inherit', env: process.env })
   if (result.error) {
     console.error(`Certification failed to start ${label}: ${result.error.message}`)
@@ -29,5 +29,5 @@ for (const [label, command, args] of gates) {
   }
 }
 
-console.log('\nBulkText Web 0.20.2 automated production certification: PASS')
+console.log('\nBulkText Web 0.20.3 automated production certification: PASS')
 console.log('Next: git diff --check && ./scripts/release-package.sh, then complete post-deploy smoke evidence.')

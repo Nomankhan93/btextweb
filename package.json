@@ -1,7 +1,7 @@
 {
   "name": "bulktext-web",
   "private": true,
-  "version": "0.20.2",
+  "version": "0.20.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -62,7 +62,10 @@
     "certify:0201": "node scripts/certify-production0201.mjs",
     "test:landing-conversion-source-0202": "node scripts/test-landing-conversion0202-source.mjs",
     "test:landing-conversion-0202": "vitest run src/test/landingConversion0202.test.tsx src/test/landingBrand0189.test.tsx src/test/pwaInstallUpdate0201.test.tsx src/test/publicRootRouting0191.test.tsx",
-    "certify:0202": "node scripts/certify-production0202.mjs"
+    "certify:0202": "node scripts/certify-production0202.mjs",
+    "test:auth-mobile-polish-source-0203": "node scripts/test-auth-mobile-polish0203-source.mjs",
+    "test:auth-mobile-polish-0203": "vitest run src/test/authMobilePolish0203.test.tsx src/test/accessibilityForms0199.test.tsx src/test/publicRootRouting0191.test.tsx",
+    "certify:0203": "node scripts/certify-production0203.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

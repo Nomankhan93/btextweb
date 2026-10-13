@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AuthLayout } from './AuthLayout'
+import { PasswordField } from './PasswordField'
 import { useAuth } from './AuthProvider'
 import { errorMessage } from '../lib/errors'
 
@@ -30,16 +31,18 @@ export function SignupPage() {
   return (
     <AuthLayout
       title="Create your account"
-      subtitle="Create your account, pair an Android phone and send through the exact SIM you choose."
+      subtitle="Create your BulkText workspace and connect your Android gateway."
       footer={<>Already have an account? <Link to="/auth/login">Sign in</Link>.</>}
     >
-      <form className="form-stack" onSubmit={submit} aria-busy={busy}>
-        <label>Your name<input autoComplete="name" required minLength={2} value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label>
-        <label>Email<input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-        <label>Password<input type="password" autoComplete="new-password" minLength={8} required aria-describedby="signup-password-help" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-        <p id="signup-password-help" className="field-help">Use at least 8 characters for your password.</p>
+      <form className="form-stack auth-form" onSubmit={submit} aria-busy={busy}>
+        <label className="auth-field">Name<input autoComplete="name" required minLength={2} value={displayName} disabled={busy} onChange={(e) => setDisplayName(e.target.value)} /></label>
+        <label className="auth-field">Email<input type="email" autoComplete="email" required value={email} disabled={busy} onChange={(e) => setEmail(e.target.value)} /></label>
+        <PasswordField id="signup-password" label="Password" autoComplete="new-password" minLength={8} describedBy="signup-password-help" value={password} disabled={busy} onChange={(e) => setPassword(e.target.value)} />
+        <p id="signup-password-help" className="field-help auth-password-help">At least 8 characters.</p>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
-        <button className="primary-button" type="submit" disabled={busy}>{busy ? 'Creating account…' : 'Create account'}</button>
+        <button className="primary-button auth-primary-button" type="submit" disabled={busy}>
+          {busy ? <><span className="auth-button-spinner" aria-hidden="true" />Creating account…</> : 'Create account'}
+        </button>
       </form>
     </AuthLayout>
   )

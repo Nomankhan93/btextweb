@@ -1,11 +1,11 @@
-# Web 0.20.2 — Landing Page Conversion & Mobile UX
+# Web 0.20.3 — Auth Screen Mobile Polish
 
-BulkText Web `0.20.2` tightens the public landing page around one dominant message: **Business SMS, sent from your own SIM.** The patch reduces mobile vertical density, moves the product proof closer to the hero, compacts workflow/features/comparison content, improves the Android gateway presentation, and strengthens public-navigation and FAQ accessibility.
+BulkText Web `0.20.3` polishes the mobile sign-in and create-account experience while preserving the certified authentication/session contract. The release aligns both screens to one top-aligned auth shell, reduces signup vertical bulk, unifies input states, adds accessible password visibility controls, improves pending/loading presentation, and softens secondary-link hierarchy.
 
-The landing page keeps the established BulkText navy/blue/cyan brand, factual carrier-cost wording, exact SIM routing story, delivery/recovery caveats, and the `0.20.1` conditional **Install App** experience. No analytics stack is added.
+The existing BulkText navy/blue/cyan identity, logo, tagline, Supabase authentication calls, redirects, password requirements, verification flow, recovery flow, session handling, public landing page, `0.20.1` PWA install/update lifecycle, and `0.20.2` landing conversion work remain intact.
 
-Frontend version is `0.20.2`; backend contract remains `0.18.5`. No database migration, auth behavior, campaign/send workflow, gateway/SIM protocol, delivery state machine, service-worker fetch strategy, or PWA install/update lifecycle change is included. The service-worker cache version advances only so installed clients receive the new static landing assets.
+Frontend version is `0.20.3`; backend contract remains `0.18.5`. No database migration or Android change is included. The service-worker cache version advances only so installed clients receive the updated static auth assets.
 
-Run `npm run certify:0202` in WSL on Node `24.21.0`, then `git diff --check` and `./scripts/release-package.sh`.
+Run `npm run certify:0203` in WSL on Node `24.21.0`, then `git diff --check` and `./scripts/release-package.sh`.
 
-See `PATCH_0_20_2_README.md`, `HANDOFF_0_20_2.md`, `VALIDATION_0_20_2.md` and `docs/LANDING_CONVERSION_MOBILE_UX_0202.md`.
+See `PATCH_0_20_3_README.md`, `HANDOFF_0_20_3.md`, `VALIDATION_0_20_3.md` and `docs/AUTH_SCREEN_MOBILE_POLISH_0203.md`.

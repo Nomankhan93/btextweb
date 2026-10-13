@@ -13,6 +13,7 @@ const requiredFiles = [
   'scripts/test-production-launch0200-source.mjs','scripts/certify-production0200.mjs','docs/PRODUCTION_LAUNCH_BASELINE_0200.md','VALIDATION_0_20_0.md','PATCH_0_20_0_README.md','HANDOFF_0_20_0.md','CHANGED_FILES_0_20_0.txt',
   'src/components/PwaExperiencePrompts.tsx','src/test/pwaInstallUpdate0201.test.tsx','scripts/test-pwa-install-update0201-source.mjs','scripts/certify-production0201.mjs','docs/PWA_INSTALL_UPDATE_EXPERIENCE_0201.md','VALIDATION_0_20_1.md','PATCH_0_20_1_README.md','HANDOFF_0_20_1.md','CHANGED_FILES_0_20_1.txt',
   'src/test/landingConversion0202.test.tsx','scripts/test-landing-conversion0202-source.mjs','scripts/certify-production0202.mjs','docs/LANDING_CONVERSION_MOBILE_UX_0202.md','VALIDATION_0_20_2.md','PATCH_0_20_2_README.md','HANDOFF_0_20_2.md','CHANGED_FILES_0_20_2.txt',
+  'src/auth/PasswordField.tsx','src/test/authMobilePolish0203.test.tsx','scripts/test-auth-mobile-polish0203-source.mjs','scripts/certify-production0203.mjs','docs/AUTH_SCREEN_MOBILE_POLISH_0203.md','VALIDATION_0_20_3.md','PATCH_0_20_3_README.md','HANDOFF_0_20_3.md','CHANGED_FILES_0_20_3.txt',
   'src/test/routeLoading0196.test.tsx','scripts/test-route-loading0196-source.mjs','scripts/test-route-loading0196-build.mjs','scripts/test-bootstrap-split0196r1-source.mjs','src/AppBootstrap.tsx','vite.config.ts',
   'docs/DRAFT_IMPORT_CAMPAIGN_UX_0186.md','docs/OFFLINE_DRAFT_WORKSPACE_01810.md',
   'supabase/migrations/20261010000100_delivery_recovery_contract_hardening.sql',
@@ -68,7 +69,7 @@ if (/service[_-]?role|jwt[_-]?secret|sb_secret_/i.test(envExample)) {
   process.exit(1)
 }
 
-if (packageJson.version !== '0.20.2') { console.error(`Preflight failed. Expected package version 0.20.2, got ${packageJson.version}`); process.exit(1) }
+if (packageJson.version !== '0.20.3') { console.error(`Preflight failed. Expected package version 0.20.3, got ${packageJson.version}`); process.exit(1) }
 
 const appShell = await readFile(new URL('../src/components/AppShell.tsx', import.meta.url), 'utf8')
 const mobileDialogFocusMarkers = [
@@ -83,7 +84,7 @@ const mobileDialogFocusMarkers = [
   'aria-modal="true"',
 ]
 const missingMobileDialogFocusMarkers = mobileDialogFocusMarkers.filter((marker) => !appShell.includes(marker))
-if (missingMobileDialogFocusMarkers.length) { console.error(`Preflight failed. 0.20.2 mobile dialog focus markers missing: ${missingMobileDialogFocusMarkers.join(', ')}`); process.exit(1) }
+if (missingMobileDialogFocusMarkers.length) { console.error(`Preflight failed. 0.20.3 mobile dialog focus markers missing: ${missingMobileDialogFocusMarkers.join(', ')}`); process.exit(1) }
 
 
 const errorsSource = await readFile(new URL('../src/lib/errors.ts', import.meta.url), 'utf8')
@@ -99,7 +100,7 @@ const safeErrorMarkers = [
   'You do not have permission to perform this action.',
 ]
 const missingSafeErrorMarkers = safeErrorMarkers.filter((marker) => !errorsSource.includes(marker))
-if (missingSafeErrorMarkers.length) { console.error(`Preflight failed. 0.20.2 safe-error markers missing: ${missingSafeErrorMarkers.join(', ')}`); process.exit(1) }
+if (missingSafeErrorMarkers.length) { console.error(`Preflight failed. 0.20.3 safe-error markers missing: ${missingSafeErrorMarkers.join(', ')}`); process.exit(1) }
 if (errorsSource.includes('parts.push(details)') || errorsSource.includes('`Hint: ${hint}`') || errorsSource.includes('`[${code}]`')) {
   console.error('Preflight failed. Raw backend details, hints or codes must not be concatenated into user-facing error text.')
   process.exit(1)
@@ -109,7 +110,7 @@ const observabilitySource = await readFile(new URL('../src/lib/observability.ts'
 const appErrorBoundarySource = await readFile(new URL('../src/components/AppErrorBoundary.tsx', import.meta.url), 'utf8')
 const settingsSource = await readFile(new URL('../src/pages/SettingsPage.tsx', import.meta.url), 'utf8')
 const observabilityMarkers = [
-  "OBSERVABILITY_RELEASE = '0.20.2'",
+  "OBSERVABILITY_RELEASE = '0.20.3'",
   "STORAGE_KEY = 'bulktext:diagnostics:v1'",
   'MAX_EVENTS = 25',
   "window.addEventListener('error'",
@@ -119,17 +120,17 @@ const observabilityMarkers = [
   'sessionStorage',
 ]
 const missingObservabilityMarkers = observabilityMarkers.filter((marker) => !observabilitySource.includes(marker))
-if (missingObservabilityMarkers.length) { console.error(`Preflight failed. 0.20.2 observability markers missing: ${missingObservabilityMarkers.join(', ')}`); process.exit(1) }
+if (missingObservabilityMarkers.length) { console.error(`Preflight failed. 0.20.3 observability markers missing: ${missingObservabilityMarkers.join(', ')}`); process.exit(1) }
 if (observabilitySource.includes('window.location.href') || observabilitySource.includes('window.location.search') || observabilitySource.includes('localStorage')) {
-  console.error('Preflight failed. 0.20.2 diagnostics must not retain full URLs, query strings or persistent local storage.')
+  console.error('Preflight failed. 0.20.3 diagnostics must not retain full URLs, query strings or persistent local storage.')
   process.exit(1)
 }
 if (!errorsSource.includes("reportDiagnostic(context, { source: 'handled-error'") || !errorsSource.includes("if (category !== 'domain')")) {
-  console.error('Preflight failed. 0.20.2 handled-error observability boundary is incomplete.')
+  console.error('Preflight failed. 0.20.3 handled-error observability boundary is incomplete.')
   process.exit(1)
 }
 if (!appErrorBoundarySource.includes("source: 'react-render'") || !settingsSource.includes('Technical diagnostics') || !settingsSource.includes('Copy diagnostics') || !settingsSource.includes('Clear diagnostics')) {
-  console.error('Preflight failed. 0.20.2 render/support diagnostic surfaces are incomplete.')
+  console.error('Preflight failed. 0.20.3 render/support diagnostic surfaces are incomplete.')
   process.exit(1)
 }
 
@@ -150,21 +151,21 @@ const boundaryMarkers = [
   'clearRecentDiagnosticEvents()',
 ]
 const missingBoundaryMarkers = boundaryMarkers.filter((marker) => !authProviderSource.includes(marker))
-if (missingBoundaryMarkers.length) { console.error(`Preflight failed. 0.20.2 auth/session markers missing: ${missingBoundaryMarkers.join(', ')}`); process.exit(1) }
+if (missingBoundaryMarkers.length) { console.error(`Preflight failed. 0.20.3 auth/session markers missing: ${missingBoundaryMarkers.join(', ')}`); process.exit(1) }
 if (!returnToSource.includes('safeReturnTo') || !returnToSource.includes("raw.startsWith('//')") || !returnToSource.includes("parsed.pathname.startsWith('/auth/')")) {
-  console.error('Preflight failed. 0.20.2 safe returnTo boundary is incomplete.')
+  console.error('Preflight failed. 0.20.3 safe returnTo boundary is incomplete.')
   process.exit(1)
 }
 if (!requireAuthSource.includes('protectedReturnTo(location)') || !loginSource.includes("safeReturnTo(searchParams.get('returnTo'))")) {
-  console.error('Preflight failed. 0.20.2 protected returnTo integration is incomplete.')
+  console.error('Preflight failed. 0.20.3 protected returnTo integration is incomplete.')
   process.exit(1)
 }
 if (!workspaceProviderSource.includes("category === 'authentication' || category === 'permission'") || !workspaceProviderSource.includes('clearOfflineWorkspaceLocator(userId)') || !workspaceProviderSource.includes('workspace: null, authority: null')) {
-  console.error('Preflight failed. 0.20.2 workspace authorization-loss boundary is incomplete.')
+  console.error('Preflight failed. 0.20.3 workspace authorization-loss boundary is incomplete.')
   process.exit(1)
 }
 if (!workspaceLocatorSource.includes('clearOfflineWorkspaceLocator(userId: string)')) {
-  console.error('Preflight failed. 0.20.2 single-workspace locator invalidation helper is missing.')
+  console.error('Preflight failed. 0.20.3 single-workspace locator invalidation helper is missing.')
   process.exit(1)
 }
 
@@ -180,11 +181,11 @@ const bootstrapMarkers = [
   '<Suspense fallback=',
 ]
 if (bootstrapMarkers.some((marker) => !mainSource.includes(marker)) || mainSource.includes("from './auth/AuthProvider'") || mainSource.includes("from './workspace/WorkspaceProvider'") || mainSource.includes("import App from './App'")) {
-  console.error('Preflight failed. 0.20.2 initial bootstrap split is missing or providers leaked back into the static entry.')
+  console.error('Preflight failed. 0.20.3 initial bootstrap split is missing or providers leaked back into the static entry.')
   process.exit(1)
 }
 for (const marker of ["import App from './App'", "from './auth/AuthProvider'", "from './workspace/WorkspaceProvider'", '<AuthProvider>', '<WorkspaceProvider>', '<App />']) {
-  if (!bootstrapSource.includes(marker)) { console.error(`Preflight failed. 0.20.2 AppBootstrap marker missing: ${marker}`); process.exit(1) }
+  if (!bootstrapSource.includes(marker)) { console.error(`Preflight failed. 0.20.3 AppBootstrap marker missing: ${marker}`); process.exit(1) }
 }
 if (
   !bootstrapContractSource.includes('INITIAL_JS_BUDGET_BYTES = 500 * 1024') ||
@@ -192,7 +193,7 @@ if (
   !bundleGateSource.includes("value?.name === 'AppBootstrap'") ||
   !bundleGateSource.includes('appEntry[1]?.dynamicImports?.includes(key)')
 ) {
-  console.error('Preflight failed. 0.20.2 bootstrap/bundle correction gates are incomplete.')
+  console.error('Preflight failed. 0.20.3 bootstrap/bundle correction gates are incomplete.')
   process.exit(1)
 }
 
@@ -210,10 +211,10 @@ const routeLoadingMarkers = [
   '<Suspense fallback={<LoadingState',
 ]
 const missingRouteLoadingMarkers = routeLoadingMarkers.filter((marker) => !appSource.includes(marker))
-if (missingRouteLoadingMarkers.length) { console.error(`Preflight failed. 0.20.2 route-loading markers missing: ${missingRouteLoadingMarkers.join(', ')}`); process.exit(1) }
-if (!viteSource.includes("manifest: 'asset-manifest.json'")) { console.error('Preflight failed. 0.20.2 Vite asset manifest output is missing.'); process.exit(1) }
-for (const marker of ["const VERSION = '0.20.2'", "'/asset-manifest.json'", 'buildManifestAssets', 'cold-start offline route coverage after code splitting']) {
-  if (!serviceWorkerSource.includes(marker)) { console.error(`Preflight failed. 0.20.2 lazy-route offline marker missing: ${marker}`); process.exit(1) }
+if (missingRouteLoadingMarkers.length) { console.error(`Preflight failed. 0.20.3 route-loading markers missing: ${missingRouteLoadingMarkers.join(', ')}`); process.exit(1) }
+if (!viteSource.includes("manifest: 'asset-manifest.json'")) { console.error('Preflight failed. 0.20.3 Vite asset manifest output is missing.'); process.exit(1) }
+for (const marker of ["const VERSION = '0.20.3'", "'/asset-manifest.json'", 'buildManifestAssets', 'cold-start offline route coverage after code splitting']) {
+  if (!serviceWorkerSource.includes(marker)) { console.error(`Preflight failed. 0.20.3 lazy-route offline marker missing: ${marker}`); process.exit(1) }
 }
 
 
@@ -231,17 +232,17 @@ for (const marker of [
   "waitingWorker.postMessage({ type: 'SKIP_WAITING' })",
   "window.addEventListener('focus'",
 ]) {
-  if (!pwaProvider0201.includes(marker)) { console.error(`Preflight failed. 0.20.2 PWA lifecycle marker missing: ${marker}`); process.exit(1) }
+  if (!pwaProvider0201.includes(marker)) { console.error(`Preflight failed. 0.20.3 PWA lifecycle marker missing: ${marker}`); process.exit(1) }
 }
 for (const marker of ['Install BulkText App', 'Not now', 'BulkText update ready', 'Update now', 'Later']) {
-  if (!pwaPrompts0201.includes(marker)) { console.error(`Preflight failed. 0.20.2 PWA prompt marker missing: ${marker}`); process.exit(1) }
+  if (!pwaPrompts0201.includes(marker)) { console.error(`Preflight failed. 0.20.3 PWA prompt marker missing: ${marker}`); process.exit(1) }
 }
 if (!landing0201.includes('canInstall ? <button className="marketing-install-link"') || !main0201.includes('<PwaExperiencePrompts />')) {
-  console.error('Preflight failed. 0.20.2 install option is not exposed globally and on the public landing navigation.')
+  console.error('Preflight failed. 0.20.3 install option is not exposed globally and on the public landing navigation.')
   process.exit(1)
 }
-if (!pwaContract0201.includes('Web 0.20.2 PWA install & update source contract') || !certifier0201.includes("'test:pwa-install-update-0201'")) {
-  console.error('Preflight failed. 0.20.2 PWA install/update certification markers are incomplete.')
+if (!pwaContract0201.includes('Web 0.20.3 PWA install & update source contract') || !certifier0201.includes("'test:pwa-install-update-0201'")) {
+  console.error('Preflight failed. 0.20.3 PWA install/update certification markers are incomplete.')
   process.exit(1)
 }
 
@@ -260,7 +261,7 @@ for (const marker of [
   "event.key !== 'Escape'",
   "document.body.style.overflow = 'hidden'",
 ]) {
-  if (!landing0202.includes(marker)) { console.error(`Preflight failed. 0.20.2 landing UX marker missing: ${marker}`); process.exit(1) }
+  if (!landing0202.includes(marker)) { console.error(`Preflight failed. 0.20.3 landing UX marker missing: ${marker}`); process.exit(1) }
 }
 for (const marker of [
   '/* 0.20.2 — Landing page conversion and mobile UX */',
@@ -268,16 +269,53 @@ for (const marker of [
   '@media (max-width: 360px)',
   "content: '↓'",
 ]) {
-  if (!landingStyles0202.includes(marker)) { console.error(`Preflight failed. 0.20.2 landing CSS marker missing: ${marker}`); process.exit(1) }
+  if (!landingStyles0202.includes(marker)) { console.error(`Preflight failed. 0.20.3 landing CSS marker missing: ${marker}`); process.exit(1) }
 }
-if (!landingContract0202.includes('Web 0.20.2 landing conversion & mobile UX source contract') || !landingCertifier0202.includes("'test:landing-conversion-0202'")) {
-  console.error('Preflight failed. 0.20.2 landing conversion certification markers are incomplete.')
+if (!landingContract0202.includes('Web 0.20.3 landing conversion & mobile UX source contract') || !landingCertifier0202.includes("'test:landing-conversion-0202'")) {
+  console.error('Preflight failed. 0.20.3 landing conversion certification markers are incomplete.')
   process.exit(1)
 }
 if (!landing0202.includes('canInstall ? <button className="marketing-install-link"') || !landing0202.includes('await install()')) {
-  console.error('Preflight failed. 0.20.2 landing redesign regressed the 0.20.1 Install App contract.')
+  console.error('Preflight failed. 0.20.3 landing redesign regressed the 0.20.1 Install App contract.')
   process.exit(1)
 }
+
+
+const authLogin0203 = await readFile(new URL('../src/auth/LoginPage.tsx', import.meta.url), 'utf8')
+const authSignup0203 = await readFile(new URL('../src/auth/SignupPage.tsx', import.meta.url), 'utf8')
+const authPassword0203 = await readFile(new URL('../src/auth/PasswordField.tsx', import.meta.url), 'utf8')
+const authStyles0203 = await readFile(new URL('../src/styles/app.css', import.meta.url), 'utf8')
+const authContract0203 = await readFile(new URL('../scripts/test-auth-mobile-polish0203-source.mjs', import.meta.url), 'utf8')
+const authCertifier0203 = await readFile(new URL('../scripts/certify-production0203.mjs', import.meta.url), 'utf8')
+for (const marker of [
+  "import { PasswordField } from './PasswordField'",
+  'auth-primary-button',
+  'disabled={busy}',
+]) {
+  const combined = `${authLogin0203}
+${authSignup0203}`
+  if (!combined.includes(marker)) { console.error(`Preflight failed. 0.20.3 auth mobile polish marker missing: ${marker}`); process.exit(1) }
+}
+for (const marker of [
+  "type={visible ? 'text' : 'password'}",
+  'aria-pressed={visible}',
+  "const toggleLabel = visible ? 'Hide password' : 'Show password'",
+]) {
+  if (!authPassword0203.includes(marker)) { console.error(`Preflight failed. 0.20.3 password visibility marker missing: ${marker}`); process.exit(1) }
+}
+for (const marker of [
+  '/* 0.20.3 — Auth screen mobile polish */',
+  'place-items: start center',
+  'min-height: 100svh',
+  '.auth-password-toggle',
+]) {
+  if (!authStyles0203.includes(marker)) { console.error(`Preflight failed. 0.20.3 auth CSS marker missing: ${marker}`); process.exit(1) }
+}
+if (!authContract0203.includes('Web 0.20.3 auth screen mobile polish source contract') || !authCertifier0203.includes("'test:auth-mobile-polish-0203'")) {
+  console.error('Preflight failed. 0.20.3 auth mobile polish certification markers are incomplete.')
+  process.exit(1)
+}
+
 
 
 const accessibilityContractSource = await readFile(new URL('../scripts/test-accessibility-forms0199-source.mjs', import.meta.url), 'utf8')
@@ -296,14 +334,14 @@ for (const marker of accessibilityMarkers0199) {
 ${phoneNumbersSource0199}
 ${composerSource0199}
 ${simpleCampaignSource0199}`
-  if (!combined.includes(marker)) { console.error(`Preflight failed. 0.20.2 accessibility/form marker missing: ${marker}`); process.exit(1) }
+  if (!combined.includes(marker)) { console.error(`Preflight failed. 0.20.3 accessibility/form marker missing: ${marker}`); process.exit(1) }
 }
 if (!phoneNumbersSource0199.includes('Phone number normalization results') || !composerSource0199.includes('aria-invalid={hasTemplateProblem || undefined}')) {
-  console.error('Preflight failed. 0.20.2 form result/error semantics are incomplete.')
+  console.error('Preflight failed. 0.20.3 form result/error semantics are incomplete.')
   process.exit(1)
 }
-if (!accessibilityContractSource.includes('Web 0.20.2 accessibility & form interaction source contract')) {
-  console.error('Preflight failed. 0.20.2 accessibility source contract marker is missing.')
+if (!accessibilityContractSource.includes('Web 0.20.3 accessibility & form interaction source contract')) {
+  console.error('Preflight failed. 0.20.3 accessibility source contract marker is missing.')
   process.exit(1)
 }
 
@@ -321,15 +359,15 @@ const launchCertificationMarkers = [
   'automated production certification: PASS',
 ]
 if (launchCertificationMarkers.some((marker) => !certificationSource.includes(marker))) {
-  console.error('Preflight failed. 0.20.2 production launch certification markers are incomplete.')
+  console.error('Preflight failed. 0.20.3 production launch certification markers are incomplete.')
   process.exit(1)
 }
-if (!launchContractSource.includes('Web 0.20.2 production launch source contract') || !launchBaselineSource.includes('Post-deploy launch checklist')) {
-  console.error('Preflight failed. 0.20.2 launch source contract or explicit post-deploy checklist is missing.')
+if (!launchContractSource.includes('Web 0.20.3 production launch source contract') || !launchBaselineSource.includes('Post-deploy launch checklist')) {
+  console.error('Preflight failed. 0.20.3 launch source contract or explicit post-deploy checklist is missing.')
   process.exit(1)
 }
 if (!launchBaselineSource.includes('initial static JS budget remains `< 500 KiB`') || !launchBaselineSource.includes('every emitted JS chunk remains `< 500,000 bytes`')) {
-  console.error('Preflight failed. 0.20.2 production launch certification markers must preserve the 0.19.6-r1 bundle budgets.')
+  console.error('Preflight failed. 0.20.3 production launch certification markers must preserve the 0.19.6-r1 bundle budgets.')
   process.exit(1)
 }
 
@@ -441,6 +479,6 @@ for (const marker of ["version', '') <> '0.18.5'", 'Production schema must not e
   if (!freshVerifier.includes(marker)) { console.error(`Preflight failed. Fresh-schema 0.18.4 marker missing: ${marker}`); process.exit(1) }
 }
 
-console.log('BulkText Web 0.20.2 / backend 0.18.5 preflight PASS')
+console.log('BulkText Web 0.20.3 / backend 0.18.5 preflight PASS')
 
-if (packageJson.bulktext?.backendContractVersion !== '0.18.5') { console.error('Expected backend contract 0.18.5 for Web 0.20.2'); process.exit(1) }
+if (packageJson.bulktext?.backendContractVersion !== '0.18.5') { console.error('Expected backend contract 0.18.5 for Web 0.20.3'); process.exit(1) }

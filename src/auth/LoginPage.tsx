@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AuthLayout } from './AuthLayout'
+import { PasswordField } from './PasswordField'
 import { useAuth } from './AuthProvider'
 import { errorMessage } from '../lib/errors'
 import { safeReturnTo } from './returnTo'
@@ -34,12 +35,14 @@ export function LoginPage() {
       subtitle="Sign in to your BulkText workspace."
       footer={<>New to BulkText? <Link to="/auth/signup">Create an account</Link>.</>}
     >
-      <form className="form-stack" onSubmit={submit} aria-busy={busy} aria-describedby={error ? 'login-form-error' : undefined}>
-        <label>Email<input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-        <label>Password<input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+      <form className="form-stack auth-form" onSubmit={submit} aria-busy={busy} aria-describedby={error ? 'login-form-error' : undefined}>
+        <label className="auth-field">Email<input type="email" autoComplete="email" required value={email} disabled={busy} onChange={(e) => setEmail(e.target.value)} /></label>
+        <PasswordField id="login-password" label="Password" autoComplete="current-password" value={password} disabled={busy} onChange={(e) => setPassword(e.target.value)} />
         {error ? <p id="login-form-error" className="form-error" role="alert">{error}</p> : null}
-        <button className="primary-button" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-        <Link className="text-link" to="/auth/forgot-password">Forgot password?</Link>
+        <button className="primary-button auth-primary-button" type="submit" disabled={busy}>
+          {busy ? <><span className="auth-button-spinner" aria-hidden="true" />Signing in…</> : 'Sign in'}
+        </button>
+        <Link className="text-link auth-recovery-link" to="/auth/forgot-password">Forgot password?</Link>
       </form>
     </AuthLayout>
   )

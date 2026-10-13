@@ -56,7 +56,7 @@ afterEach(cleanup)
 it('renders the public landing page at root for signed-out visitors without redirecting to login', async () => {
   renderRoute('/')
 
-  expect(await screen.findByRole('heading', { level: 1, name: 'Send business SMS directly from your own SIM' })).toBeTruthy()
+  expect(await screen.findByRole('heading', { level: 1, name: 'Business SMS, sent from your own SIM.' })).toBeTruthy()
   expect(screen.getByTestId('location').textContent).toBe('/')
   expect(screen.queryByRole('heading', { name: 'Welcome back' })).toBeNull()
 })

@@ -15,12 +15,12 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.2', 'frontend version must be 0.20.2')
-check(lock.version === '0.20.2' && lock.packages?.['']?.version === '0.20.2', 'package-lock release version must match package.json')
+check(pkg.version === '0.20.3', 'frontend version must be 0.20.3')
+check(lock.version === '0.20.3' && lock.packages?.['']?.version === '0.20.3', 'package-lock release version must match package.json')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain pinned to 0.18.5')
-check(Boolean(pkg.scripts?.['test:landing-conversion-source-0202']), '0.20.2 landing source contract script must exist')
-check(Boolean(pkg.scripts?.['test:landing-conversion-0202']), '0.20.2 landing runtime script must exist')
-check(Boolean(pkg.scripts?.['certify:0202']), '0.20.2 certification script must exist')
+check(Boolean(pkg.scripts?.['test:landing-conversion-source-0202']), '0.20.3 landing source contract script must exist')
+check(Boolean(pkg.scripts?.['test:landing-conversion-0202']), '0.20.3 landing runtime script must exist')
+check(Boolean(pkg.scripts?.['certify:0202']), '0.20.3 certification script must exist')
 
 check(landing.includes('Business SMS, sent from your own SIM.'), 'single dominant hero message required')
 check(landing.includes('Create campaigns on the web and send through your paired Android phone using the exact SIM you choose.'), 'compact hero supporting copy required')
@@ -44,10 +44,10 @@ check(landing.includes('aria-expanded={isOpen}') && landing.includes('aria-contr
 check(landing.includes("event.key !== 'Escape'") && landing.includes('menuButtonRef.current?.focus()'), 'mobile menu Escape close and focus return required')
 check(landing.includes("document.body.style.overflow = 'hidden'"), 'mobile navigation must prevent background scroll while open')
 check(landing.includes('marketing-menu-backdrop'), 'mobile navigation outside-click dismissal surface required')
-check(landing.includes('Install App') && landing.includes('canInstall'), '0.20.2 conditional Install App option must remain available')
-check(landing.includes('await install()'), '0.20.2 install action must remain delegated to the PWA provider')
+check(landing.includes('Install App') && landing.includes('canInstall'), '0.20.3 conditional Install App option must remain available')
+check(landing.includes('await install()'), '0.20.3 install action must remain delegated to the PWA provider')
 
-check(css.includes('/* 0.20.2 — Landing page conversion and mobile UX */'), '0.20.2 landing CSS section required')
+check(css.includes('/* 0.20.2 — Landing page conversion and mobile UX */'), '0.20.3 landing CSS section required')
 check(css.includes('overflow-x: clip'), 'landing surface must guard against narrow-screen horizontal overflow')
 check(css.includes('font-size: clamp(2.5rem,11vw,2.75rem)'), 'mobile hero typography must stay within the approved compact range')
 check(css.includes('@media (max-width: 360px)'), '320-360px narrow-screen guard required')
@@ -57,10 +57,10 @@ check(css.includes("content: '↓'"), 'mobile Android architecture flow must bec
 check(css.includes("color: #cbd9e6 !important"), 'dark gateway supporting text contrast correction required')
 check(!css.includes('@keyframes marketing'), 'landing patch must not add ornamental marketing animations')
 
-check(serviceWorker.includes("const VERSION = '0.20.2'"), 'service-worker cache version must advance to 0.20.2')
-check(preflight.includes('test-landing-conversion0202-source.mjs'), 'preflight must require the 0.20.2 landing contract')
+check(serviceWorker.includes("const VERSION = '0.20.3'"), 'service-worker cache version must advance to 0.20.3')
+check(preflight.includes('test-landing-conversion0202-source.mjs'), 'preflight must require the 0.20.3 landing contract')
 check(!landing.includes('Pricing') && !landing.includes('Start Free'), 'unlaunched pricing/free-tier claims must remain absent')
 check(landing.includes('No third-party gateway fee') && landing.includes('carrier balance or bundle'), 'cost wording must remain scoped and disclose carrier cost')
-check(!fs.existsSync('supabase/migrations/20261013002020_landing_conversion_mobile_ux.sql'), '0.20.2 must not add a database migration')
+check(!fs.existsSync('supabase/migrations/20261013002020_landing_conversion_mobile_ux.sql'), '0.20.3 must not add a database migration')
 
-console.log(`Web 0.20.2 landing conversion & mobile UX source contract: PASS (${assertions} assertions)`)
+console.log(`Web 0.20.3 landing conversion & mobile UX source contract: PASS (${assertions} assertions)`)

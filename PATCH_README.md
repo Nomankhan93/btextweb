@@ -1,28 +1,25 @@
-# Current Patch — Web 0.20.2
+# Current Patch — Web 0.20.3
 
-`0.20.2 — Landing Page Conversion & Mobile UX` improves the signed-out public landing page without changing BulkText product workflows or backend contracts.
+`0.20.3 — Auth Screen Mobile Polish` improves the sign-in and create-account screens without changing BulkText authentication behavior or backend contracts.
 
 ## Included
-- compact mobile hero and clearer single value proposition;
-- product/dashboard proof moved before workflow explanation;
-- three-item value strip;
-- compact four-step workflow;
-- lighter six-feature presentation without oversized mobile cards;
-- three-differentiator BulkText comparison;
-- higher-contrast, smaller Android gateway section with vertical mobile flow;
-- accessible FAQ accordion;
-- mobile menu Escape close, focus return, outside dismissal and scroll lock;
-- explicit regression coverage for the `0.20.1` conditional Install App/update experience;
-- narrow-screen CSS guard down to 320px-class devices.
+- one consistent top-aligned mobile auth shell instead of vertically centering the shorter sign-in card;
+- tighter signup copy, spacing, brand block and heading scale;
+- unified 56px white input treatment with subtle focus/autofill states;
+- shared accessible show/hide password control with a 44×44px target;
+- compact password guidance and softer secondary-link hierarchy;
+- explicit pending states that disable form controls and show spinner + action text;
+- short-screen and 320–360px responsive guards;
+- focused 0.20.3 source/runtime certification plus auth/accessibility regressions.
 
 ## Not included
-No Supabase migration, auth change, campaign/send behavior change, Android gateway protocol change, delivery/recovery state change, analytics stack, pricing/free-tier claim, or service-worker fetch-strategy change.
+No Supabase migration, authentication API change, redirect/session change, password-rule change, email-verification change, recovery-flow change, landing-page redesign, PWA lifecycle change, campaign/send behavior change, or Android gateway change.
 
 ## Validate
 ```bash
 nvm use 24.21.0
 npm ci
-npm run certify:0202
+npm run certify:0203
 git diff --check
 ./scripts/release-package.sh
 ```

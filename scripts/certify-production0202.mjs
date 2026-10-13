@@ -3,10 +3,10 @@ import process from 'node:process'
 
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const gates = [
-  ['0.20.2 landing conversion source contract', npm, ['run', 'test:landing-conversion-source-0202']],
-  ['0.20.2 landing conversion runtime', npm, ['run', 'test:landing-conversion-0202']],
-  ['0.20.2 PWA install/update source regression', npm, ['run', 'test:pwa-install-update-source-0201']],
-  ['0.20.2 PWA install/update runtime regression', npm, ['run', 'test:pwa-install-update-0201']],
+  ['0.20.3 landing conversion source contract', npm, ['run', 'test:landing-conversion-source-0202']],
+  ['0.20.3 landing conversion runtime', npm, ['run', 'test:landing-conversion-0202']],
+  ['0.20.3 PWA install/update source regression', npm, ['run', 'test:pwa-install-update-source-0201']],
+  ['0.20.3 PWA install/update runtime regression', npm, ['run', 'test:pwa-install-update-0201']],
   ['launch source contract', npm, ['run', 'test:launch-source-0200']],
   ['preflight', npm, ['run', 'preflight']],
   ['accessibility/forms', npm, ['run', 'test:accessibility-forms-0199']],
@@ -21,7 +21,7 @@ const gates = [
 ]
 
 for (const [label, command, args] of gates) {
-  console.log(`\n=== 0.20.2 certification: ${label} ===`)
+  console.log(`\n=== 0.20.3 certification: ${label} ===`)
   const result = spawnSync(command, args, { stdio: 'inherit', env: process.env })
   if (result.error) {
     console.error(`Certification failed to start ${label}: ${result.error.message}`)
@@ -33,5 +33,5 @@ for (const [label, command, args] of gates) {
   }
 }
 
-console.log('\nBulkText Web 0.20.2 automated production certification: PASS')
+console.log('\nBulkText Web 0.20.3 automated production certification: PASS')
 console.log('Next: git diff --check && ./scripts/release-package.sh, then verify the landing page on deployed mobile Chrome at 320/360/390/412 widths.')
