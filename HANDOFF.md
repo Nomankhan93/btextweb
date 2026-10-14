@@ -1,13 +1,11 @@
-# Current Handoff — Web 0.20.4
+# Handoff — Web 0.20.5
 
-Current frontend release: `0.20.4`
-Backend send/delivery contract: `0.18.5`
-Database migration: `20261013000100_recipient_import_reliability_scale.sql`
+The reusable recovery layer is `src/lib/requestRecovery.ts`; the scheduler is `src/lib/useAdaptivePoll.ts`. Live campaign/device hooks retain the previous successful batch when refresh fails. `SyncFreshness` displays freshness outside live announcements. Auth and workspace providers coalesce validation/bootstrap work and distinguish temporary failure from a revoked session.
 
-`0.20.4 — Recipient Import Reliability & Scale` fixes XLSX compatibility and removes the historical 5 MB / 5,000-row import product caps. CSV/XLSX parsing now keeps the complete parsed row set, exposes progress/cancel state, and XLSX has a bounded JavaScript raw-DEFLATE fallback when native browser decompression is unavailable or fails.
+Release and service-worker markers are 0.20.5. Historical source-check filenames remain intact; release assertions were updated. A placeholder-only `.env.example` was restored because the supplied clean ZIP omitted it.
 
-Database staging is now bounded and retry-safe across row batches: `begin_contact_import`, `append_contact_import_rows`, `finalize_contact_import`, and `abort_contact_import`. Incomplete `staging` imports stay out of history and cannot create recipient previews. The legacy `create_contact_import` RPC remains as a compatibility wrapper without the retired product caps.
+Before deployment, apply to your 0.20.4 working tree and run `npm run certify:0205`. After deployment, verify login, campaign/device freshness, hidden-tab pause, offline/reconnect, and recovery from a temporary server failure. Confirm existing sending behavior and controlled PWA update on an actual gateway device. Never resend a message merely because a status read timed out.
 
-Campaign confirmation, send authorization, exact-SIM selection, durable queueing, callbacks, UNKNOWN recovery, consent/suppression behavior, and Android gateway behavior are unchanged.
+Rollback: retain your previous deployment. For source rollback, use the installer backup's `backup-manifest.json` to restore backed-up paths and remove only paths recorded as newly created, after checking for later edits. Reinstall dependencies after restoring package files. No database rollback is required for this patch.
 
-Deployment order: validate locally, push the migration, then deploy the frontend. Primary web certification is `npm run certify:0204`; local DB acceptance is `npm run test:import-scale-local-0204` after the migration is applied to local Supabase.
+Follow-ups: staged-import recovery; database contention and inventory-query improvements; Android polling audit. This patch does not resolve a provider-wide incident or prove its root cause.

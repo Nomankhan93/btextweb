@@ -6,9 +6,9 @@ import { writeOfflineWorkspaceLocator } from '../lib/offlineWorkspaceLocator'
 import { WorkspaceProvider, useWorkspace } from '../workspace/WorkspaceProvider'
 import { RequireWorkspace } from '../workspace/RequireWorkspace'
 
-const mocks = vi.hoisted(() => ({ user: { id: 'offline-user' }, rpc: vi.fn() }))
-vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user: mocks.user }) }))
-vi.mock('../lib/supabase', () => ({ supabase: { rpc: mocks.rpc } }))
+const mocks = vi.hoisted(() => ({ user: { id: 'offline-user' }, rpc: vi.fn(), revalidateSession: vi.fn(async () => true) }))
+vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user: mocks.user, revalidateSession: mocks.revalidateSession }) }))
+vi.mock('../lib/supabase', () => ({ supabase: { rpc: (...args: unknown[]) => { const task = mocks.rpc(...args); return { abortSignal: () => task } } } }))
 vi.mock('../pwa/PwaProvider', () => ({ usePwa: () => ({ online: false }) }))
 
 function Probe() {

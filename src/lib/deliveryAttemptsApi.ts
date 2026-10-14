@@ -1,3 +1,4 @@
+import { recoveryRpc } from './requestRecovery'
 import { mapContractHealth } from './deliveryContract'
 import type { CampaignDeliveryStatus, CampaignMessageAttempt, MessageRecoveryAction } from './deliveryAttempts'
 import { errorMessage } from './errors'
@@ -51,22 +52,22 @@ function mapAttempt(row: Record<string, unknown>): CampaignMessageAttempt {
   }
 }
 
-export async function getCampaignDeliveryStatus(organizationId: string, campaignId: string): Promise<CampaignDeliveryStatus | null> {
-  const { data, error } = await client().rpc('get_campaign_delivery_status', {
+export async function getCampaignDeliveryStatus(organizationId: string, campaignId: string, signal?: AbortSignal): Promise<CampaignDeliveryStatus | null> {
+  const { data, error } = await recoveryRpc(client(), 'get_campaign_delivery_status', {
     p_organization_id: organizationId,
     p_campaign_id: campaignId,
-  })
+  }, signal)
   if (error) throw new Error(errorMessage(error, 'Could not load SMS delivery status.'))
   const row = ((data ?? []) as Record<string, unknown>[])[0]
   return row ? mapStatus(row) : null
 }
 
-export async function listCampaignMessageAttempts(organizationId: string, campaignId: string, limit = 100): Promise<CampaignMessageAttempt[]> {
-  const { data, error } = await client().rpc('list_campaign_message_attempts', {
+export async function listCampaignMessageAttempts(organizationId: string, campaignId: string, limit = 100, signal?: AbortSignal): Promise<CampaignMessageAttempt[]> {
+  const { data, error } = await recoveryRpc(client(), 'list_campaign_message_attempts', {
     p_organization_id: organizationId,
     p_campaign_id: campaignId,
     p_limit: Math.min(Math.max(limit, 1), 500),
-  })
+  }, signal)
   if (error) throw new Error(errorMessage(error, 'Could not load SMS attempt history.'))
   return ((data ?? []) as Record<string, unknown>[]).map(mapAttempt)
 }
@@ -85,10 +86,10 @@ export async function requestCampaignMessageRecovery(
   return Number(data ?? 0)
 }
 
-export async function getCampaignContractHealth(organizationId: string, campaignId: string) {
-  const { data, error } = await client().rpc('get_campaign_contract_health', {
+export async function getCampaignContractHealth(organizationId: string, campaignId: string, signal?: AbortSignal) {
+  const { data, error } = await recoveryRpc(client(), 'get_campaign_contract_health', {
     p_organization_id: organizationId, p_campaign_id: campaignId,
-  })
+  }, signal)
   if (error) throw new Error(errorMessage(error, 'Could not load delivery contract health. Apply the 0.18.5 database migration first.'))
   return mapContractHealth(data as Record<string, unknown>)
 }

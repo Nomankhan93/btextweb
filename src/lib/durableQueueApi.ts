@@ -1,3 +1,4 @@
+import { recoveryRpc } from './requestRecovery'
 import type { CampaignDispatch, CampaignDispatchStatus } from './durableQueue'
 import { errorMessage } from './errors'
 import { supabase } from './supabase'
@@ -25,11 +26,11 @@ function mapDispatch(row: Record<string, unknown>): CampaignDispatch {
   }
 }
 
-export async function getCampaignDispatch(organizationId: string, campaignId: string): Promise<CampaignDispatch | null> {
-  const { data, error } = await client().rpc('get_campaign_dispatch', {
+export async function getCampaignDispatch(organizationId: string, campaignId: string, signal?: AbortSignal): Promise<CampaignDispatch | null> {
+  const { data, error } = await recoveryRpc(client(), 'get_campaign_dispatch', {
     p_organization_id: organizationId,
     p_campaign_id: campaignId,
-  })
+  }, signal)
   if (error) throw new Error(errorMessage(error, 'Could not load durable queue status.'))
   const row = ((data ?? []) as Record<string, unknown>[])[0]
   return row ? mapDispatch(row) : null

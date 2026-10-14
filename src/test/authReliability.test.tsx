@@ -68,3 +68,34 @@ it('preserves a valid mounted session when background revalidation only hits the
   await waitFor(() => expect(mock.getUser).toHaveBeenCalledTimes(1))
   expect(screen.getByText('one')).toBeTruthy()
 })
+
+it('coalesces wake events and throttles sequential successful revalidation', async () => {
+  mock.getSession.mockResolvedValue({ data: { session: { user: { id: 'one' } } } })
+  mock.getUser.mockResolvedValue({ data: { user: { id: 'one' } }, error: null })
+  render(<AuthProvider><Probe /></AuthProvider>)
+  await screen.findByText('one')
+  await act(async () => { window.dispatchEvent(new Event('focus')); window.dispatchEvent(new Event('online')) })
+  await act(async () => { window.dispatchEvent(new Event('focus')) })
+  expect(mock.getUser).toHaveBeenCalledTimes(1)
+})
+it('recognizes a structured refresh-token rejection as authentication failure', async () => {
+  mock.getSession.mockResolvedValue({ data: { session: { user: { id: 'one' } } } })
+  mock.getUser.mockResolvedValue({ data: { user: null }, error: { status: 400, code: 'refresh_token_not_found', message: 'Refresh unavailable' } })
+  render(<AuthProvider><Probe /></AuthProvider>); await screen.findByText('one')
+  act(() => window.dispatchEvent(new Event('focus')))
+  expect(await screen.findByText('Signed out')).toBeTruthy()
+})
+
+it('releases a hanging revalidation without logging out the mounted account', async () => {
+  vi.useFakeTimers()
+  try {
+    mock.getSession.mockResolvedValue({ data: { session: { user: { id: 'one' } } } })
+    mock.getUser.mockReturnValue(new Promise(() => {}))
+    render(<AuthProvider><Probe /></AuthProvider>)
+    await act(async () => {})
+    act(() => window.dispatchEvent(new Event('focus')))
+    expect(screen.getByText('one validating')).toBeTruthy()
+    await act(async () => { await vi.advanceTimersByTimeAsync(15000) })
+    expect(screen.getByText('one')).toBeTruthy()
+  } finally { vi.useRealTimers() }
+})

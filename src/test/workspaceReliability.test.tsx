@@ -7,7 +7,7 @@ import { WorkspaceProvider, useWorkspace } from '../workspace/WorkspaceProvider'
 import { RequireWorkspace } from '../workspace/RequireWorkspace'
 const mocks = vi.hoisted(() => ({ user: { id: 'one' }, rpc: vi.fn(), revalidateSession: vi.fn(async () => true) }))
 vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user: mocks.user, revalidateSession: mocks.revalidateSession }) }))
-vi.mock('../lib/supabase', () => ({ supabase: { rpc: mocks.rpc } }))
+vi.mock('../lib/supabase', () => ({ supabase: { rpc: (...args: unknown[]) => { const task = mocks.rpc(...args); return { abortSignal: () => task } } } }))
 function Form() {
   const [value, setValue] = useState('')
   const { workspace, refresh } = useWorkspace()
@@ -27,6 +27,7 @@ it('preserves the mounted form across same-user auth object refresh and explicit
   let reject!: (value: Error) => void
   mocks.rpc.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail }))
   fireEvent.click(screen.getByText('Refresh workspace'))
+  await act(async () => {})
   expect((screen.getByLabelText('Draft') as HTMLInputElement).value).toBe('Unsaved campaign')
   await act(async () => { reject(new Error('offline')) })
   expect(screen.getByRole('status').textContent).toContain('preserved')
@@ -38,6 +39,7 @@ it('hides the old account immediately and ignores its late refresh response', as
   let resolve!: (value: ReturnType<typeof result>) => void
   mocks.rpc.mockImplementationOnce(() => new Promise((done) => { resolve = done }))
   fireEvent.click(screen.getByText('Refresh workspace'))
+  await act(async () => {})
   mocks.user = { id: 'two' }; mocks.rpc.mockResolvedValue(result('two'))
   view.rerender(<App />)
   expect(screen.queryByDisplayValue('private')).toBeNull()
@@ -54,8 +56,27 @@ it('drops verified workspace authority immediately when server permission is rev
 
   mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: 'permission denied', status: 403 } })
   fireEvent.click(screen.getByText('Refresh workspace'))
+  await act(async () => {})
 
   expect(await screen.findByText('Account setup needs attention')).toBeTruthy()
   expect(screen.queryByText('Workspace one')).toBeNull()
   expect(localStorage.length).toBe(0)
+})
+
+it('coalesces workspace wake events while session validation is pending', async () => {
+  let resolve!: (value: boolean) => void
+  mocks.revalidateSession.mockImplementationOnce(() => new Promise(done => { resolve = done }))
+  render(<App />)
+  fireEvent(window, new Event('focus')); fireEvent(window, new Event('online'))
+  expect(mocks.revalidateSession).toHaveBeenCalledTimes(1)
+  expect(mocks.rpc).not.toHaveBeenCalled()
+  await act(async () => resolve(true))
+  expect(await screen.findByText('Workspace one')).toBeTruthy()
+  expect(mocks.rpc).toHaveBeenCalledTimes(1)
+})
+it('does not call workspace provisioning after definitive auth rejection', async () => {
+  mocks.revalidateSession.mockResolvedValueOnce(false)
+  render(<App />)
+  expect(await screen.findByText('Authentication required. Sign in again.')).toBeTruthy()
+  expect(mocks.rpc).not.toHaveBeenCalled()
 })

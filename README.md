@@ -1,1 +1,30 @@
-# BulkText Web 0.20.4 — Recipient Import Reliability & Scale\n\nBulkText Web `0.20.4` fixes recipient import reliability for modern Excel (`.xlsx`) files and removes the historical **5 MB / 5,000-row product caps** from CSV/XLSX imports.\n\nCSV and XLSX parsing now keeps all parsed recipient rows instead of truncating at 5,000, does not reject a source solely because it exceeds 5 MB, reports import progress, supports cancellation, and includes a bounded pure-JavaScript raw-DEFLATE fallback for XLSX ZIP entries when the browser/WebView cannot use native `DecompressionStream('deflate-raw')` reliably.\n\nLarge recipient sets are staged through new read/write-isolated import RPCs in bounded batches rather than one giant PostgREST JSON request. Incomplete imports remain hidden and cannot be used to create recipient previews; finalization reconciles exact row counts and recomputes duplicate flags across the complete import.\n\nThere is intentionally no advertised fixed file-size or recipient-row product limit. Real browser memory/storage and malformed-archive protections still apply, and the existing 100-column mapping safety limit remains.\n\nFrontend version: `0.20.4`\nBackend send/delivery contract: `0.18.5`\nDatabase migration: `20261013000100_recipient_import_reliability_scale.sql`\nAndroid gateway: unchanged\n\n**Deployment order matters:** apply and validate the database migration before deploying the `0.20.4` frontend because the new web client calls the staged-import RPCs.\n\nRun `npm run certify:0204`, then apply the migration locally and run `npm run test:import-scale-local-0204` before any hosted database push.\n\nSee `PATCH_0_20_4_README.md`, `HANDOFF_0_20_4.md`, `VALIDATION_0_20_4.md`, and `docs/RECIPIENT_IMPORT_RELIABILITY_SCALE_0204.md`.\n
+# BulkText Web 0.20.5 — Request Recovery, Auth & Adaptive Polling
+
+Apply to the supplied clean 0.20.4 baseline. This patch adds bounded live-status reads, structured recovery errors, adaptive polling, and coalesced auth/workspace recovery.
+
+- Live reads have a 15-second deadline and cancel outstanding sibling requests on failure.
+- Transient failures back off with jitter (5–60 seconds); accessible Retry-After headers are respected. Manual/focus wakeups do not bypass cooldown.
+- Campaign status polls every 5 seconds while active and 30 seconds while idle. Devices poll every 5 seconds during pairing and 15 seconds otherwise.
+- Hidden/offline pages pause polling; reconnect resumes it. Last successful data stays visible with freshness and retry information.
+- Auth validation is coalesced and bounded. Transient outages preserve the mounted account; definitive invalid-session errors require reauthentication. Workspace provisioning waits for valid auth.
+- Mutating requests are not automatically replayed.
+
+## Apply
+
+Extract the patch ZIP, then run `bash /path/to/bulktext-web-0.20.5-patch/apply.sh /path/to/project`.
+The installer verifies payloads and baseline hashes before writing. Conflicting edits stop installation. It backs up changed existing files under `.patch-backups/0.20.5-<timestamp>`. Existing `.env.example` is preserved; real environment files are untouched. Reapplying an already applied patch is safe.
+
+Then run:
+```bash
+npm ci
+npm run certify:0205
+git diff --check
+```
+
+No new SQL migration. The existing 0.20.4 import migration must already be deployed for that baseline's import functionality. Backend contract remains 0.18.5. Deploy the frontend through your existing process after reviewing changes.
+
+## Limits
+
+Supabase suspension/outages can still prevent work. Client cancellation does not guarantee database rollback. This release covers six live-read RPCs plus workspace bootstrap, not every API. Import recovery, database hot-lock/query optimization, and Android polling remain separate follow-ups. Retry-After is usable only when exposed to the browser. Freshness timestamps are component-local.
+
+See VALIDATION_0_20_5.md and HANDOFF_0_20_5.md for evidence and deployment checks.

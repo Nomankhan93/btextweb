@@ -24,16 +24,16 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.4', 'frontend version must be 0.20.3')
+check(pkg.version === '0.20.5', 'frontend version must be 0.20.3')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
-check(lock.version === '0.20.4' && lock.packages?.['']?.version === '0.20.4', 'package-lock release version must match package.json')
+check(lock.version === '0.20.5' && lock.packages?.['']?.version === '0.20.5', 'package-lock release version must match package.json')
 check(pkg.scripts?.['test:auth-boundary-source-0198'] === 'node scripts/test-auth-session-workspace0198-source.mjs', 'source contract command must exist')
 check(pkg.scripts?.['test:auth-boundary-0198']?.includes('src/test/authBoundary0198.test.ts'), 'focused auth boundary command must include return-target coverage')
 check(pkg.scripts?.['test:auth-boundary-0198']?.includes('src/test/authReliability.test.tsx'), 'focused auth boundary command must include session reliability coverage')
 check(pkg.scripts?.['test:auth-boundary-0198']?.includes('src/test/workspaceReliability.test.tsx'), 'focused auth boundary command must include workspace reliability coverage')
 
 check(auth.includes('revalidateSession: () => Promise<boolean>'), 'auth context must expose explicit session revalidation')
-check(auth.includes('supabase.auth.getUser()'), 'session revalidation must validate against Supabase rather than trusting local state only')
+check(auth.includes('supabase!.auth.getUser()'), 'session revalidation must validate against Supabase rather than trusting local state only')
 check(auth.includes("window.addEventListener('online'"), 'session must revalidate after reconnect')
 check(auth.includes("window.addEventListener('focus'"), 'session must revalidate when the tab regains focus')
 check(auth.includes("document.addEventListener('visibilitychange'"), 'session must revalidate when the document becomes visible')
@@ -73,7 +73,7 @@ check(boundaryTests.includes("safeReturnTo('https://example.com/steal')"), 'exte
 check(boundaryTests.includes("safeReturnTo('/auth/login?returnTo=/campaigns')"), 'auth-loop return target rejection must have direct unit coverage')
 
 check(preflight.includes('test-auth-session-workspace0198-source.mjs'), 'preflight must require the 0.20.3 boundary source contract')
-check(sw.includes("const VERSION = '0.20.4'"), 'service-worker cache marker must match 0.20.3')
+check(sw.includes("const VERSION = '0.20.5'"), 'service-worker cache marker must match 0.20.3')
 check(!fs.existsSync('supabase/migrations/20261013001980_auth_session_workspace_boundary.sql'), '0.20.3 must not add a database migration')
 
 console.log(`Web 0.20.3 auth/session/workspace boundary source contract: PASS (${assertions} assertions)`)

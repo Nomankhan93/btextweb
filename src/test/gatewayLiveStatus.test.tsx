@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { DevicesPage } from '../pages/DevicesPage'
-import { GATEWAY_POLL_MS } from '../lib/useGatewayLiveStatus'
+import { GATEWAY_IDLE_POLL_MS } from '../lib/useGatewayLiveStatus'
 const mocks = vi.hoisted(() => ({ workspace: { id: 'one' }, devices: vi.fn(), sessions: vi.fn(), create: vi.fn(), bind: vi.fn() }))
 vi.mock('../workspace/WorkspaceProvider', () => ({ useWorkspace: () => ({ workspace: mocks.workspace }) }))
 vi.mock('../components/PairingQr', () => ({ PairingQr: () => <span>QR</span> }))
@@ -17,7 +17,7 @@ const phone = { deviceId: 'device-one', displayName: 'Test phone', platform: 'an
 const session = { pairingId: 'pair', status: 'pending', createdAt: null, expiresAt: '2099-01-01', claimedDeviceId: null }
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>((r) => { resolve = r }); return { promise, resolve } }
 async function settle() { await act(async () => {}) }
-async function tick() { await act(async () => { await vi.advanceTimersByTimeAsync(GATEWAY_POLL_MS) }) }
+async function tick() { await act(async () => { await vi.advanceTimersByTimeAsync(GATEWAY_IDLE_POLL_MS) }) }
 beforeEach(() => {
   vi.useFakeTimers(); vi.clearAllMocks(); mocks.workspace = { id: 'one' }
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
@@ -46,7 +46,7 @@ it('preserves a pending raw code across polling and clears it when claimed', asy
 })
 it('keeps loaded cards on polling failure and recovers automatically', async () => {
   mocks.devices.mockResolvedValue([phone]); render(<DevicesPage />); await settle()
-  mocks.devices.mockRejectedValueOnce(new Error('offline')); await tick()
+  mocks.devices.mockRejectedValueOnce(new TypeError('Failed to fetch')); await tick()
   expect(screen.getByText('Test phone')).toBeTruthy(); expect(screen.getByRole('status').textContent).toContain('Could not refresh')
   await tick(); expect(screen.getByRole('status').textContent).toContain('refresh automatically')
 })
@@ -64,9 +64,10 @@ it('pauses in hidden tabs, resumes on visibility and focus, and recovers online'
 it('coalesces triggers during an in-flight refresh and removes timers on unmount', async () => {
   const pending = deferred<never[]>(); mocks.devices.mockReturnValueOnce(pending.promise)
   const view = render(<DevicesPage />); await settle()
-  fireEvent(window, new Event('focus')); fireEvent(window, new Event('online')); await tick()
+  fireEvent(window, new Event('focus')); fireEvent(window, new Event('online')); await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
   expect(mocks.devices).toHaveBeenCalledTimes(1)
-  await act(async () => pending.resolve([])); expect(mocks.devices).toHaveBeenCalledTimes(2)
+  await act(async () => pending.resolve([])); expect(mocks.devices).toHaveBeenCalledTimes(1)
+  await tick(); expect(mocks.devices).toHaveBeenCalledTimes(2)
   view.unmount(); await tick(); fireEvent(window, new Event('focus')); expect(mocks.devices).toHaveBeenCalledTimes(2)
 })
 it('ignores an old workspace response and does not reset on same-id context refresh', async () => {

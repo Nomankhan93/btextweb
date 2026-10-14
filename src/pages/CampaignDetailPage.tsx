@@ -1,3 +1,4 @@
+import { SyncFreshness } from '../components/SyncFreshness'
 import { useCampaignLiveStatus } from '../lib/useCampaignLiveStatus'
 import { contractNotices } from '../lib/deliveryContract'
 import { useEffect, useMemo, useState } from 'react'
@@ -43,7 +44,7 @@ function CampaignDetail({ workspaceId, campaignId }: { workspaceId: string; camp
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [now, setNow] = useState(() => new Date())
-  const { dispatch, setDispatch, deliveryStatus, contractHealth, attempts, syncError, fetching, loaded, refresh: refreshDelivery } = useCampaignLiveStatus(workspaceId, campaignId, loading || Boolean(error) || safetyBusy || recoveryBusy || deleteBusy)
+  const { dispatch, setDispatch, deliveryStatus, contractHealth, attempts, syncError, lastSuccessAt, nextRetryAt, fetching, loaded, refresh: refreshDelivery } = useCampaignLiveStatus(workspaceId, campaignId, loading || Boolean(error) || safetyBusy || recoveryBusy || deleteBusy)
 
 
   useEffect(() => {
@@ -227,6 +228,7 @@ function CampaignDetail({ workspaceId, campaignId }: { workspaceId: string; camp
       <section className="page-heading recipient-heading"><div><p className="eyebrow">Confirmed campaign</p><h1>{campaign.title}</h1><p>Immutable execution snapshot confirmed {dateTime(campaign.confirmedAt)}. Send to Android runs the exact-SIM safety checks, authorization and durable queue handoff in one action.</p></div><div className="button-row"><Link className="secondary-button" to="/campaigns">Back to campaigns</Link><button className="danger-button" type="button" disabled={deleteBusy || !online} onClick={() => void removeCampaign()}>{deleteBusy ? 'Deleting…' : 'Delete campaign'}</button></div></section>
       {!online ? <div className="notice warning-notice"><strong>Offline safety mode.</strong> Last loaded campaign information may remain visible, but live status, authorization, queueing, recovery and sending are disabled until you reconnect.</div> : null}
       <div role="status" className="notice"><span>{syncError || (loaded ? 'Queue and delivery status refresh automatically.' : 'Loading queue and delivery status…')}</span> <button className="secondary-button" type="button" disabled={!online || fetching || safetyBusy || recoveryBusy || deleteBusy} onClick={refreshDelivery}>{fetching ? 'Refreshing…' : 'Refresh campaign status'}</button></div>
+      <SyncFreshness lastSuccessAt={lastSuccessAt} nextRetryAt={nextRetryAt} />
       {deleteError ? <div className="notice error-notice">{deleteError}</div> : null}
 
       <section className="metric-grid confirmation-metrics">

@@ -17,9 +17,9 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.4', 'frontend version must be 0.20.3')
+check(pkg.version === '0.20.5', 'frontend version must be 0.20.3')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
-check(lock.version === '0.20.4' && lock.packages?.['']?.version === '0.20.4', 'package-lock release version must match package.json')
+check(lock.version === '0.20.5' && lock.packages?.['']?.version === '0.20.5', 'package-lock release version must match package.json')
 check(Boolean(pkg.scripts?.['test:route-loading-source-0196']), 'source contract command must exist')
 check(Boolean(pkg.scripts?.['test:route-loading-0196']), 'focused route-loading Vitest command must exist')
 check(Boolean(pkg.scripts?.['test:bundle-0196']), 'post-build bundle budget command must exist')
@@ -37,7 +37,7 @@ check(app.includes('window.location.reload()'), 'chunk failure fallback must exp
 check(app.includes('<Suspense fallback={<LoadingState'), 'lazy routes must expose a loading fallback')
 check(app.includes("import { LandingPage } from './pages/LandingPage'"), 'public landing must remain immediate rather than lazy')
 check(vite.includes("manifest: 'asset-manifest.json'"), 'Vite must emit a stable build asset manifest for offline lazy-chunk precaching')
-check(sw.includes("const VERSION = '0.20.4'"), 'service-worker cache marker must match 0.20.3')
+check(sw.includes("const VERSION = '0.20.5'"), 'service-worker cache marker must match 0.20.3')
 check(sw.includes("'/asset-manifest.json'"), 'service worker must require the Vite asset manifest')
 check(sw.includes('buildManifestAssets'), 'service worker must discover lazy build chunks from the manifest')
 check(sw.includes('cold-start offline route coverage after code splitting'), 'service-worker contract must document offline lazy-route preservation')

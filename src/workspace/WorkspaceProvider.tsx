@@ -1,3 +1,4 @@
+import { recoveryRpc } from '../lib/requestRecovery'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { errorDiagnosticCategory, errorDiagnosticContext, errorMessage } from '../lib/errors'
@@ -46,8 +47,11 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
   const userId = user?.id ?? null
   const [state, setState] = useState<WorkspaceState>({ owner: null, workspace: null, authority: null, loading: false, error: null })
   const generation = useRef(0)
+  const inFlight = useRef<{ userId: string | null; task: Promise<void> } | null>(null)
+  const controller = useRef<AbortController | null>(null)
+  const wakeCooldown = useRef(0)
 
-  const refresh = useCallback(async () => {
+  const executeRefresh = useCallback(async () => {
     const request = ++generation.current
     if (!userId) {
       setState({ owner: null, workspace: null, authority: null, loading: false, error: null })
@@ -55,7 +59,7 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     }
 
     const cached = cachedWorkspace(userId)
-    if (!supabase) {
+    if (!supabase || !navigator.onLine) {
       setState({ owner: userId, workspace: cached, authority: cached ? 'local' : null, loading: false, error: null })
       return
     }
@@ -68,7 +72,16 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     })
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('get_my_personal_workspace')
+      // Verify the session before the provisioning RPC; never retry this mutation blindly.
+      const valid = await revalidateSession()
+      if (request !== generation.current) return
+      if (!valid) {
+        clearOfflineWorkspaceLocator(userId)
+        setState({ owner: userId, workspace: null, authority: null, loading: false, error: 'Authentication required. Sign in again.' })
+        return
+      }
+      controller.current = new AbortController()
+      const { data, error: rpcError } = await recoveryRpc(supabase, 'get_my_personal_workspace', {}, controller.current.signal)
       if (rpcError) throw rpcError
       const row = (data as PersonalWorkspaceRow[] | null)?.[0]
       if (!row?.workspace_id) throw new Error('Your personal workspace could not be provisioned.')
@@ -99,18 +112,29 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     }
   }, [revalidateSession, userId])
 
+  const refresh = useCallback((): Promise<void> => {
+    if (inFlight.current?.userId === userId) return inFlight.current.task
+    const task = executeRefresh()
+    const entry = { userId, task }
+    inFlight.current = entry
+    void task.finally(() => {
+      if (inFlight.current === entry) { inFlight.current = null; wakeCooldown.current = Date.now() + 15_000 }
+    })
+    return task
+  }, [executeRefresh, userId])
+
   useEffect(() => {
     void refresh()
-    return () => { generation.current += 1 }
+    return () => { generation.current += 1; controller.current?.abort(); inFlight.current = null; wakeCooldown.current = 0 }
   }, [refresh])
 
   useEffect(() => {
     if (!userId) return
     const refreshWhenActive = () => {
-      if (navigator.onLine) void refresh()
+      if (navigator.onLine && Date.now() >= wakeCooldown.current) void refresh()
     }
     const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible' && navigator.onLine) void refresh()
+      if (document.visibilityState === 'visible' && navigator.onLine && Date.now() >= wakeCooldown.current) void refresh()
     }
     window.addEventListener('online', refreshWhenActive)
     window.addEventListener('focus', refreshWhenActive)

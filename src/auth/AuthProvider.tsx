@@ -1,3 +1,4 @@
+import { withDeadline } from '../lib/requestRecovery'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { clearCampaignDrafts } from '../lib/campaignDraftStorage'
@@ -44,6 +45,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [revalidating, setRevalidating] = useState(false)
   const sessionRef = useRef<Session | null>(null)
   const generation = useRef(0)
+  const lastValidation = useRef({ userId: '', at: 0 })
   const revalidationInFlight = useRef<Promise<boolean> | null>(null)
 
   useEffect(() => {
@@ -60,7 +62,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     let authEventReceived = false
     const request = ++generation.current
 
-    void supabase.auth.getSession().then(({ data }) => {
+    void withDeadline('auth-session', () => supabase!.auth.getSession()).then(({ data, error }) => {
+      if (error) throw error
       if (active && request === generation.current && !authEventReceived) {
         sessionRef.current = data.session
         setSession(data.session)
@@ -77,6 +80,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (!active) return
       authEventReceived = true
       const eventGeneration = ++generation.current
+      revalidationInFlight.current = null
+      lastValidation.current = { userId: '', at: 0 }
       const previousUserId = sessionRef.current?.user.id ?? null
       const nextUserId = nextSession?.user.id ?? null
       const identityChanged = Boolean(previousUserId && nextUserId && previousUserId !== nextUserId)
@@ -113,11 +118,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!supabase || !current) return Promise.resolve(false)
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve(true)
 
+    if (lastValidation.current.userId === current.user.id && Date.now() - lastValidation.current.at < 15_000) return Promise.resolve(true)
     const request = ++generation.current
     setRevalidating(true)
     const task = (async () => {
       try {
-        const { data, error } = await supabase.auth.getUser()
+        const { data, error } = await withDeadline('auth-user', () => supabase!.auth.getUser())
         if (request !== generation.current) return Boolean(sessionRef.current)
         if (error || !data.user) {
           const reason = error ?? new Error('Auth session missing')
@@ -150,6 +156,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (request === generation.current) reportDiagnostic(reason, { source: 'handled-error', severity: 'warning' })
         return Boolean(sessionRef.current)
       } finally {
+        if (request === generation.current) lastValidation.current = { userId: current.user.id, at: Date.now() }
         setRevalidating(false)
       }
     })()
@@ -166,10 +173,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const revalidateWhenVisible = () => {
       if (document.visibilityState === 'visible') void revalidateSession()
     }
+    const authRequired = () => { lastValidation.current.at = 0; void revalidateSession() }
+    window.addEventListener('bulktext:auth-required', authRequired)
     window.addEventListener('online', revalidateWhenActive)
     window.addEventListener('focus', revalidateWhenActive)
     document.addEventListener('visibilitychange', revalidateWhenVisible)
     return () => {
+      window.removeEventListener('bulktext:auth-required', authRequired)
       window.removeEventListener('online', revalidateWhenActive)
       window.removeEventListener('focus', revalidateWhenActive)
       document.removeEventListener('visibilitychange', revalidateWhenVisible)

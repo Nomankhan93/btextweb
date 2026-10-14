@@ -16,7 +16,7 @@ beforeEach(() => {
   vi.useFakeTimers(); vi.clearAllMocks()
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
   Object.defineProperty(navigator, 'onLine', { configurable: true, value: true })
-  api.queue.mockResolvedValue({ queuedJobs: 9, downloadedJobs: 0 }); api.status.mockResolvedValue({ deliveredJobs: 0 })
+  api.queue.mockResolvedValue({ queuedJobs: 9, downloadedJobs: 0 }); api.status.mockResolvedValue({ deliveredJobs: 0, sentJobs: 9 })
   api.history.mockResolvedValue([]); api.health.mockResolvedValue(null)
 })
 afterEach(() => { cleanup(); vi.useRealTimers() })
@@ -35,7 +35,7 @@ it('manual refresh updates the queue and callbacks together', async () => {
 })
 it('keeps the last complete result if a member read fails and retries', async () => {
   render(<View />); await settle()
-  api.status.mockResolvedValue({ deliveredJobs: 9 }); api.queue.mockRejectedValueOnce(new Error('network'))
+  api.status.mockResolvedValue({ deliveredJobs: 9 }); api.queue.mockRejectedValueOnce(new TypeError('Failed to fetch'))
   await tick(); expect(screen.getByText('9 queued / 0 ACK / 0 delivered')).toBeTruthy()
   expect(screen.getByText(/Could not refresh/)).toBeTruthy()
   api.queue.mockResolvedValue({ queuedJobs: 0, downloadedJobs: 9 }); await tick()
@@ -57,7 +57,8 @@ it('coalesces slow reads and cleans up after unmount', async () => {
   const view = render(<View />); await settle()
   fireEvent(window, new Event('focus')); fireEvent(window, new Event('online')); await tick()
   expect(api.status).toHaveBeenCalledTimes(1)
-  await act(async () => pending.resolve(null)); expect(api.status).toHaveBeenCalledTimes(2)
+  await act(async () => pending.resolve(null)); expect(api.status).toHaveBeenCalledTimes(1)
+  await tick(); expect(api.status).toHaveBeenCalledTimes(2)
   view.unmount(); await tick(); fireEvent(window, new Event('focus')); expect(api.status).toHaveBeenCalledTimes(2)
 })
 it('discards a pending response across keyed campaign navigation', async () => {
@@ -79,7 +80,7 @@ it('discards pre-mutation reads and refreshes on resume', async () => {
 it('discovers a dispatch created in another tab after initially finding none', async () => {
   api.queue.mockResolvedValueOnce(null); api.status.mockResolvedValueOnce(null)
   render(<View />); await settle(); expect(screen.getByText('- queued / - ACK / - delivered')).toBeTruthy()
-  await tick(); expect(screen.getByText('9 queued / 0 ACK / 0 delivered')).toBeTruthy()
+  await act(async () => { await vi.advanceTimersByTimeAsync(30000) }); expect(screen.getByText('9 queued / 0 ACK / 0 delivered')).toBeTruthy()
 })
 
 vi.mock('../workspace/WorkspaceProvider', () => ({ useWorkspace: () => ({ workspace: { id: 'workspace' } }) }))

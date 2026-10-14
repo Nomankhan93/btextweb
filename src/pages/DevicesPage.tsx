@@ -1,3 +1,4 @@
+import { SyncFreshness } from '../components/SyncFreshness'
 import { useEffect, useMemo, useState } from 'react'
 import { PairingQr } from '../components/PairingQr'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
@@ -48,7 +49,7 @@ function DeviceWorkspace({ workspace }: { workspace: { id: string } }) {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  const { devices, sessions, loading, fetching, syncError, refresh } = useGatewayLiveStatus(workspace.id, busy)
+  const { devices, sessions, loading, fetching, syncError, lastSuccessAt, nextRetryAt, refresh } = useGatewayLiveStatus(workspace.id, busy)
   const canManage = true
   const activeDevices = useMemo(() => devices.filter((device) => device.status === 'active'), [devices])
   const readyDevices = useMemo(() => activeDevices.filter((device) => device.bindingStatus === 'ready'), [activeDevices])
@@ -164,6 +165,7 @@ function DeviceWorkspace({ workspace }: { workspace: { id: string } }) {
       </section>
 
       <p className="muted-copy" role="status">{syncError ?? 'Phone and SIM details refresh automatically while this page is visible.'}</p>
+      <SyncFreshness lastSuccessAt={lastSuccessAt} nextRetryAt={nextRetryAt} />
       {!online ? <div className="notice warning-notice"><strong>Offline.</strong> Pairing, SIM selection, disconnect and live refresh are disabled until you reconnect.</div> : null}
       {error ? <ErrorState title="Device operation failed">{error}</ErrorState> : null}
       {message ? <div className="notice success-notice">{message}</div> : null}

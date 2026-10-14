@@ -1,3 +1,4 @@
+import { recoveryRpc } from './requestRecovery'
 import { errorMessage } from './errors'
 import { supabase } from './supabase'
 
@@ -203,14 +204,14 @@ export function gatewayBindingLabel(device: Pick<GatewayDeviceSummary, 'bindingS
   return device.bindingStatus === 'missing' ? `${carrier}${slot} · missing` : `${carrier}${slot}`
 }
 
-export async function listGatewayDevices(organizationId: string): Promise<GatewayDeviceSummary[]> {
-  const { data, error } = await client().rpc('list_gateway_device_dashboard', { p_organization_id: organizationId })
+export async function listGatewayDevices(organizationId: string, signal?: AbortSignal): Promise<GatewayDeviceSummary[]> {
+  const { data, error } = await recoveryRpc(client(), 'list_gateway_device_dashboard', { p_organization_id: organizationId }, signal)
   const rows = unwrap((data ?? []) as GatewayDeviceDashboardRow[], error, 'Could not load gateway devices.')
   return rows.map(mapDeviceRow)
 }
 
-export async function listGatewayPairingSessions(organizationId: string): Promise<GatewayPairingSession[]> {
-  const { data, error } = await client().rpc('list_gateway_pairing_sessions', { p_organization_id: organizationId })
+export async function listGatewayPairingSessions(organizationId: string, signal?: AbortSignal): Promise<GatewayPairingSession[]> {
+  const { data, error } = await recoveryRpc(client(), 'list_gateway_pairing_sessions', { p_organization_id: organizationId }, signal)
   const rows = unwrap((data ?? []) as GatewayPairingSessionRow[], error, 'Could not load pairing sessions.')
   return rows.map((row) => ({
     pairingId: row.pairing_id,

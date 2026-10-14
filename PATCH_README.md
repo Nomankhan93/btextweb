@@ -1,32 +1,30 @@
-# Current Patch — Web 0.20.4
+# BulkText Web 0.20.5 — Request Recovery, Auth & Adaptive Polling
 
-`0.20.4 — Recipient Import Reliability & Scale` makes `.xlsx` and `.csv` recipient ingestion reliable at larger sizes without changing message delivery semantics.
+Apply to the supplied clean 0.20.4 baseline. This patch adds bounded live-status reads, structured recovery errors, adaptive polling, and coalesced auth/workspace recovery.
 
-## Included
-- removes the visible and enforced 5 MB source-file product cap;
-- removes the enforced 5,000-row import/product cap;
-- retains the 100-column mapping safeguard;
-- adds progress and cancellation during file reading/parsing/staging;
-- adds XLSX raw-DEFLATE fallback for browser/WebView compatibility;
-- stages large imports in 250-row web batches through bounded server RPCs;
-- makes repeated batch/finalize retries idempotent;
-- hides incomplete imports and blocks previews from unfinished staging sessions;
-- recomputes duplicate-in-file state across the entire finalized import;
-- removes the default 5,000-row ceiling from paged recipient collection and local draft schema checks;
-- retains 0.20.3-r1 production routing and controlled PWA update behavior.
+- Live reads have a 15-second deadline and cancel outstanding sibling requests on failure.
+- Transient failures back off with jitter (5–60 seconds); accessible Retry-After headers are respected. Manual/focus wakeups do not bypass cooldown.
+- Campaign status polls every 5 seconds while active and 30 seconds while idle. Devices poll every 5 seconds during pairing and 15 seconds otherwise.
+- Hidden/offline pages pause polling; reconnect resumes it. Last successful data stays visible with freshness and retry information.
+- Auth validation is coalesced and bounded. Transient outages preserve the mounted account; definitive invalid-session errors require reauthentication. Workspace provisioning waits for valid auth.
+- Mutating requests are not automatically replayed.
 
-## Not included
-No change to campaign confirmation, send authorization, exact-SIM selection, queue semantics, delivery callbacks, UNKNOWN/recovery behavior, consent/suppression rules, subscription behavior, or Android gateway code.
+## Apply
 
-## Database
-This patch **does include** `supabase/migrations/20261013000100_recipient_import_reliability_scale.sql`. The migration must reach the target Supabase database before the 0.20.4 frontend is deployed.
+Extract the patch ZIP, then run `bash /path/to/bulktext-web-0.20.5-patch/apply.sh /path/to/project`.
+The installer verifies payloads and baseline hashes before writing. Conflicting edits stop installation. It backs up changed existing files under `.patch-backups/0.20.5-<timestamp>`. Existing `.env.example` is preserved; real environment files are untouched. Reapplying an already applied patch is safe.
 
-## Validate
+Then run:
 ```bash
-nvm use 24.21.0
 npm ci
-npm run certify:0204
-npx supabase migration up --local
-npm run test:import-scale-local-0204
+npm run certify:0205
 git diff --check
 ```
+
+No new SQL migration. The existing 0.20.4 import migration must already be deployed for that baseline's import functionality. Backend contract remains 0.18.5. Deploy the frontend through your existing process after reviewing changes.
+
+## Limits
+
+Supabase suspension/outages can still prevent work. Client cancellation does not guarantee database rollback. This release covers six live-read RPCs plus workspace bootstrap, not every API. Import recovery, database hot-lock/query optimization, and Android polling remain separate follow-ups. Retry-After is usable only when exposed to the browser. Freshness timestamps are component-local.
+
+See VALIDATION_0_20_5.md and HANDOFF_0_20_5.md for evidence and deployment checks.
