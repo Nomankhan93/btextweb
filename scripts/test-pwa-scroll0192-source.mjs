@@ -9,7 +9,7 @@ const css = fs.readFileSync('src/styles/app.css', 'utf8')
 const sw = fs.readFileSync('public/service-worker.js', 'utf8')
 const shell = fs.readFileSync('src/components/AppShell.tsx', 'utf8')
 
-check(pkg.version === '0.20.5-r1', 'frontend version must be 0.20.3')
+check(pkg.version === '0.20.12', 'frontend version must be 0.20.3')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
 check(Boolean(pkg.scripts?.['test:pwa-scroll-source-0192']), '0.20.3 source regression script must exist')
 check(Boolean(pkg.scripts?.['test:pwa-scroll-0192']), '0.20.3 functional regression script must exist')
@@ -28,6 +28,6 @@ check(/\.content\s*\{\s*padding:\s*18px 12px calc\(96px \+ env\(safe-area-inset-
 check(/\.mobile-tools-sheet\s*\{[\s\S]*overflow-y:\s*auto/s.test(css), 'Tools sheet keeps bounded internal vertical scrolling')
 check(shell.includes('className="mobile-bottom-nav"'), 'AppShell still renders mobile bottom navigation')
 check(shell.includes('className="mobile-tools-sheet"'), 'AppShell still renders Tools sheet')
-check(sw.includes("const VERSION = '0.20.5-r1'"), 'service-worker cache version must match 0.20.3')
+check(sw.includes("const VERSION = '0.20.12'"), 'service-worker cache version must match 0.20.3')
 
 console.log(`Web 0.20.3 installed PWA scroll source contract: PASS (${assertions} assertions)`)

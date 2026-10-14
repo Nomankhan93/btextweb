@@ -123,6 +123,24 @@ export function discoverCustomFieldKeys(rows: PersonalizationSourceRow[]): strin
   return [...keys].sort((a, b) => a.localeCompare(b))
 }
 
+
+export interface PersonalizationTokenOption {
+  token: string
+  label: string
+}
+
+export function availablePersonalizationTokens(rows: PersonalizationSourceRow[]): PersonalizationTokenOption[] {
+  if (rows.length === 0) return []
+  const candidates: PersonalizationTokenOption[] = [
+    { token: 'name', label: 'Name' },
+    { token: 'first_name', label: 'First name' },
+    { token: 'last_name', label: 'Last name' },
+    { token: 'phone', label: 'Phone' },
+    ...discoverCustomFieldKeys(rows).map((key) => ({ token: `custom:${key}`, label: key })),
+  ]
+  return candidates.filter((candidate) => rows.every((row) => tokenValue(row, candidate.token) != null))
+}
+
 export function summarizePersonalization(template: string, rows: PersonalizationSourceRow[]) {
   const analysis = analyzeMessageTemplate(template)
   let completeRecipients = 0

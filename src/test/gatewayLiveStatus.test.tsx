@@ -11,6 +11,12 @@ vi.mock('../lib/gatewayDevices', () => ({
   createGatewayPairing: mocks.create, bindGatewaySim: mocks.bind,
   clearGatewaySimBinding: vi.fn(), revokeGatewayDevice: vi.fn(), revokeGatewayPairing: vi.fn(),
   gatewayHealthLabel: () => 'Recently seen', gatewayBindingLabel: (d: { boundSimId: string | null }) => d.boundSimId ? 'Ufone selected' : 'No SIM selected',
+  gatewayWorkspaceReadiness: (devices: Array<{ status: string; healthStatus: string; bindingStatus: string; boundSimId: string | null }>) => {
+    const active = devices.filter((device) => device.status === 'active')
+    const ready = active.find((device) => device.healthStatus === 'recent' && device.bindingStatus === 'ready' && device.boundSimId)
+    const device = ready ?? active[0] ?? null
+    return { kind: ready ? 'ready' : !device ? 'no_phone' : device.bindingStatus === 'missing' ? 'sim_missing' : device.bindingStatus !== 'ready' ? 'select_sim' : 'phone_attention', ready: Boolean(ready), device, activeDeviceCount: active.length, readyDeviceCount: ready ? 1 : 0, attentionDeviceCount: active.filter((item) => item.healthStatus !== 'recent').length }
+  },
 }))
 const sim = { simId: 'sim', subscriptionId: 1, slotIndex: 0, carrierName: 'Ufone', present: true }
 const phone = { deviceId: 'device-one', displayName: 'Test phone', platform: 'android', status: 'active', healthStatus: 'recent', bindingStatus: 'unbound', sims: [], boundSimId: null, appVersionCode: null, batteryPercent: null }
@@ -29,7 +35,7 @@ afterEach(() => { cleanup(); vi.useRealTimers() })
 it('automatically shows a paired phone, then inventory, without manual refresh', async () => {
   render(<DevicesPage />); await settle()
   mocks.devices.mockResolvedValue([phone]); await tick()
-  expect(screen.getByText('Test phone')).toBeTruthy()
+  expect(screen.getAllByText('Test phone')[0]).toBeTruthy()
   mocks.devices.mockResolvedValue([{ ...phone, sims: [sim] }]); await tick()
   expect(screen.getByRole('button', { name: 'Use this SIM' })).toBeTruthy()
   expect(mocks.devices).toHaveBeenCalledTimes(3)
@@ -47,8 +53,8 @@ it('preserves a pending raw code across polling and clears it when claimed', asy
 it('keeps loaded cards on polling failure and recovers automatically', async () => {
   mocks.devices.mockResolvedValue([phone]); render(<DevicesPage />); await settle()
   mocks.devices.mockRejectedValueOnce(new TypeError('Failed to fetch')); await tick()
-  expect(screen.getByText('Test phone')).toBeTruthy(); expect(screen.getByRole('status').textContent).toContain('Could not refresh')
-  await tick(); expect(screen.getByRole('status').textContent).toContain('refresh automatically')
+  expect(screen.getAllByText('Test phone')[0]).toBeTruthy(); expect(screen.getByRole('status').textContent).toContain('Could not refresh'); expect(screen.getByRole('heading', { name: 'Status unavailable' })).toBeTruthy()
+  await tick(); expect(screen.queryByText(/Could not refresh status/)).toBeNull(); expect(screen.getAllByText('Test phone').length).toBeGreaterThan(0)
 })
 it('pauses in hidden tabs, resumes on visibility and focus, and recovers online', async () => {
   render(<DevicesPage />); await settle()
@@ -75,7 +81,7 @@ it('ignores an old workspace response and does not reset on same-id context refr
   const view = render(<DevicesPage />); await settle()
   mocks.workspace = { id: 'two' }; mocks.devices.mockResolvedValue([{ ...phone, displayName: 'New account phone' }]); view.rerender(<DevicesPage />); await settle()
   await act(async () => pending.resolve([phone])); expect(screen.queryByText('Test phone')).toBeNull()
-  expect(screen.getByText('New account phone')).toBeTruthy()
+  expect(screen.getAllByText('New account phone')[0]).toBeTruthy()
   const count = mocks.devices.mock.calls.length; mocks.workspace = { id: 'two' }; view.rerender(<DevicesPage />); await settle()
   expect(mocks.devices).toHaveBeenCalledTimes(count)
 })
@@ -84,12 +90,13 @@ it('discards a pre-mutation poll and refreshes the authoritative SIM after bindi
   const stale = deferred<unknown[]>(); mocks.devices.mockReturnValueOnce(stale.promise); await tick()
   const mutation = deferred<void>(); mocks.bind.mockReturnValueOnce(mutation.promise)
   fireEvent.click(screen.getByText('Use this SIM')); await settle()
-  await act(async () => stale.resolve([])); expect(screen.getByText('Test phone')).toBeTruthy()
-  mocks.devices.mockResolvedValue([{ ...phone, sims: [sim], boundSimId: 'sim', bindingStatus: 'ready' }])
-  await act(async () => mutation.resolve()); expect(screen.getByText('Bound')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: /Use Ufone · SIM 1/i })); await settle()
+  await act(async () => stale.resolve([])); expect(screen.getAllByText('Test phone')[0]).toBeTruthy()
+  mocks.devices.mockResolvedValue([{ ...phone, sims: [sim], boundSimId: 'sim', bindingStatus: 'ready', boundCarrierName: 'Ufone', boundSlotIndex: 0 }])
+  await act(async () => mutation.resolve()); expect(screen.getByText('Selected')).toBeTruthy()
   expect(mocks.bind).toHaveBeenCalledWith('one', 'device-one', 'sim')
 })
 it('manual refresh remains available and never authorizes or sends messages', async () => {
-  render(<DevicesPage />); await settle(); fireEvent.click(screen.getByRole('button', { name: 'Refresh' })); await settle()
+  render(<DevicesPage />); await settle(); fireEvent.click(screen.getByRole('button', { name: 'Refresh Phone & SIM status' })); await settle()
   expect(mocks.devices).toHaveBeenCalledTimes(2); expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.bind).not.toHaveBeenCalled()
 })

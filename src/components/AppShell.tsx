@@ -58,6 +58,7 @@ export function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const toolsActive = secondaryNavigation.some(({ href }) => location.pathname === href || location.pathname.startsWith(`${href}/`))
+  const campaignWizardActive = location.pathname === '/campaigns/new' || location.pathname.startsWith('/campaigns/review/')
 
   useEffect(() => {
     setToolsOpen(false)
@@ -124,7 +125,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${campaignWizardActive ? ' campaign-wizard-shell' : ''}`}>
       <header className="topbar">
         <BrandLockup className="topbar-brand" showTagline />
 

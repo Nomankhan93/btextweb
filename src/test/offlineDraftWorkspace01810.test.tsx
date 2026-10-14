@@ -86,13 +86,15 @@ it('keeps a prepared message editable offline, blocks server review, then reconc
   await waitFor(() => expect(mock.rows).toHaveBeenCalledWith('offline-workspace', 'snapshot'))
   await waitFor(() => expect((screen.getByRole('button', { name: 'Review campaign' }) as HTMLButtonElement).disabled).toBe(false))
   expect((screen.getByRole('textbox', { name: /^SMS message/ }) as HTMLTextAreaElement).value).toBe('Edited offline for {{name}}')
-  expect(screen.getByText(/Prepared recipient details last refreshed from the server/)).toBeTruthy()
+  expect(screen.getByText(/Prepared recipients last refreshed from the server/)).toBeTruthy()
 }, 10_000)
 
 
 it('keeps local autosave enabled after React StrictMode effect replay', async () => {
   render(<StrictMode><App /></StrictMode>)
-  const name = await screen.findByRole('textbox', { name: 'Name' }) as HTMLInputElement
+  fireEvent.click(await screen.findByRole('button', { name: 'Back' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+  const name = screen.getByRole('textbox', { name: 'Campaign name' }) as HTMLInputElement
   fireEvent.change(name, { target: { value: 'StrictMode edit survives' } })
   await waitFor(() => expect(readCampaignDraft(key)?.campaignName).toBe('StrictMode edit survives'))
 })

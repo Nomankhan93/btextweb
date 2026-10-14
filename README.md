@@ -1,30 +1,43 @@
-# BulkText Web 0.20.5 — Request Recovery, Auth & Adaptive Polling
+# BulkText Web 0.20.12 — Frontend Cleanup Integration & Corrections
 
-Apply to the supplied clean 0.20.4 baseline. This patch adds bounded live-status reads, structured recovery errors, adaptive polling, and coalesced auth/workspace recovery.
+This release integrates frontend releases 0.20.6–0.20.11 and their audit corrections into one patch for the supplied, unpatched **0.20.5-r1** project. Do not apply the six older patches first.
 
-- Live reads have a 15-second deadline and cancel outstanding sibling requests on failure.
-- Transient failures back off with jitter (5–60 seconds); accessible Retry-After headers are respected. Manual/focus wakeups do not bypass cooldown.
-- Campaign status polls every 5 seconds while active and 30 seconds while idle. Devices poll every 5 seconds during pairing and 15 seconds otherwise.
-- Hidden/offline pages pause polling; reconnect resumes it. Last successful data stays visible with freshness and retry information.
-- Auth validation is coalesced and bounded. Transient outages preserve the mounted account; definitive invalid-session errors require reauthentication. Workspace provisioning waits for valid auth.
-- Mutating requests are not automatically replayed.
+## Included changes
 
-## Apply
+- Compact Home dashboard with partial-failure isolation, recent campaigns, stable workspace dependencies and visible-tab refresh.
+- Focused campaign wizard, compact imports/consent/message summaries, safe personalization controls and deliberate step focus.
+- Campaign review with masked recipient previews, accurate first-100 expansion without duplicate rows, and an honest “SIM selected” label.
+- One final sending confirmation for both the main and technical queue actions. Both run fresh eligibility/phone/exact-SIM checks before authorization and enqueueing. Cancel never enqueues.
+- Delivery presentation distinguishes waiting/receipt/active sending, SENT, DELIVERED and UNKNOWN; unresolved UNKNOWN is not counted as complete and never automatically resent.
+- Phone & SIM control center with stale/unavailable-state handling, secondary pairing, compact SIM rows and collapsed technical/history sections.
+- Stable dialog keyboard focus across parent updates, Escape/Tab behavior and return-to-opener handling.
+- Corrected semantic TypeScript errors, regression fixtures/selectors, release markers and obsolete message metric CSS.
 
-Extract the patch ZIP, then run `bash /path/to/bulktext-web-0.20.5-patch/apply.sh /path/to/project`.
-The installer verifies payloads and baseline hashes before writing. Conflicting edits stop installation. It backs up changed existing files under `.patch-backups/0.20.5-<timestamp>`. Existing `.env.example` is preserved; real environment files are untouched. Reapplying an already applied patch is safe.
+## Apply in Ubuntu / WSL
 
-Then run:
+Prerequisites: Python 3 and Node 24 (use your pinned Node 24 installation). Start from the supplied 0.20.5-r1 baseline. Preserve local work; the installer refuses mismatched files instead of overwriting edits.
+
 ```bash
+bash /path/to/bulktext-web-0.20.12-patch/apply.sh /home/noman/projects/bulktext-web-0.4.0 --dry-run
+bash /path/to/bulktext-web-0.20.12-patch/apply.sh /home/noman/projects/bulktext-web-0.4.0
+cd /home/noman/projects/bulktext-web-0.4.0
 npm ci
-npm run certify:0205
+npm run certify:02012
 git diff --check
 ```
 
-No new SQL migration. The existing 0.20.4 import migration must already be deployed for that baseline's import functionality. Backend contract remains 0.18.5. Deploy the frontend through your existing process after reviewing changes.
+The installer verifies metadata, payload and baseline hashes; takes a timestamped backup; writes through temporary files with atomic replacement; verifies installed bytes and preflight; and restores the baseline on caught installation failures. A successful repeated apply is a no-op. No installation command sends SMS, deploys the app or changes the database.
 
-## Limits
+Rollback (only before editing installed release files):
 
-Supabase suspension/outages can still prevent work. Client cancellation does not guarantee database rollback. This release covers six live-read RPCs plus workspace bootstrap, not every API. Import recovery, database hot-lock/query optimization, and Android polling remain separate follow-ups. Retry-After is usable only when exposed to the browser. Freshness timestamps are component-local.
+```bash
+bash /path/to/bulktext-web-0.20.12-patch/apply.sh /home/noman/projects/bulktext-web-0.4.0 --rollback /home/noman/projects/bulktext-web-0.4.0/.patch-backups/EXACT-BACKUP-NAME
+```
 
-See VALIDATION_0_20_5.md and HANDOFF_0_20_5.md for evidence and deployment checks.
+## Release boundary
+
+Frontend **0.20.12**; backend contract **0.18.5**. Existing database migrations, RPCs and Android source are unchanged. Existing account data, credentials and environment files are preserved. Old release documents are historical; this README, PATCH_0_20_12_README.md and VALIDATION_0_20_12.md describe the current release.
+
+## Acceptance after deployment
+
+Check desktop and mobile: Home partial failure, unpaired/recent/stale/offline Phone & SIM, SIM selection/cancel, all campaign steps and draft restoration, review expansion, final confirmation/cancel, waiting/sent/delivered/UNKNOWN presentation, keyboard focus, and controlled PWA update. A fixture or unit test does not substitute for a real phone/carrier acceptance test. Use only your controlled test recipient when testing real SMS.

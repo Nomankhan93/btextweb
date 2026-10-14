@@ -100,7 +100,7 @@ it('renders live queue progress on the actual campaign page without resetting it
   render(<MemoryRouter initialEntries={['/campaigns/one']}><Routes><Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} /></Routes></MemoryRouter>)
   await settle()
   expect(screen.getByRole('heading', { name: 'Test campaign' })).toBeTruthy()
-  expect(screen.getByText('0%')).toBeTruthy()
+  expect(screen.getAllByText('0%')[0]).toBeTruthy()
   api.queue.mockResolvedValue({ status: 'downloaded', queuedJobs: 0, leasedJobs: 0, downloadedJobs: 9, recipientCount: 9, estimatedSmsUnits: 9, enqueuedAt: null, simSlotIndex: 0 })
   await tick()
   expect(screen.getByText('100%')).toBeTruthy()

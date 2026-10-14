@@ -1,7 +1,7 @@
 {
   "name": "bulktext-web",
   "private": true,
-  "version": "0.20.5-r1",
+  "version": "0.20.12",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -73,7 +73,26 @@
     "test:import-scale-local-0204": "node scripts/test-import-scale-local0204.mjs",
     "certify:0204": "node scripts/certify-production0204.mjs",
     "test:recovery-0205": "vitest run src/test/requestRecovery0205.test.ts src/test/adaptivePolling0205.test.tsx src/test/authReliability.test.tsx src/test/workspaceReliability.test.tsx src/test/campaignLiveStatus.test.tsx src/test/gatewayLiveStatus.test.tsx src/test/offlineWorkspaceColdStart01810r1.test.tsx",
-    "certify:0205": "node scripts/certify-production0205.mjs"
+    "certify:0205": "node scripts/certify-production0205.mjs",
+    "test:dashboard-control-center-source-0206": "node scripts/test-dashboard-control-center0206-source.mjs",
+    "test:dashboard-control-center-0206": "vitest run src/test/dashboardControlCenter0206.test.tsx src/test/pwaInstallUpdate0201.test.tsx src/test/mobileUi0187.test.tsx src/test/productNavigation.test.ts",
+    "certify:0206": "node scripts/certify-production0206.mjs",
+    "test:campaign-send-safety-source-0207": "node scripts/test-campaign-confirmation-send-safety0207-source.mjs",
+    "test:campaign-send-safety-0207": "vitest run src/test/campaignConfirmationSendSafety0207.test.tsx src/test/actionDialog0207.test.tsx src/test/campaignUx.test.tsx src/test/mobileDialogFocus0194.test.tsx",
+    "certify:0207": "node scripts/certify-production0207.mjs",
+    "test:campaign-wizard-source-0208": "node scripts/test-campaign-wizard-simplification0208-source.mjs",
+    "test:campaign-wizard-0208": "vitest run src/test/campaignWizardSimplification0208.test.tsx src/test/campaignUx.test.tsx src/test/offlineDraftWorkspace01810.test.tsx src/test/mobileUi0187.test.tsx",
+    "certify:0208": "node scripts/certify-production0208.mjs",
+    "test:campaign-message-review-source-0209": "node scripts/test-campaign-message-review0209-source.mjs",
+    "test:campaign-message-review-0209": "vitest run src/test/campaignMessageReview0209.test.tsx src/test/campaignWizardSimplification0208.test.tsx src/test/campaignUx.test.tsx src/test/campaignConfirmationSendSafety0207.test.tsx",
+    "certify:0209": "node scripts/certify-production0209.mjs",
+    "test:campaign-delivery-source-02010": "node scripts/test-campaign-delivery-experience02010-source.mjs",
+    "test:campaign-delivery-02010": "vitest run src/test/campaignDeliveryExperience02010.test.tsx src/test/campaignLiveStatus.test.tsx src/test/campaignConfirmationSendSafety0207.test.tsx",
+    "certify:02010": "node scripts/certify-production02010.mjs",
+    "test:phone-sim-readiness-source-02011": "node scripts/test-phone-sim-readiness02011-source.mjs",
+    "test:phone-sim-readiness-02011": "vitest run src/test/phoneSimReadiness02011.test.tsx src/test/gatewayLiveStatus.test.tsx src/test/gatewayDevices.test.ts src/test/dashboardControlCenter0206.test.tsx src/test/actionDialog0207.test.tsx",
+    "certify:02011": "node scripts/certify-production02011.mjs",
+    "certify:02012": "node scripts/certify-production02012.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

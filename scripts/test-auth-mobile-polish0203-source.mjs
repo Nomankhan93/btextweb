@@ -21,8 +21,8 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.5-r1', 'frontend version must be 0.20.3')
-check(lock.version === '0.20.5-r1' && lock.packages?.['']?.version === '0.20.5-r1', 'package-lock release version must match package.json')
+check(pkg.version === '0.20.12', 'frontend version must be 0.20.3')
+check(lock.version === '0.20.12' && lock.packages?.['']?.version === '0.20.12', 'package-lock release version must match package.json')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
 check(pkg.scripts?.['test:auth-mobile-polish-source-0203'] === 'node scripts/test-auth-mobile-polish0203-source.mjs', '0.20.3 source contract script must exist')
 check(pkg.scripts?.['test:auth-mobile-polish-0203']?.includes('src/test/authMobilePolish0203.test.tsx'), '0.20.3 runtime command must exist')
@@ -68,7 +68,7 @@ check(styles.includes('@media (max-width: 900px) and (max-height: 700px)'), 'sho
 
 check(runtime.includes('provides an accessible show and hide password control on sign in'), 'runtime coverage must verify password visibility semantics')
 check(runtime.includes('keeps auth inputs and password visibility control disabled while sign in is pending'), 'runtime coverage must verify pending-state safety')
-check(sw.includes("const VERSION = '0.20.5-r1'"), 'service-worker cache version must advance to 0.20.3 for new static auth assets')
+check(sw.includes("const VERSION = '0.20.12'"), 'service-worker cache version must advance to 0.20.3 for new static auth assets')
 check(preflight.includes('test-auth-mobile-polish0203-source.mjs'), 'preflight must require the 0.20.3 auth source contract')
 check(!fs.existsSync('supabase/migrations/20261013002030_auth_screen_mobile_polish.sql'), '0.20.3 must not add a database migration')
 

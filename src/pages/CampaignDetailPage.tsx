@@ -1,19 +1,53 @@
+import { ActionDialog } from '../components/ActionDialog'
 import { SyncFreshness } from '../components/SyncFreshness'
 import { useCampaignLiveStatus } from '../lib/useCampaignLiveStatus'
 import { contractNotices } from '../lib/deliveryContract'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState, LoadingState } from '../components/StateViews'
 import { deleteCampaign, getCampaignConfirmation, listCampaignConfirmationRecipients, type CampaignConfirmationDetail, type CampaignConfirmationRecipient } from '../lib/campaignConfirmationApi'
 import { canCreateDurableQueue, dispatchProgress, dispatchSummary } from '../lib/durableQueue'
 import { enqueueCampaignDispatch } from '../lib/durableQueueApi'
-import { attemptBadgeClass, deliveryProgress, deliverySummary, sentProgress, type MessageRecoveryAction } from '../lib/deliveryAttempts'
+import { attemptBadgeClass, deliveryAttentionJobs, deliveryProgress, deliverySummary, processedDeliveryJobs, processingProgress, resolvedUnknownJobs, sentProgress, type CampaignDeliveryStatus, type MessageRecoveryAction } from '../lib/deliveryAttempts'
 import { requestCampaignMessageRecovery } from '../lib/deliveryAttemptsApi'
 import { errorMessage } from '../lib/errors'
 import { authorizationIsActive, canAuthorizeCampaign, preflightSummary, type CampaignSendAuthorization, type CampaignSendPreflight } from '../lib/gatewayPreflight'
 import { authorizeCampaignSend, getCampaignSendPreflight, getLatestCampaignSendAuthorization, revokeCampaignSendAuthorization } from '../lib/gatewayPreflightApi'
 import { useWorkspace } from '../workspace/WorkspaceProvider'
 import { usePwa } from '../pwa/PwaProvider'
+import { maskRecipientNumber } from '../lib/recipientDisplay'
+
+
+
+type LiveDeliveryTone = 'active' | 'success' | 'warning' | 'neutral'
+
+function liveDeliveryPresentation(status: CampaignDeliveryStatus | null, dispatch: { recipientCount: number; queuedJobs: number; leasedJobs: number; downloadedJobs: number }) {
+  const total = Math.max(0, dispatch.recipientCount)
+  if (!status) {
+    if (dispatch.downloadedJobs > 0) return { title: 'Starting on phone', badge: 'Starting', tone: 'active' as LiveDeliveryTone, summary: `${dispatch.downloadedJobs.toLocaleString()} of ${total.toLocaleString()} jobs have reached Android. Waiting for send status.` }
+    if (dispatch.leasedJobs > 0) return { title: 'Phone receiving jobs', badge: 'Connecting', tone: 'active' as LiveDeliveryTone, summary: `${dispatch.leasedJobs.toLocaleString()} job${dispatch.leasedJobs === 1 ? '' : 's'} are being handed to the paired Android phone.` }
+    return { title: 'Waiting for phone', badge: 'Queued', tone: 'neutral' as LiveDeliveryTone, summary: `${dispatch.queuedJobs.toLocaleString()} job${dispatch.queuedJobs === 1 ? '' : 's'} are waiting for the paired Android phone.` }
+  }
+
+  const processed = processedDeliveryJobs(status)
+  const knownSent = status.sentJobs + status.deliveredJobs
+  const resolvedUnknown = resolvedUnknownJobs(status)
+  if (status.unresolvedUnknownJobs > 0) return { title: 'Needs attention', badge: 'Attention', tone: 'warning' as LiveDeliveryTone, summary: `${status.unresolvedUnknownJobs.toLocaleString()} recipient result${status.unresolvedUnknownJobs === 1 ? '' : 's'} are UNKNOWN. BulkText will not automatically resend them.` }
+  if (status.awaitingAttemptJobs > 0 && status.preparedJobs + status.submittedJobs === 0 && dispatch.downloadedJobs < total) return { title: dispatch.leasedJobs > 0 ? 'Phone receiving jobs' : 'Waiting for phone', badge: 'Queued', tone: 'neutral' as LiveDeliveryTone, summary: `${status.awaitingAttemptJobs.toLocaleString()} recipients are awaiting a phone attempt. Queued work is not sent SMS.` }
+  if (status.awaitingAttemptJobs + status.preparedJobs + status.submittedJobs > 0) return { title: 'Sending in progress', badge: 'Live', tone: 'active' as LiveDeliveryTone, summary: `${processed.toLocaleString()} of ${status.recipientCount.toLocaleString()} recipients have a settled send outcome. Status refreshes automatically while work is active.` }
+  if (status.failedJobs > 0) return { title: 'Completed with issues', badge: 'Review', tone: 'warning' as LiveDeliveryTone, summary: `${processed.toLocaleString()} of ${status.recipientCount.toLocaleString()} recipients are processed; ${status.failedJobs.toLocaleString()} failed result${status.failedJobs === 1 ? '' : 's'} need review.` }
+  if (resolvedUnknown > 0) return { title: 'Completed with unverified results', badge: 'Review', tone: 'warning' as LiveDeliveryTone, summary: `${resolvedUnknown.toLocaleString()} UNKNOWN result${resolvedUnknown === 1 ? '' : 's'} were resolved without resend, so no SENT or DELIVERED claim is made for those recipients.` }
+  if (status.deliveredJobs === status.recipientCount && status.recipientCount > 0) return { title: 'Delivery confirmed', badge: 'Delivered', tone: 'success' as LiveDeliveryTone, summary: `All ${status.recipientCount.toLocaleString()} recipients reported DELIVERED.` }
+  if (knownSent === status.recipientCount && status.recipientCount > 0) return { title: 'Sending complete', badge: 'Sent', tone: 'success' as LiveDeliveryTone, summary: `All ${status.recipientCount.toLocaleString()} recipients have complete SENT success. Delivery receipts may continue to arrive.` }
+  return { title: 'Tracking delivery', badge: 'Tracking', tone: 'active' as LiveDeliveryTone, summary: deliverySummary(status) }
+}
+
+function liveBadgeClass(tone: LiveDeliveryTone) {
+  if (tone === 'success') return 'badge-success'
+  if (tone === 'warning') return 'badge-warning'
+  if (tone === 'active') return 'badge-live'
+  return 'badge-muted'
+}
 
 function dateTime(value: string | null) {
   if (!value) return 'Never'
@@ -37,6 +71,8 @@ function CampaignDetail({ workspaceId, campaignId }: { workspaceId: string; camp
   const [authorization, setAuthorization] = useState<CampaignSendAuthorization | null>(null)
   const [loading, setLoading] = useState(true)
   const [safetyBusy, setSafetyBusy] = useState(false)
+  const [sendDialogOpen, setSendDialogOpen] = useState(false)
+  const [recoveryDialogOpen, setRecoveryDialogOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [safetyError, setSafetyError] = useState<string | null>(null)
   const [deliveryError, setDeliveryError] = useState<string | null>(null)
@@ -44,6 +80,7 @@ function CampaignDetail({ workspaceId, campaignId }: { workspaceId: string; camp
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [now, setNow] = useState(() => new Date())
+  const sendInFlight = useRef(false)
   const { dispatch, setDispatch, deliveryStatus, contractHealth, attempts, syncError, lastSuccessAt, nextRetryAt, fetching, loaded, refresh: refreshDelivery } = useCampaignLiveStatus(workspaceId, campaignId, loading || Boolean(error) || safetyBusy || recoveryBusy || deleteBusy)
 
 
@@ -77,8 +114,6 @@ function CampaignDetail({ workspaceId, campaignId }: { workspaceId: string; camp
 
   async function requestRecovery(action: MessageRecoveryAction) {
     if (!online || !workspace || !campaignId || !dispatch || recoveryBusy) return
-    const message = 'Resolve all current UNKNOWN jobs without resending them? This clears the Android safety pause so remaining jobs can continue, but the UNKNOWN recipients will not be sent again.'
-    if (!window.confirm(message)) return
     setRecoveryBusy(true)
     setDeliveryError(null)
     try {
@@ -87,6 +122,7 @@ function CampaignDetail({ workspaceId, campaignId }: { workspaceId: string; camp
         setDeliveryError('No new unresolved UNKNOWN attempts were found; existing pending requests are retained.')
       }
       await refreshDelivery()
+      setRecoveryDialogOpen(false)
     } catch (reason) {
       setDeliveryError(errorMessage(reason, 'Could not request message recovery.'))
     } finally {
@@ -164,37 +200,17 @@ function CampaignDetail({ workspaceId, campaignId }: { workspaceId: string; camp
   }
 
 
-  async function createQueue() {
-    if (!online || !workspace || !campaignId || !authorization || !canCreateDurableQueue(authorization, dispatch, now)) return
-    if (!window.confirm('Create the durable cloud queue from this immutable campaign snapshot? This still does not send any SMS.')) return
-    setSafetyBusy(true)
-    setSafetyError(null)
-    try {
-      const nextDispatch = await enqueueCampaignDispatch(workspace.id, campaignId, authorization.authorizationId)
-      const nextAuthorization = await getLatestCampaignSendAuthorization(workspace.id, campaignId)
-      setDispatch(nextDispatch)
-      setAuthorization(nextAuthorization)
-      setNow(new Date())
-    } catch (reason) {
-      const message = errorMessage(reason, 'Could not create the durable cloud queue.')
-      await refreshSafety()
-      setSafetyError(message)
-    } finally {
-      setSafetyBusy(false)
-    }
-  }
-
-
   async function sendToPhone() {
-    if (!online || !workspace || !campaignId || dispatch) return
-    if (!window.confirm('Send this confirmed campaign through the paired Android gateway? BulkText will re-run exact-SIM preflight, create the durable queue, and the enabled Android 0.18 background gateway will execute it without requiring you to return to the phone.')) return
+    if (!online || !workspace || !campaignId || dispatch || safetyBusy || sendInFlight.current) return
+    sendInFlight.current = true
     setSafetyBusy(true)
     setSafetyError(null)
     try {
       const freshPreflight = await getCampaignSendPreflight(workspace.id, campaignId)
       setPreflight(freshPreflight)
       if (!freshPreflight.ready) {
-        setSafetyError(freshPreflight.blockers.join(' ' ) || 'Gateway preflight is blocked.')
+        setSendDialogOpen(false)
+        setSafetyError(freshPreflight.blockers.join(' ' ) || 'The final phone & SIM check is blocked.')
         return
       }
       const freshAuthorization = await authorizeCampaignSend(workspace.id, campaignId)
@@ -203,11 +219,14 @@ function CampaignDetail({ workspaceId, campaignId }: { workspaceId: string; camp
       setDispatch(nextDispatch)
       setAuthorization(await getLatestCampaignSendAuthorization(workspace.id, campaignId))
       setNow(new Date())
+      setSendDialogOpen(false)
     } catch (reason) {
-      const message = errorMessage(reason, 'Could not send this campaign to Android.')
+      const message = errorMessage(reason, 'Could not start sending this campaign.')
+      setSendDialogOpen(false)
       try { await refreshSafety() } catch {}
       setSafetyError(message)
     } finally {
+      sendInFlight.current = false
       setSafetyBusy(false)
     }
   }
@@ -222,47 +241,70 @@ function CampaignDetail({ workspaceId, campaignId }: { workspaceId: string; camp
 
   const encoding = campaign.gsm7Recipients === campaign.recipientCount ? 'GSM-7' : campaign.unicodeRecipients === campaign.recipientCount ? 'Unicode' : 'Mixed'
   const phone = [campaign.gatewayManufacturer, campaign.gatewayModel].filter(Boolean).join(' ') || campaign.gatewayDeviceName
+  const liveDelivery = dispatch ? liveDeliveryPresentation(deliveryStatus, dispatch) : null
+  const processedJobs = processedDeliveryJobs(deliveryStatus)
+  const attentionJobs = deliveryAttentionJobs(deliveryStatus)
+  const knownSentJobs = deliveryStatus ? deliveryStatus.sentJobs + deliveryStatus.deliveredJobs : 0
 
   return (
     <div className="page-stack">
-      <section className="page-heading recipient-heading"><div><p className="eyebrow">Confirmed campaign</p><h1>{campaign.title}</h1><p>Immutable execution snapshot confirmed {dateTime(campaign.confirmedAt)}. Send to Android runs the exact-SIM safety checks, authorization and durable queue handoff in one action.</p></div><div className="button-row"><Link className="secondary-button" to="/campaigns">Back to campaigns</Link><button className="danger-button" type="button" disabled={deleteBusy || !online} onClick={() => void removeCampaign()}>{deleteBusy ? 'Deleting…' : 'Delete campaign'}</button></div></section>
+      <section className="page-heading recipient-heading confirmed-campaign-heading"><div><p className="eyebrow">Confirmed campaign</p><h1>{campaign.title}</h1><p>Confirmed {dateTime(campaign.confirmedAt)}. Recipients, message and selected SIM are locked for this campaign. Sending requires explicit confirmation and final safety checks.</p></div><div className="button-row"><Link className="secondary-button" to="/campaigns">Back to campaigns</Link><button className="danger-button" type="button" disabled={deleteBusy || !online} onClick={() => void removeCampaign()}>{deleteBusy ? 'Deleting…' : 'Delete campaign'}</button></div></section>
       {!online ? <div className="notice warning-notice"><strong>Offline safety mode.</strong> Last loaded campaign information may remain visible, but live status, authorization, queueing, recovery and sending are disabled until you reconnect.</div> : null}
       <div role="status" className="notice"><span>{syncError || (loaded ? 'Queue and delivery status refresh automatically.' : 'Loading queue and delivery status…')}</span> <button className="secondary-button" type="button" disabled={!online || fetching || safetyBusy || recoveryBusy || deleteBusy} onClick={refreshDelivery}>{fetching ? 'Refreshing…' : 'Refresh campaign status'}</button></div>
       <SyncFreshness lastSuccessAt={lastSuccessAt} nextRetryAt={nextRetryAt} />
       {deleteError ? <div className="notice error-notice">{deleteError}</div> : null}
 
+      <section className={`panel simple-send-panel confirmed-send-panel ${dispatch ? 'live-delivery-panel' : ''}`}>
+        <div className="panel-heading"><div><p className="eyebrow">{dispatch ? 'Live campaign status' : 'Send campaign'}</p><h2>{dispatch ? liveDelivery?.title : preflight?.ready ? 'Final check before sending' : 'Phone or recipients need attention'}</h2></div><span className={`badge ${dispatch && liveDelivery ? liveBadgeClass(liveDelivery.tone) : preflight?.ready ? 'badge-success' : 'badge-muted'}`}>{dispatch && liveDelivery ? liveDelivery.badge : preflight?.ready ? 'Ready' : 'Final check'}</span></div>
+        {safetyError ? <div className="notice error-notice">{safetyError}</div> : null}
+        {deliveryError ? <div className="notice error-notice">{deliveryError}</div> : null}
+        {dispatch ? <>
+          <p className="live-delivery-summary" aria-live="polite">{liveDelivery?.summary}</p>
+          <div className="live-processing-progress">
+            <div><strong>{processedJobs.toLocaleString()} of {dispatch.recipientCount.toLocaleString()} processed</strong><span>{processingProgress(deliveryStatus).toFixed(0)}%</span></div>
+            <progress max={Math.max(1, dispatch.recipientCount)} value={processedJobs}>Send processing progress</progress>
+          </div>
+          <div className="live-stage-grid" aria-label="Live campaign progress">
+            <div><div><span>Android received</span><strong>{dispatch.downloadedJobs.toLocaleString()} / {dispatch.recipientCount.toLocaleString()}</strong></div><progress max={Math.max(1, dispatch.recipientCount)} value={dispatch.downloadedJobs}>Android receipt progress</progress></div>
+            <div><div><span>Known sent</span><strong>{deliveryStatus ? `${knownSentJobs.toLocaleString()} / ${deliveryStatus.recipientCount.toLocaleString()}` : 'Waiting'}</strong></div><progress max={Math.max(1, dispatch.recipientCount)} value={knownSentJobs}>Known sent progress</progress></div>
+            <div><div><span>Delivered</span><strong>{deliveryStatus ? `${deliveryStatus.deliveredJobs.toLocaleString()} / ${deliveryStatus.recipientCount.toLocaleString()}` : 'Waiting'}</strong></div><progress max={Math.max(1, dispatch.recipientCount)} value={deliveryStatus?.deliveredJobs ?? 0}>Delivery receipt progress</progress></div>
+          </div>
+          <div className="live-delivery-facts">
+            <div><span>Awaiting / active</span><strong>{deliveryStatus ? (deliveryStatus.awaitingAttemptJobs + deliveryStatus.preparedJobs + deliveryStatus.submittedJobs).toLocaleString() : '—'}</strong></div>
+            <div><span>Known sent</span><strong>{deliveryStatus ? knownSentJobs.toLocaleString() : '—'}</strong></div>
+            <div><span>Delivered</span><strong>{deliveryStatus ? deliveryStatus.deliveredJobs.toLocaleString() : '—'}</strong></div>
+            <div className={attentionJobs ? 'has-attention' : ''}><span>Needs attention</span><strong>{deliveryStatus ? attentionJobs.toLocaleString() : '—'}</strong></div>
+          </div>
+          {deliveryStatus?.recoveryRequestedJobs ? <div className="notice warning-notice"><strong>Recovery requested.</strong> {deliveryStatus.recoveryRequestedJobs.toLocaleString()} UNKNOWN result{deliveryStatus.recoveryRequestedJobs === 1 ? '' : 's'} are waiting to be resolved without resend.</div> : null}
+          {deliveryStatus?.unresolvedUnknownJobs && deliveryStatus.recoveryRequestedJobs === 0 ? <div className="live-recovery-action"><p>BulkText pauses automatic continuation for UNKNOWN outcomes because resending could duplicate a message that may already have left the phone.</p><button className="secondary-button" type="button" disabled={!online || recoveryBusy} onClick={() => setRecoveryDialogOpen(true)}>Continue without resending {deliveryStatus.unresolvedUnknownJobs.toLocaleString()} UNKNOWN</button></div> : null}
+          <p className="technical-details-hint">Live status refreshes automatically. Detailed queue, callback and attempt diagnostics remain available below.</p>
+        </> : <>
+          <div className="send-readiness-summary">
+            <div><span>Recipients</span><strong>{campaign.recipientCount.toLocaleString()}</strong></div>
+            <div><span>Estimated SMS</span><strong>{campaign.estimatedSmsUnits.toLocaleString()}</strong></div>
+            <div><span>Sending from</span><strong>{phone} · {campaign.simCarrierName || campaign.simDisplayName || 'SIM'} · SIM {campaign.simSlotIndex + 1}</strong></div>
+          </div>
+          <p className="muted-copy">BulkText runs one final recipient, phone freshness and exact-SIM check before queueing. If a check fails, nothing is queued.</p>
+          <div className="button-row"><button className="primary-button" type="button" disabled={!online || safetyBusy || !loaded} onClick={() => setSendDialogOpen(true)}>{safetyBusy ? 'Starting…' : `Start sending to ${campaign.recipientCount.toLocaleString()} recipients`}</button></div>
+          <p className="technical-details-hint">Preflight, authorization and queue diagnostics remain available under Technical send details.</p>
+        </>}
+      </section>
+
       <section className="metric-grid confirmation-metrics">
         <article className="metric-card"><span>Recipients</span><h2>{campaign.recipientCount.toLocaleString()}</h2><p>Frozen recipient snapshot.</p></article>
-        <article className="metric-card"><span>Estimated SMS units</span><h2>{campaign.estimatedSmsUnits.toLocaleString()}</h2><p>Estimate only.</p></article>
+        <article className="metric-card"><span>Estimated SMS</span><h2>{campaign.estimatedSmsUnits.toLocaleString()}</h2><p>Estimate only.</p></article>
         <article className="metric-card"><span>Encoding</span><h2>{encoding}</h2><p>{campaign.gsm7Recipients} GSM-7 · {campaign.unicodeRecipients} Unicode</p></article>
-        <article className="metric-card"><span>Segments</span><h2>{campaign.minimumSegments}–{campaign.maximumSegments}</h2><p>{campaign.averageSegments.toFixed(2)} average.</p></article>
+        <article className="metric-card"><span>Segments</span><h2>{campaign.minimumSegments === campaign.maximumSegments ? `${campaign.maximumSegments} each` : `${campaign.minimumSegments}–${campaign.maximumSegments} each`}</h2><p>{campaign.averageSegments.toFixed(2)} average.</p></article>
       </section>
 
       <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Frozen message</p><h2>Template snapshot</h2></div><span className="badge badge-success">Confirmed</span></div><pre className="campaign-template-preview">{campaign.messageTemplateSnapshot}</pre></section>
 
-      <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Phone &amp; SIM</p><h2>Confirmed sending identity</h2></div></div><div className="definition-grid confirmation-device-grid"><div><dt>Phone</dt><dd>{phone}</dd></div><div><dt>Selected SIM</dt><dd>{campaign.simCarrierName || campaign.simDisplayName || 'SIM'} · SIM {campaign.simSlotIndex + 1}</dd></div><div><dt>Subscription</dt><dd>{campaign.simSubscriptionId}</dd></div><div><dt>Phone last seen at confirmation</dt><dd>{dateTime(campaign.gatewayLastSeenAt)}</dd></div></div></section>
+      <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Phone &amp; SIM</p><h2>Confirmed sending setup</h2></div></div><div className="definition-grid confirmed-device-summary"><div><dt>Phone</dt><dd>{phone}</dd></div><div><dt>Selected SIM</dt><dd>{campaign.simCarrierName || campaign.simDisplayName || 'SIM'} · SIM {campaign.simSlotIndex + 1}</dd></div><div><dt>Connected when confirmed</dt><dd>{dateTime(campaign.gatewayLastSeenAt)}</dd></div></div></section>
 
-      <section className="panel simple-send-panel">
-        <div className="panel-heading"><div><p className="eyebrow">Simple send</p><h2>{dispatch ? 'Campaign progress' : 'Send to Android'}</h2></div><span className={`badge ${dispatch ? 'badge-success' : preflight?.ready ? 'badge-success' : 'badge-warning'}`}>{dispatch ? dispatch.status === 'downloaded' ? 'Downloaded' : dispatch.status === 'leasing' ? 'Leasing' : 'Queued' : preflight?.ready ? 'Ready' : 'Check required'}</span></div>
-        {safetyError ? <div className="notice error-notice">{safetyError}</div> : null}
-        {dispatch ? <>
-          <p className="muted-copy">The durable cloud queue is frozen to the confirmed SIM. Downloaded / ACKed means Android received the job; it does not mean SENT or DELIVERED.</p>
-          <div className="campaign-progress-grid" aria-label="Campaign delivery progress">
-            <div><span>Queued</span><strong>{dispatch.queuedJobs.toLocaleString()}</strong><small>Waiting in cloud</small></div>
-            <div><span>Downloaded / ACKed</span><strong>{dispatch.downloadedJobs.toLocaleString()}</strong><small>Received by Android</small></div>
-            <div><span>Known sent</span><strong>{deliveryStatus ? (deliveryStatus.sentJobs + deliveryStatus.deliveredJobs).toLocaleString() : '—'}</strong><small>Carrier SENT success</small></div>
-            <div><span>Delivered</span><strong>{deliveryStatus ? deliveryStatus.deliveredJobs.toLocaleString() : '—'}</strong><small>Delivery callback</small></div>
-            <div><span>Failed</span><strong>{deliveryStatus ? deliveryStatus.failedJobs.toLocaleString() : '—'}</strong><small>No automatic resend</small></div>
-            <div><span>UNKNOWN</span><strong>{deliveryStatus ? deliveryStatus.unresolvedUnknownJobs.toLocaleString() : '—'}</strong><small>Never auto-retried</small></div>
-          </div>
-          <p className="muted-copy">{dispatchSummary(dispatch)}</p>
-        </> : <><p className="muted-copy">One action re-runs current eligibility, phone/SIM freshness and exact SIM identity, then creates the authorized durable queue. It never falls back to another SIM.</p><div className="button-row"><button className="primary-button" type="button" disabled={!online || safetyBusy || !loaded} onClick={() => void sendToPhone()}>{safetyBusy ? 'Checking & queueing…' : 'Send to Android'}</button></div></>}
-        <p className="technical-details-hint">Preflight, authorization and queue diagnostics are available under Technical send details below.</p>
-      </section>
 
       <details className="panel technical-send-disclosure">
         <summary>Technical send details</summary>
-        <p className="muted-copy technical-disclosure-copy">Use these controls for diagnostics or recovery. The main Send to Android action above remains the normal workflow.</p>
+        <p className="muted-copy technical-disclosure-copy">Use these controls for diagnostics or recovery. The Start sending action above remains the normal workflow.</p>
         <div className="technical-send-panels">
       <section className="panel gateway-preflight-panel">
         <div className="panel-heading">
@@ -303,47 +345,78 @@ function CampaignDetail({ workspaceId, campaignId }: { workspaceId: string; camp
           <div className="definition-grid confirmation-device-grid"><div><dt>Enqueued</dt><dd>{dateTime(dispatch.enqueuedAt)}</dd></div><div><dt>Exact subscription</dt><dd>{dispatch.simSubscriptionId}</dd></div><div><dt>Exact SIM slot</dt><dd>SIM {dispatch.simSlotIndex + 1}</dd></div><div><dt>Estimated SMS units</dt><dd>{dispatch.estimatedSmsUnits.toLocaleString()}</dd></div></div>
         </> : <>
           <p className="muted-copy">Queue creation atomically consumes a fresh authorization, re-runs server preflight, and creates one immutable job per confirmed recipient. Duplicate campaign enqueue is prevented by the database.</p>
-          <div className="button-row"><button className="primary-button" type="button" disabled={!online || safetyBusy || !loaded || !canCreateDurableQueue(authorization, dispatch, now)} onClick={() => void createQueue()}>{safetyBusy ? 'Working…' : 'Create durable queue'}</button></div>
+          <div className="button-row"><button className="primary-button" type="button" disabled={!online || safetyBusy || !loaded || !canCreateDurableQueue(authorization, dispatch, now)} onClick={() => setSendDialogOpen(true)}>{safetyBusy ? 'Working…' : 'Review and start sending'}</button></div>
         </>}
       </section>
+          <section className="notice technical-safety-note"><strong>Delivery safety diagnostics:</strong> Android registers an immutable attempt before SmsManager and reports per-part SENT/DELIVERED callbacks. A post-SmsManager callback failure is treated as ambiguous UNKNOWN because SMS delivery may still occur. Callback-derived resend remains disabled; UNKNOWN can only continue without resending.</section>
         </div>
       </details>
 
       {dispatch ? <section className="panel delivery-attempts-panel">
         <div className="panel-heading">
-          <div><p className="eyebrow">SMS callbacks &amp; recovery</p><h2>SENT / DELIVERED status</h2></div>
-          <span className={`badge ${deliveryStatus?.unresolvedUnknownJobs ? 'badge-warning' : deliveryStatus?.deliveredJobs === deliveryStatus?.recipientCount && deliveryStatus?.recipientCount ? 'badge-success' : 'badge-muted'}`}>{deliveryStatus?.unresolvedUnknownJobs ? 'Recovery required' : deliveryStatus ? 'Tracking' : 'Waiting'}</span>
+          <div><p className="eyebrow">Delivery details</p><h2>Callback status breakdown</h2></div>
+          <span className={`badge ${deliveryStatus?.unresolvedUnknownJobs || deliveryStatus?.failedJobs ? 'badge-warning' : deliveryStatus?.deliveredJobs === deliveryStatus?.recipientCount && deliveryStatus?.recipientCount ? 'badge-success' : 'badge-muted'}`}>{deliveryStatus?.unresolvedUnknownJobs ? 'Attention' : deliveryStatus ? 'Live' : 'Waiting'}</span>
         </div>
-        {deliveryError ? <div className="notice error-notice">{deliveryError}</div> : null}
-        <p className="muted-copy">{deliverySummary(deliveryStatus)}</p>
+        <p className="muted-copy">SENT success and DELIVERED are separate outcomes. UNKNOWN is intentionally kept distinct because BulkText cannot safely assume whether the SMS left the phone.</p>
         {contractHealth ? contractNotices(contractHealth).map((notice) => <div className="notice warning-notice" key={notice}>{notice}</div>) : null}
         {contractHealth?.blockReasons.length ? <ul>{contractHealth.blockReasons.map((reason) => <li key={reason.code}>{reason.code === 'recipient_ineligible' ? 'Consent / suppression check' : reason.code === 'segment_mismatch' ? 'SMS segment mismatch' : reason.code}: {reason.jobs} jobs</li>)}</ul> : null}
-        {deliveryStatus ? <>
-          <div className="metric-grid confirmation-metrics">
-            <article className="metric-card"><span>Awaiting attempt</span><h2>{deliveryStatus.awaitingAttemptJobs.toLocaleString()}</h2><p>No server attempt yet; may include queued or blocked work.</p></article>
-            <article className="metric-card"><span>Prepared / submitted</span><h2>{(deliveryStatus.preparedJobs + deliveryStatus.submittedJobs).toLocaleString()}</h2><p>{deliveryStatus.preparedJobs.toLocaleString()} prepared · {deliveryStatus.submittedJobs.toLocaleString()} submitted. Neither means carrier SENT.</p></article>
-            <article className="metric-card"><span>Known sent</span><h2>{(deliveryStatus.sentJobs + deliveryStatus.deliveredJobs).toLocaleString()}</h2><p>{sentProgress(deliveryStatus).toFixed(0)}% of recipients have complete SENT success.</p></article>
-            <article className="metric-card"><span>Delivered</span><h2>{deliveryStatus.deliveredJobs.toLocaleString()}</h2><p>{deliveryProgress(deliveryStatus).toFixed(0)}% reported DELIVERED.</p></article>
-            <article className="metric-card"><span>Failed</span><h2>{deliveryStatus.failedJobs.toLocaleString()}</h2><p>Callback-derived failure never authorizes resend.</p></article>
-            <article className="metric-card"><span>Unresolved UNKNOWN</span><h2>{deliveryStatus.unresolvedUnknownJobs.toLocaleString()}</h2><p>Never automatically retried.</p></article>
-          </div>
-          {deliveryStatus.recoveryRequestedJobs > 0 ? <div className="notice warning-notice"><strong>Recovery queued.</strong> {deliveryStatus.recoveryRequestedJobs.toLocaleString()} request{deliveryStatus.recoveryRequestedJobs === 1 ? '' : 's'} waiting for the paired Android gateway.</div> : null}
-          <div className="button-row">
-            {deliveryStatus.unresolvedUnknownJobs > 0 ? <button className="secondary-button" type="button" disabled={!online || recoveryBusy} onClick={() => void requestRecovery('skip_unknown')}>{recoveryBusy ? 'Working…' : `Continue without resending ${deliveryStatus.unresolvedUnknownJobs} UNKNOWN`}</button> : null}
-
-          </div>
-        </> : <p className="muted-copy">No Android attempt has been registered yet. Android 0.18 registers every attempt in cloud before calling SmsManager.</p>}
+        {deliveryStatus ? <div className="delivery-state-breakdown" aria-label="Delivery state breakdown">
+          <div><span>Awaiting attempt</span><strong>{deliveryStatus.awaitingAttemptJobs.toLocaleString()}</strong></div>
+          <div><span>Prepared</span><strong>{deliveryStatus.preparedJobs.toLocaleString()}</strong></div>
+          <div><span>Submitted</span><strong>{deliveryStatus.submittedJobs.toLocaleString()}</strong></div>
+          <div><span>Sent</span><strong>{deliveryStatus.sentJobs.toLocaleString()}</strong></div>
+          <div><span>Delivered</span><strong>{deliveryStatus.deliveredJobs.toLocaleString()}</strong></div>
+          <div><span>Failed</span><strong>{deliveryStatus.failedJobs.toLocaleString()}</strong></div>
+          <div className={deliveryStatus.unresolvedUnknownJobs ? 'has-attention' : ''}><span>UNKNOWN</span><strong>{deliveryStatus.unresolvedUnknownJobs.toLocaleString()}</strong></div>
+        </div> : <p className="muted-copy">Waiting for the Android gateway to begin reporting delivery status.</p>}
+        {deliveryStatus ? <div className="delivery-progress-notes"><span>Known sent {sentProgress(deliveryStatus).toFixed(0)}%</span><span>Delivered {deliveryProgress(deliveryStatus).toFixed(0)}%</span>{resolvedUnknownJobs(deliveryStatus) ? <span>{resolvedUnknownJobs(deliveryStatus).toLocaleString()} UNKNOWN resolved without resend</span> : null}</div> : null}
 
         <details className="advanced-send-details" open={Boolean(deliveryStatus?.failedJobs || deliveryStatus?.unknownJobs)}>
           <summary>Attempt history</summary>
-          <p className="muted-copy">Every retry receives a new immutable attempt number. SENT success and DELIVERED are separate outcomes; delivery failure never authorizes a resend.</p>
-          {attempts.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Row</th><th>Recipient</th><th>Attempt</th><th>State</th><th>Resend safety</th><th>Updated</th></tr></thead><tbody>{attempts.map((attempt) => <tr key={attempt.attemptId}><td>{attempt.sourceRowNumber}</td><td>{attempt.normalizedE164}</td><td>#{attempt.attemptNumber}</td><td><span className={`badge ${attemptBadgeClass(attempt.state)}`}>{attempt.state.toUpperCase()}</span>{attempt.terminalReason ? <small>{attempt.terminalReason}</small> : null}{attempt.resolution === 'skip_without_retry' ? <small>Resolved without resend.</small> : null}</td><td>{attempt.state === 'unknown' || attempt.state === 'failed' ? <span className="badge badge-muted">No resend from callback failure</span> : <span className="badge badge-muted">Not applicable</span>}</td><td>{dateTime(attempt.deliveredAt || attempt.sentAt || attempt.failedAt || attempt.unknownAt || attempt.submittedAt || attempt.createdAt)}</td></tr>)}</tbody></table></div> : <p className="muted-copy">No attempt history yet.</p>}
+          <p className="muted-copy">Attempt history is diagnostic. Callback failure never grants automatic resend permission.</p>
+          {attempts.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Row</th><th>Recipient</th><th>Attempt</th><th>State</th><th>Resend safety</th><th>Updated</th></tr></thead><tbody>{attempts.map((attempt) => <tr key={attempt.attemptId}><td>{attempt.sourceRowNumber}</td><td>{maskRecipientNumber(attempt.normalizedE164)}</td><td>#{attempt.attemptNumber}</td><td><span className={`badge ${attemptBadgeClass(attempt.state)}`}>{attempt.state.toUpperCase()}</span>{attempt.terminalReason ? <small>{attempt.terminalReason}</small> : null}{attempt.resolution === 'skip_without_retry' ? <small>Resolved without resend.</small> : null}</td><td>{attempt.state === 'unknown' || attempt.state === 'failed' ? <span className="badge badge-muted">No automatic resend</span> : <span className="badge badge-muted">Not applicable</span>}</td><td>{dateTime(attempt.deliveredAt || attempt.sentAt || attempt.failedAt || attempt.unknownAt || attempt.submittedAt || attempt.createdAt)}</td></tr>)}</tbody></table></div> : <p className="muted-copy">No attempt history yet.</p>}
         </details>
       </section> : null}
 
-      <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Recipients</p><h2>Frozen personalized messages</h2></div><span className="badge badge-muted">First {Math.min(100, campaign.recipientCount)}</span></div>{recipients.length === 0 ? <EmptyState title="No recipients">This campaign has no stored recipients.</EmptyState> : <div className="table-wrap"><table className="data-table campaign-recipient-table"><thead><tr><th>Recipient</th><th>Message</th><th>SMS</th><th>Eligibility</th></tr></thead><tbody>{recipients.map((recipient) => <tr key={recipient.recipientId}><td><strong>{recipient.displayName || 'Recipient'}</strong><small>{recipient.normalizedE164}</small></td><td className="campaign-message-cell">{recipient.renderedMessage}</td><td>{recipient.smsEncoding}<small>{recipient.segmentCount} segment{recipient.segmentCount === 1 ? '' : 's'} · {recipient.characterCount} chars</small></td><td><span className="badge badge-success">Eligible at confirmation</span><small>Current eligibility is rechecked by preflight.</small></td></tr>)}</tbody></table></div>}{campaign.recipientCount > recipients.length ? <p className="muted-copy">Showing the first {recipients.length} recipients. The full snapshot contains {campaign.recipientCount} recipients.</p> : null}</section>
+      <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Recipients</p><h2>Frozen personalized messages</h2></div><span className="badge badge-muted">First {Math.min(100, campaign.recipientCount)}</span></div>{recipients.length === 0 ? <EmptyState title="No recipients">This campaign has no stored recipients.</EmptyState> : <div className="table-wrap campaign-recipient-table-wrap"><table className="data-table campaign-recipient-table"><thead><tr><th>Recipient</th><th>Message</th><th>SMS</th><th>Eligibility</th></tr></thead><tbody>{recipients.map((recipient) => <tr key={recipient.recipientId}><td data-label="Recipient"><strong>{recipient.displayName || 'Recipient'}</strong><small>{recipient.normalizedE164}</small></td><td data-label="Message" className="campaign-message-cell">{recipient.renderedMessage}</td><td data-label="SMS">{recipient.smsEncoding}<small>{recipient.segmentCount} segment{recipient.segmentCount === 1 ? '' : 's'} · {recipient.characterCount} chars</small></td><td data-label="Eligibility"><span className="badge badge-success">Eligible at confirmation</span><small>Current eligibility is rechecked by preflight.</small></td></tr>)}</tbody></table></div>}{campaign.recipientCount > recipients.length ? <p className="muted-copy">Showing the first {recipients.length} recipients. The full snapshot contains {campaign.recipientCount} recipients.</p> : null}</section>
 
-      <section className="notice warning-notice"><strong>0.18.1 safety boundary:</strong> Android registers an immutable attempt before SmsManager and reports per-part SENT/DELIVERED callbacks. Any post-SmsManager callback failure is treated as ambiguous UNKNOWN, because real-device acceptance proved that SMS delivery can still occur. Callback-derived resend is disabled; continue UNKNOWN only without resending.</section>
+      <ActionDialog
+        open={recoveryDialogOpen}
+        eyebrow="Delivery safety"
+        title="Continue without resending UNKNOWN results?"
+        description="BulkText will resolve the current UNKNOWN results without sending those recipients again, then allow remaining safe work to continue."
+        confirmLabel="Continue without resending"
+        busyLabel="Requesting…"
+        busy={recoveryBusy}
+        onCancel={() => setRecoveryDialogOpen(false)}
+        onConfirm={() => requestRecovery('skip_unknown')}
+      >
+        <div className="action-dialog-summary">
+          <div><span>UNKNOWN results</span><strong>{deliveryStatus?.unresolvedUnknownJobs.toLocaleString() ?? '0'}</strong></div>
+          <div><span>Automatic resend</span><strong>Disabled</strong></div>
+        </div>
+        <p className="send-dialog-warning"><strong>No SENT or DELIVERED claim will be made for these UNKNOWN recipients.</strong></p>
+      </ActionDialog>
+
+      <ActionDialog
+        open={sendDialogOpen}
+        eyebrow="Final send confirmation"
+        title="Start sending?"
+        description="BulkText runs one final phone, SIM and recipient check. If it passes, sending is queued immediately and the Android gateway can begin sending."
+        confirmLabel="Start sending"
+        busyLabel="Starting…"
+        busy={safetyBusy}
+        onCancel={() => setSendDialogOpen(false)}
+        onConfirm={sendToPhone}
+      >
+        <div className="action-dialog-summary">
+          <div><span>Campaign</span><strong>{campaign.title}</strong></div>
+          <div><span>Recipients</span><strong>{campaign.recipientCount.toLocaleString()}</strong></div>
+          <div><span>Estimated SMS</span><strong>{campaign.estimatedSmsUnits.toLocaleString()}</strong></div>
+          <div><span>Sending from</span><strong>{phone} · {campaign.simCarrierName || campaign.simDisplayName || 'SIM'} · SIM {campaign.simSlotIndex + 1}</strong></div>
+        </div>
+        <p className="send-dialog-warning"><strong>Sending begins immediately after the final safety check.</strong></p>
+      </ActionDialog>
     </div>
   )
 }

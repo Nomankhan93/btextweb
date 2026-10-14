@@ -1,11 +1,11 @@
-# Handoff — Web 0.20.5
+# Handoff — BulkText Web 0.20.12
 
-The reusable recovery layer is `src/lib/requestRecovery.ts`; the scheduler is `src/lib/useAdaptivePoll.ts`. Live campaign/device hooks retain the previous successful batch when refresh fails. `SyncFreshness` displays freshness outside live announcements. Auth and workspace providers coalesce validation/bootstrap work and distinguish temporary failure from a revoked session.
+Direct integration from 0.20.5-r1. All six frontend patch payloads are included with corrections. Do not layer the old patches over this release.
 
-Release and service-worker markers are 0.20.5. Historical source-check filenames remain intact; release assertions were updated. A placeholder-only `.env.example` was restored because the supplied clean ZIP omitted it.
+Safety invariants: immutable confirmed recipient/message/phone/SIM snapshot; explicit final confirmation before enqueueing on every visible queue path; fresh backend preflight → authorization → enqueue; immediate duplicate-submit guard; no fallback SIM; no automatic resend of UNKNOWN or callback failures; offline writes remain blocked.
 
-Before deployment, apply to your 0.20.4 working tree and run `npm run certify:0205`. After deployment, verify login, campaign/device freshness, hidden-tab pause, offline/reconnect, and recovery from a temporary server failure. Confirm existing sending behavior and controlled PWA update on an actual gateway device. Never resend a message merely because a status read timed out.
+Dashboard refresh dependencies use workspace ID rather than object identity. Phone & SIM downgrades failed refreshes to “Status unavailable” while keeping last-known cards. A review SIM label is not a fresh send-authorization claim. Pending attempts alone do not mean SMS sending has started.
 
-Rollback: retain your previous deployment. For source rollback, use the installer backup's `backup-manifest.json` to restore backed-up paths and remove only paths recorded as newly created, after checking for later edits. Reinstall dependencies after restoring package files. No database rollback is required for this patch.
+ActionDialog uses stable open/close focus lifecycle and latest callbacks, and unique accessible IDs. Wizard step changes focus the section. Recipient expansion is explicitly limited to the first 100 and does not repeat the initial three.
 
-Follow-ups: staged-import recovery; database contention and inventory-query improvements; Android polling audit. This patch does not resolve a provider-wide incident or prove its root cause.
+Run npm run certify:02012. Database and Android code need no deployment for this patch. See VALIDATION_0_20_12.md for execution evidence and unperformed browser/device acceptance.

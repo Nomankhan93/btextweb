@@ -18,7 +18,7 @@ const pkg = JSON.parse(pkgText)
 let assertions = 0
 function check(condition, message) { assert.ok(condition, message); assertions += 1 }
 
-check(pkg.version === '0.20.5-r1', 'frontend version must be 0.20.3')
+check(pkg.version === '0.20.12', 'frontend version must be 0.20.3')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
 check(pkg.scripts?.['test:offline-reliability-01810r1']?.includes('offlineWorkspaceColdStart01810r1.test.tsx'), 'r1 targeted reliability test suite must exist')
 check(pkg.scripts?.['test:pwa-shell-01810r1'] === 'node scripts/test-pwa-shell01810r1.mjs', 'service-worker integrity regression script must exist')
@@ -72,7 +72,7 @@ check(requireWorkspace.includes('Offline local-draft access only'), 'non-draft r
 check(auth.includes('await clearCampaignDrafts()'), 'explicit sign-out must await local draft cleanup')
 check(auth.includes('clearOfflineWorkspaceLocators()'), 'sign-out must clear cached workspace locators')
 
-check(serviceWorker.includes("const VERSION = '0.20.5-r1'"), 'service worker cache version must match r1')
+check(serviceWorker.includes("const VERSION = '0.20.12'"), 'service worker cache version must match r1')
 check(serviceWorker.includes('requiredResponse(url)'), 'precache assets must pass a required-response gate')
 check(serviceWorker.includes('if (!response.ok) throw new Error'), 'non-success required assets must fail installation')
 check(serviceWorker.includes('Fetch and validate the complete build before mutating'), 'shell cache mutation must happen only after complete validation')

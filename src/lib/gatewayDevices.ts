@@ -4,6 +4,16 @@ import { supabase } from './supabase'
 
 export type GatewayHealthStatus = 'recent' | 'stale' | 'offline' | 'never_seen' | 'revoked'
 export type GatewayBindingStatus = 'ready' | 'missing' | 'unbound'
+export type GatewayReadinessKind = 'ready' | 'select_sim' | 'sim_missing' | 'phone_attention' | 'no_phone'
+
+export interface GatewayWorkspaceReadiness {
+  kind: GatewayReadinessKind
+  ready: boolean
+  device: GatewayDeviceSummary | null
+  activeDeviceCount: number
+  readyDeviceCount: number
+  attentionDeviceCount: number
+}
 
 export interface GatewaySimSummary {
   simId: string
@@ -202,6 +212,52 @@ export function gatewayBindingLabel(device: Pick<GatewayDeviceSummary, 'bindingS
   const carrier = device.boundCarrierName || 'SIM'
   const slot = device.boundSlotIndex === null ? '' : ` · SIM ${device.boundSlotIndex + 1}`
   return device.bindingStatus === 'missing' ? `${carrier}${slot} · missing` : `${carrier}${slot}`
+}
+
+
+export function gatewayDeviceReadyForSending(device: GatewayDeviceSummary) {
+  return device.status === 'active'
+    && device.healthStatus === 'recent'
+    && device.bindingStatus === 'ready'
+    && Boolean(device.boundSimId)
+}
+
+export function gatewayWorkspaceReadiness(devices: GatewayDeviceSummary[]): GatewayWorkspaceReadiness {
+  const active = devices.filter((device) => device.status === 'active')
+  const ready = active.filter(gatewayDeviceReadyForSending)
+  const attention = active.filter((device) => device.healthStatus !== 'recent')
+
+  if (ready.length > 0) {
+    return {
+      kind: 'ready', ready: true, device: ready[0],
+      activeDeviceCount: active.length, readyDeviceCount: ready.length, attentionDeviceCount: attention.length,
+    }
+  }
+  if (active.length === 0) {
+    return { kind: 'no_phone', ready: false, device: null, activeDeviceCount: 0, readyDeviceCount: 0, attentionDeviceCount: 0 }
+  }
+
+  const missing = active.find((device) => device.bindingStatus === 'missing')
+  if (missing) {
+    return {
+      kind: 'sim_missing', ready: false, device: missing,
+      activeDeviceCount: active.length, readyDeviceCount: 0, attentionDeviceCount: attention.length,
+    }
+  }
+
+  const unbound = active.find((device) => device.bindingStatus !== 'ready' || !device.boundSimId)
+  if (unbound) {
+    return {
+      kind: 'select_sim', ready: false, device: unbound,
+      activeDeviceCount: active.length, readyDeviceCount: 0, attentionDeviceCount: attention.length,
+    }
+  }
+
+  const unhealthy = active.find((device) => device.healthStatus !== 'recent') ?? active[0]
+  return {
+    kind: 'phone_attention', ready: false, device: unhealthy,
+    activeDeviceCount: active.length, readyDeviceCount: 0, attentionDeviceCount: attention.length,
+  }
 }
 
 export async function listGatewayDevices(organizationId: string, signal?: AbortSignal): Promise<GatewayDeviceSummary[]> {

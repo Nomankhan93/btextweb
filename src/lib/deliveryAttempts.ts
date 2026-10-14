@@ -47,6 +47,29 @@ export function sentProgress(status: CampaignDeliveryStatus | null): number {
   return Math.min(100, Math.max(0, (knownSent / status.recipientCount) * 100))
 }
 
+export function resolvedUnknownJobs(status: CampaignDeliveryStatus | null): number {
+  if (!status) return 0
+  return Math.max(0, status.unknownJobs - status.unresolvedUnknownJobs)
+}
+
+/** Recipients with a settled send outcome. Unresolved UNKNOWN stays outside this count. */
+export function processedDeliveryJobs(status: CampaignDeliveryStatus | null): number {
+  if (!status) return 0
+  return Math.min(status.recipientCount, Math.max(0,
+    status.sentJobs + status.deliveredJobs + status.failedJobs + resolvedUnknownJobs(status),
+  ))
+}
+
+export function processingProgress(status: CampaignDeliveryStatus | null): number {
+  if (!status || status.recipientCount <= 0) return 0
+  return Math.min(100, Math.max(0, (processedDeliveryJobs(status) / status.recipientCount) * 100))
+}
+
+export function deliveryAttentionJobs(status: CampaignDeliveryStatus | null): number {
+  if (!status) return 0
+  return Math.max(0, status.failedJobs + status.unresolvedUnknownJobs)
+}
+
 export function deliverySummary(status: CampaignDeliveryStatus | null): string {
   if (!status) return 'Waiting for Android attempt/callback status.'
   if (status.unresolvedUnknownJobs > 0) {

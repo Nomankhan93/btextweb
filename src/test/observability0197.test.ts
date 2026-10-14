@@ -34,7 +34,7 @@ describe('production-safe diagnostics', () => {
     expect(visible).toBe('You do not have permission to perform this action.')
     const [event] = getRecentDiagnosticEvents()
     expect(event).toMatchObject({
-      release: '0.20.5-r1',
+      release: '0.20.12',
       source: 'handled-error',
       category: 'permission',
       code: '42501',
@@ -80,13 +80,13 @@ describe('production-safe diagnostics', () => {
     }
     const events = getRecentDiagnosticEvents()
     expect(events).toHaveLength(25)
-    expect(events.every((event) => event.release === '0.20.5-r1')).toBe(true)
+    expect(events.every((event) => event.release === '0.20.12')).toBe(true)
   })
 
   it('exports a support snapshot containing sanitized events only', () => {
     reportDiagnostic({ message: 'JWT expired bearer super-secret', code: 'PGRST301', status: 401 }, { source: 'unhandled-rejection', severity: 'fatal' })
     const snapshot = diagnosticSnapshot()
-    expect(snapshot.release).toBe('0.20.5-r1')
+    expect(snapshot.release).toBe('0.20.12')
     expect(snapshot.events).toHaveLength(1)
     expect(snapshot.events[0].category).toBe('authentication')
     const exported = JSON.stringify(snapshot)

@@ -21,6 +21,11 @@ const requiredFiles = [
   'supabase/migrations/20261010000100_delivery_recovery_contract_hardening.sql',
   'scripts/test-delivery-contract0185.mjs','src/lib/deliveryContract.ts',
   'package.json','.env.example','src/App.tsx','src/pages/DashboardPage.tsx','src/pages/CampaignsPage.tsx',
+  'src/test/dashboardControlCenter0206.test.tsx','scripts/test-dashboard-control-center0206-source.mjs','scripts/certify-production0206.mjs','docs/HOME_DASHBOARD_CONTROL_CENTER_0206.md','VALIDATION_0_20_6.md','PATCH_0_20_6_README.md','HANDOFF_0_20_6.md','CHANGED_FILES_0_20_6.txt',
+  'src/components/ActionDialog.tsx','src/test/actionDialog0207.test.tsx','src/test/campaignConfirmationSendSafety0207.test.tsx','scripts/test-campaign-confirmation-send-safety0207-source.mjs','scripts/certify-production0207.mjs','docs/CAMPAIGN_CONFIRMATION_SEND_SAFETY_UX_0207.md','VALIDATION_0_20_7.md','PATCH_0_20_7_README.md','HANDOFF_0_20_7.md','CHANGED_FILES_0_20_7.txt',
+  'src/lib/recipientDisplay.ts','src/test/campaignMessageReview0209.test.tsx','scripts/test-campaign-message-review0209-source.mjs','scripts/certify-production0209.mjs','docs/CAMPAIGN_MESSAGE_REVIEW_EXPERIENCE_0209.md','VALIDATION_0_20_9.md','PATCH_0_20_9_README.md','HANDOFF_0_20_9.md','CHANGED_FILES_0_20_9.txt',
+  'src/test/campaignDeliveryExperience02010.test.tsx','scripts/test-campaign-delivery-experience02010-source.mjs','scripts/certify-production02010.mjs','docs/CAMPAIGN_DELIVERY_EXPERIENCE_02010.md','VALIDATION_0_20_10.md','PATCH_0_20_10_README.md','HANDOFF_0_20_10.md','CHANGED_FILES_0_20_10.txt',
+  'src/test/phoneSimReadiness02011.test.tsx','scripts/test-phone-sim-readiness02011-source.mjs','scripts/certify-production02011.mjs','docs/PHONE_SIM_READINESS_CONTROL_CENTER_02011.md','VALIDATION_0_20_11.md','PATCH_0_20_11_README.md','HANDOFF_0_20_11.md','CHANGED_FILES_0_20_11.txt',
   'src/pages/CampaignConfirmationPage.tsx','src/pages/CampaignDetailPage.tsx','src/pages/SimpleCampaignPage.tsx','src/auth/AuthProvider.tsx',
   'src/workspace/WorkspaceProvider.tsx','src/workspace/RequireWorkspace.tsx','src/lib/errors.ts','src/lib/gatewayDevices.ts',
   'src/lib/messageComposer.ts','src/lib/messageComposerApi.ts','src/lib/smsSegments.ts','src/lib/campaignConfirmation.ts',
@@ -71,7 +76,166 @@ if (/service[_-]?role|jwt[_-]?secret|sb_secret_/i.test(envExample)) {
   process.exit(1)
 }
 
-if (packageJson.version !== '0.20.5-r1') { console.error(`Preflight failed. Expected package version 0.20.5-r1, got ${packageJson.version}`); process.exit(1) }
+if (packageJson.version !== '0.20.12') { console.error(`Preflight failed. Expected package version 0.20.12, got ${packageJson.version}`); process.exit(1) }
+
+const dashboard0206 = await readFile(new URL('../src/pages/DashboardPage.tsx', import.meta.url), 'utf8')
+const dashboardStyles0206 = await readFile(new URL('../src/styles/app.css', import.meta.url), 'utf8')
+const dashboardSourceContract0206 = await readFile(new URL('../scripts/test-dashboard-control-center0206-source.mjs', import.meta.url), 'utf8')
+const dashboard0206Markers = ['Promise.allSettled([', 'listCampaignConfirmations(workspace.id)', 'data.campaigns.slice(0, 3)', 'Sending setup', 'Recent campaigns', 'Available sections remain usable.']
+const missingDashboard0206Markers = dashboard0206Markers.filter((marker) => !dashboard0206.includes(marker))
+if (missingDashboard0206Markers.length) { console.error(`Preflight failed. 0.20.12 dashboard markers missing: ${missingDashboard0206Markers.join(', ')}`); process.exit(1) }
+if (dashboard0206.includes('PwaInstallCard') || dashboard0206.includes('Current identity') || dashboard0206.includes('dashboard-next-action')) {
+  console.error('Preflight failed. 0.20.12 dashboard still contains a retired duplicate install/setup/action surface.')
+  process.exit(1)
+}
+if ((dashboard0206.match(/to="\/campaigns\/new"/g) ?? []).length !== 1) { console.error('Preflight failed. 0.20.12 dashboard must expose exactly one New campaign action.'); process.exit(1) }
+if (!dashboardStyles0206.includes('.dashboard-setup-strip') || !dashboardStyles0206.includes('.dashboard-recent-row') || dashboardStyles0206.includes('.dashboard-next-action')) {
+  console.error('Preflight failed. 0.20.12 dashboard responsive style contract is incomplete.')
+  process.exit(1)
+}
+if (!dashboardSourceContract0206.includes('Home Dashboard Control Center source contract')) { console.error('Preflight failed. 0.20.12 dashboard source contract marker is missing.'); process.exit(1) }
+
+const campaignConfirmation0207 = await readFile(new URL('../src/pages/CampaignConfirmationPage.tsx', import.meta.url), 'utf8')
+const campaignDetail0207 = await readFile(new URL('../src/pages/CampaignDetailPage.tsx', import.meta.url), 'utf8')
+const actionDialog0207 = await readFile(new URL('../src/components/ActionDialog.tsx', import.meta.url), 'utf8')
+const campaignSendSafetyContract0207 = await readFile(new URL('../scripts/test-campaign-confirmation-send-safety0207-source.mjs', import.meta.url), 'utf8')
+if (!campaignConfirmation0207.includes('title="Confirm campaign?"') || campaignConfirmation0207.includes('window.confirm(') || !campaignConfirmation0207.includes('Nothing is sent yet.')) {
+  console.error('Preflight failed. 0.20.12 branded campaign confirmation safety boundary is incomplete.')
+  process.exit(1)
+}
+if (!campaignDetail0207.includes('title="Start sending?"') || !campaignDetail0207.includes('sendInFlight.current') || campaignDetail0207.includes("'Send to Android'") || campaignDetail0207.includes('0.18.1 safety boundary')) {
+  console.error('Preflight failed. 0.20.12 final-send consequence/double-submit/terminology contract is incomplete.')
+  process.exit(1)
+}
+if (!actionDialog0207.includes('role="dialog"') || !actionDialog0207.includes('aria-modal="true"') || !actionDialog0207.includes("event.key === 'Escape'")) {
+  console.error('Preflight failed. 0.20.12 branded ActionDialog accessibility contract is incomplete.')
+  process.exit(1)
+}
+if (!campaignSendSafetyContract0207.includes('Campaign Confirmation & Send Safety UX source contract')) {
+  console.error('Preflight failed. 0.20.12 campaign send-safety source contract marker is missing.')
+  process.exit(1)
+}
+
+const campaignWizard0208 = await readFile(new URL('../src/pages/SimpleCampaignPage.tsx', import.meta.url), 'utf8')
+const appShell0208 = await readFile(new URL('../src/components/AppShell.tsx', import.meta.url), 'utf8')
+const campaignWizardContract0208 = await readFile(new URL('../scripts/test-campaign-wizard-simplification0208-source.mjs', import.meta.url), 'utf8')
+const campaignWizardMarkers0208 = ['type WizardStep = 1 | 2 | 3', 'Continue to recipients', 'Continue to message', 'Add consent reference (optional)', 'simple-import-summary-line', 'title="Discard this draft?"']
+const missingCampaignWizardMarkers0208 = campaignWizardMarkers0208.filter((marker) => !campaignWizard0208.includes(marker))
+if (missingCampaignWizardMarkers0208.length) {
+  console.error(`Preflight failed. 0.20.12 campaign wizard markers missing: ${missingCampaignWizardMarkers0208.join(', ')}`)
+  process.exit(1)
+}
+if (campaignWizard0208.includes('const currentStep = !parsed') || campaignWizard0208.includes('Continue with ${uniqueReady.toLocaleString()} unique numbers') || campaignWizard0208.includes('“Saved” is shown only after the IndexedDB transaction commits.')) {
+  console.error('Preflight failed. 0.20.12 campaign wizard still contains retired pseudo-stepper or developer-facing copy.')
+  process.exit(1)
+}
+if (!appShell0208.includes("location.pathname === '/campaigns/new' || location.pathname.startsWith('/campaigns/review/')") || !appShell0208.includes('campaign-wizard-shell')) {
+  console.error('Preflight failed. 0.20.12 focused campaign shell routing contract is incomplete.')
+  process.exit(1)
+}
+if (!dashboardStyles0206.includes('.campaign-wizard-shell .mobile-bottom-nav { display: none; }') || !dashboardStyles0206.includes('.campaign-wizard-mobile-header') || !dashboardStyles0206.includes('.simple-wizard-actions')) {
+  console.error('Preflight failed. 0.20.12 focused mobile campaign wizard styles are incomplete.')
+  process.exit(1)
+}
+if (!campaignConfirmation0207.includes('campaign-review-stepper') || !campaignConfirmation0207.includes('← Message')) {
+  console.error('Preflight failed. 0.20.12 campaign review does not continue the focused wizard.')
+  process.exit(1)
+}
+if (!campaignWizardContract0208.includes('Campaign Wizard Simplification source contract')) {
+  console.error('Preflight failed. 0.20.12 campaign wizard source contract marker is missing.')
+  process.exit(1)
+}
+
+const campaignMessageReview0209 = await readFile(new URL('../src/pages/SimpleCampaignPage.tsx', import.meta.url), 'utf8')
+const campaignReview0209 = await readFile(new URL('../src/pages/CampaignConfirmationPage.tsx', import.meta.url), 'utf8')
+const messageComposerSource0209 = await readFile(new URL('../src/lib/messageComposer.ts', import.meta.url), 'utf8')
+const recipientDisplaySource0209 = await readFile(new URL('../src/lib/recipientDisplay.ts', import.meta.url), 'utf8')
+const campaignMessageReviewContract0209 = await readFile(new URL('../scripts/test-campaign-message-review0209-source.mjs', import.meta.url), 'utf8')
+const campaignMessageReviewMarkers0209 = ['personalization-controls', 'message-live-summary', 'Unicode detected.', 'maskRecipientNumber(row.normalization.normalizedE164 ?? row.rawPhone)']
+const missingCampaignMessageReviewMarkers0209 = campaignMessageReviewMarkers0209.filter((marker) => !campaignMessageReview0209.includes(marker))
+if (missingCampaignMessageReviewMarkers0209.length) {
+  console.error(`Preflight failed. 0.20.12 composer markers missing: ${missingCampaignMessageReviewMarkers0209.join(', ')}`)
+  process.exit(1)
+}
+if (!messageComposerSource0209.includes('availablePersonalizationTokens') || !messageComposerSource0209.includes('rows.every((row) => tokenValue(row, candidate.token) != null)')) {
+  console.error('Preflight failed. 0.20.12 safe personalization contract is incomplete.')
+  process.exit(1)
+}
+if (!recipientDisplaySource0209.includes('maskRecipientNumber') || !recipientDisplaySource0209.includes("'•'.repeat")) {
+  console.error('Preflight failed. 0.20.12 recipient masking helper is incomplete.')
+  process.exit(1)
+}
+for (const marker of ['review-summary-strip', 'featuredPreviews = useMemo(() => previewableRecipients.slice(0, 3)', 'Preview first ${Math.min(100, previewableRecipients.length).toLocaleString()} recipients', 'maskRecipientNumber(preview.row.normalizedE164)', 'Nothing is sent yet.']) {
+  if (!campaignReview0209.includes(marker)) { console.error(`Preflight failed. 0.20.12 review marker missing: ${marker}`); process.exit(1) }
+}
+if (campaignReview0209.includes('className="metric-grid confirmation-metrics"') || campaignReview0209.includes('The server will render the template again') || campaignReview0209.includes('Sending identity snapshot')) {
+  console.error('Preflight failed. 0.20.12 review still contains retired metric-card or engineering copy.')
+  process.exit(1)
+}
+if (!campaignMessageReviewContract0209.includes('Message & Review Experience source contract')) {
+  console.error('Preflight failed. 0.20.12 message/review source contract marker is missing.')
+  process.exit(1)
+}
+
+const campaignDeliverySource02010 = await readFile(new URL('../src/lib/deliveryAttempts.ts', import.meta.url), 'utf8')
+const campaignDeliveryContract02010 = await readFile(new URL('../scripts/test-campaign-delivery-experience02010-source.mjs', import.meta.url), 'utf8')
+const campaignDeliveryMarkers02010 = ['Live campaign status', 'live-processing-progress', 'live-stage-grid', 'Needs attention', 'Completed with unverified results', 'Continue without resending UNKNOWN results?']
+const missingCampaignDeliveryMarkers02010 = campaignDeliveryMarkers02010.filter((marker) => !campaignDetail0207.includes(marker))
+if (missingCampaignDeliveryMarkers02010.length) {
+  console.error(`Preflight failed. 0.20.12 campaign delivery markers missing: ${missingCampaignDeliveryMarkers02010.join(', ')}`)
+  process.exit(1)
+}
+if (!campaignDeliverySource02010.includes('processedDeliveryJobs') || !campaignDeliverySource02010.includes('resolvedUnknownJobs') || !campaignDeliverySource02010.includes('deliveryAttentionJobs')) {
+  console.error('Preflight failed. 0.20.12 delivery-state derivation helpers are incomplete.')
+  process.exit(1)
+}
+const recoveryFunction02010 = campaignDetail0207.match(/async function requestRecovery[\s\S]*?\n  }\n\n  async function removeCampaign/)?.[0] ?? ''
+if (recoveryFunction02010.includes('window.confirm') || !campaignDetail0207.includes("requestRecovery('skip_unknown')")) {
+  console.error('Preflight failed. 0.20.12 UNKNOWN recovery must stay branded and skip-without-resend only.')
+  process.exit(1)
+}
+if (campaignDetail0207.includes('<article className="metric-card"><span>Awaiting attempt</span>') || !campaignDetail0207.includes('maskRecipientNumber(attempt.normalizedE164)')) {
+  console.error('Preflight failed. 0.20.12 delivery detail compaction/privacy contract is incomplete.')
+  process.exit(1)
+}
+if (!dashboardStyles0206.includes('.live-delivery-panel') || !dashboardStyles0206.includes('.delivery-state-breakdown') || !dashboardStyles0206.includes('.live-recovery-action')) {
+  console.error('Preflight failed. 0.20.12 delivery experience styles are incomplete.')
+  process.exit(1)
+}
+if (!campaignDeliveryContract02010.includes('Campaign Delivery Experience source contract')) {
+  console.error('Preflight failed. 0.20.12 campaign delivery source contract marker is missing.')
+  process.exit(1)
+}
+
+const phoneSimPage02011 = await readFile(new URL('../src/pages/DevicesPage.tsx', import.meta.url), 'utf8')
+const gatewayDevices02011 = await readFile(new URL('../src/lib/gatewayDevices.ts', import.meta.url), 'utf8')
+const phoneSimContract02011 = await readFile(new URL('../scripts/test-phone-sim-readiness02011-source.mjs', import.meta.url), 'utf8')
+const phoneSimReadinessMarkers02011 = ['Current readiness', 'Ready to send', 'Phone needs attention', 'Previous phones', 'Device details', 'Unselect SIM', 'Change sending SIM?', 'SIM safety']
+const missingPhoneSimReadinessMarkers02011 = phoneSimReadinessMarkers02011.filter((marker) => !phoneSimPage02011.includes(marker))
+if (missingPhoneSimReadinessMarkers02011.length) {
+  console.error(`Preflight failed. 0.20.12 Phone & SIM readiness markers missing: ${missingPhoneSimReadinessMarkers02011.join(', ')}`)
+  process.exit(1)
+}
+if (!gatewayDevices02011.includes('gatewayWorkspaceReadiness') || !gatewayDevices02011.includes("device.healthStatus === 'recent'") || !gatewayDevices02011.includes("device.bindingStatus === 'ready'")) {
+  console.error('Preflight failed. 0.20.12 shared Phone & SIM readiness derivation is incomplete.')
+  process.exit(1)
+}
+if (phoneSimPage02011.includes('Connected Android phone') || phoneSimPage02011.includes('>Clear SIM<') || phoneSimPage02011.includes('Recent pairing codes') || phoneSimPage02011.includes('window.confirm')) {
+  console.error('Preflight failed. 0.20.12 Phone & SIM page contains retired inventory-console terminology or native confirmation.')
+  process.exit(1)
+}
+if (!dashboard0206.includes('gatewayWorkspaceReadiness(data.devices)')) {
+  console.error('Preflight failed. 0.20.12 dashboard must reuse the shared Phone & SIM readiness derivation.')
+  process.exit(1)
+}
+if (!dashboardStyles0206.includes('/* 0.20.11 — Phone & SIM Readiness Control Center */') || !dashboardStyles0206.includes('.phone-readiness-card') || !dashboardStyles0206.includes('.compact-disclosure') || !dashboardStyles0206.includes('.phone-sim-safety-callout')) {
+  console.error('Preflight failed. 0.20.12 Phone & SIM control-center styles are incomplete.')
+  process.exit(1)
+}
+if (!phoneSimContract02011.includes('Phone & SIM Readiness Control Center source contract')) {
+  console.error('Preflight failed. 0.20.12 Phone & SIM source contract marker is missing.')
+  process.exit(1)
+}
 
 const importScaleSource = await readFile(new URL('../scripts/test-import-scale0204-source.mjs', import.meta.url), 'utf8')
 const importFiles0204 = await readFile(new URL('../src/lib/importFiles.ts', import.meta.url), 'utf8')
@@ -79,23 +243,23 @@ const importsApi0204 = await readFile(new URL('../src/lib/importsApi.ts', import
 const importsPage0204 = await readFile(new URL('../src/pages/ImportsPage.tsx', import.meta.url), 'utf8')
 const importMigration0204 = await readFile(new URL('../supabase/migrations/20261013000100_recipient_import_reliability_scale.sql', import.meta.url), 'utf8')
 if (!importScaleSource.includes('recipient import reliability & scale source contract')) {
-  console.error('Preflight failed. 0.20.5-r1 recipient import source contract marker is missing.')
+  console.error('Preflight failed. 0.20.12 recipient import source contract marker is missing.')
   process.exit(1)
 }
 if (importFiles0204.includes('MAX_IMPORT_FILE_BYTES') || importFiles0204.includes('MAX_IMPORT_ROWS') || !importFiles0204.includes('inflateRawFallback')) {
-  console.error('Preflight failed. 0.20.5-r1 parser still contains a retired product cap or lacks the XLSX fallback.')
+  console.error('Preflight failed. 0.20.12 parser still contains a retired product cap or lacks the XLSX fallback.')
   process.exit(1)
 }
 if (!importsApi0204.includes("'begin_contact_import'") || !importsApi0204.includes("'append_contact_import_rows'") || !importsApi0204.includes("'finalize_contact_import'")) {
-  console.error('Preflight failed. 0.20.5-r1 batched import staging client contract is incomplete.')
+  console.error('Preflight failed. 0.20.12 batched import staging client contract is incomplete.')
   process.exit(1)
 }
 if (importsPage0204.includes('max 5 MB') || importsPage0204.includes('MAX_IMPORT_ROWS') || !importsPage0204.includes('import-work-progress')) {
-  console.error('Preflight failed. 0.20.5-r1 import UX still exposes a retired cap or lacks progress.')
+  console.error('Preflight failed. 0.20.12 import UX still exposes a retired cap or lacks progress.')
   process.exit(1)
 }
 for (const marker of ['begin_contact_import', 'append_contact_import_rows', 'finalize_contact_import', 'abort_contact_import', "'import_fixed_file_size_cap', false", "'import_fixed_row_cap', false"]) {
-  if (!importMigration0204.includes(marker)) { console.error(`Preflight failed. 0.20.5-r1 import migration marker missing: ${marker}`); process.exit(1) }
+  if (!importMigration0204.includes(marker)) { console.error(`Preflight failed. 0.20.12 import migration marker missing: ${marker}`); process.exit(1) }
 }
 
 
@@ -109,19 +273,19 @@ if (
   || vercelConfig.rewrites[0]?.source !== '/(.*)'
   || vercelConfig.rewrites[0]?.destination !== '/index.html'
 ) {
-  console.error('Preflight failed. 0.20.5-r1 Vercel SPA fallback is missing or broadened unexpectedly.')
+  console.error('Preflight failed. 0.20.12 Vercel SPA fallback is missing or broadened unexpectedly.')
   process.exit(1)
 }
 if (!correctiveRoutingContract.includes('production routing & controlled PWA update source contract')) {
-  console.error('Preflight failed. 0.20.5-r1 routing/PWA source contract marker is missing.')
+  console.error('Preflight failed. 0.20.12 routing/PWA source contract marker is missing.')
   process.exit(1)
 }
 if (!correctiveCertifier.includes("'test:routing-pwa-source-0203r1'") || !correctiveCertifier.includes("'certify:0203'")) {
-  console.error('Preflight failed. 0.20.5-r1 corrective certification chain is incomplete.')
+  console.error('Preflight failed. 0.20.12 corrective certification chain is incomplete.')
   process.exit(1)
 }
 if (!correctivePrompts.includes("updating ? 'Updating…' : 'Update now'") || !correctivePrompts.includes('disabled={updating}')) {
-  console.error('Preflight failed. 0.20.5-r1 explicit update progress UI is incomplete.')
+  console.error('Preflight failed. 0.20.12 explicit update progress UI is incomplete.')
   process.exit(1)
 }
 
@@ -164,7 +328,7 @@ const observabilitySource = await readFile(new URL('../src/lib/observability.ts'
 const appErrorBoundarySource = await readFile(new URL('../src/components/AppErrorBoundary.tsx', import.meta.url), 'utf8')
 const settingsSource = await readFile(new URL('../src/pages/SettingsPage.tsx', import.meta.url), 'utf8')
 const observabilityMarkers = [
-  "OBSERVABILITY_RELEASE = '0.20.5-r1'",
+  "OBSERVABILITY_RELEASE = '0.20.12'",
   "STORAGE_KEY = 'bulktext:diagnostics:v1'",
   'MAX_EVENTS = 25',
   "window.addEventListener('error'",
@@ -267,11 +431,11 @@ const routeLoadingMarkers = [
 const missingRouteLoadingMarkers = routeLoadingMarkers.filter((marker) => !appSource.includes(marker))
 if (missingRouteLoadingMarkers.length) { console.error(`Preflight failed. 0.20.3 route-loading markers missing: ${missingRouteLoadingMarkers.join(', ')}`); process.exit(1) }
 if (!viteSource.includes("manifest: 'asset-manifest.json'")) { console.error('Preflight failed. 0.20.3 Vite asset manifest output is missing.'); process.exit(1) }
-for (const marker of ["const VERSION = '0.20.5-r1'", "'/asset-manifest.json'", 'buildManifestAssets', 'cold-start offline route coverage after code splitting', 'async function installedShellNavigation(request)', 'if (installedShell) return installedShell', 'if (networkResponse.ok) return networkResponse']) {
-  if (!serviceWorkerSource.includes(marker)) { console.error(`Preflight failed. 0.20.5-r1 PWA shell marker missing: ${marker}`); process.exit(1) }
+for (const marker of ["const VERSION = '0.20.12'", "'/asset-manifest.json'", 'buildManifestAssets', 'cold-start offline route coverage after code splitting', 'async function installedShellNavigation(request)', 'if (installedShell) return installedShell', 'if (networkResponse.ok) return networkResponse']) {
+  if (!serviceWorkerSource.includes(marker)) { console.error(`Preflight failed. 0.20.12 PWA shell marker missing: ${marker}`); process.exit(1) }
 }
 if (serviceWorkerSource.includes('async function networkFirstNavigation(request)')) {
-  console.error('Preflight failed. 0.20.5-r1 must not restore network-first controlled HTML navigation.')
+  console.error('Preflight failed. 0.20.12 must not restore network-first controlled HTML navigation.')
   process.exit(1)
 }
 
@@ -537,6 +701,6 @@ for (const marker of ["version', '') <> '0.18.5'", 'Production schema must not e
   if (!freshVerifier.includes(marker)) { console.error(`Preflight failed. Fresh-schema 0.18.4 marker missing: ${marker}`); process.exit(1) }
 }
 
-console.log('BulkText Web 0.20.5-r1 / backend 0.18.5 preflight PASS')
+console.log('BulkText Web 0.20.12 / backend 0.18.5 preflight PASS')
 
-if (packageJson.bulktext?.backendContractVersion !== '0.18.5') { console.error('Expected backend contract 0.18.5 for Web 0.20.5-r1'); process.exit(1) }
+if (packageJson.bulktext?.backendContractVersion !== '0.18.5') { console.error('Expected backend contract 0.18.5 for Web 0.20.12'); process.exit(1) }

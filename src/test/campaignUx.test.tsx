@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { SimpleCampaignPage } from '../pages/SimpleCampaignPage'
 import { CampaignConfirmationPage } from '../pages/CampaignConfirmationPage'
@@ -53,18 +53,21 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 it('preserves valid import on picker cancellation/failure and resets consent only on successful replacement', async () => {
   const view = render(<App />)
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Campaign name' }), { target: { value: 'Import test' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to recipients' }))
   await waitFor(() => expect(view.container.querySelector('input[type=file]')).not.toBeNull())
   const input = view.container.querySelector('input[type=file]')!
   fireEvent.change(input, { target: { files: [new File([''], 'contacts.csv')] } })
   const consent = await screen.findByRole('checkbox')
   fireEvent.click(consent)
-  fireEvent.change(input, { target: { files: [] } })
+  const replacementInput = view.container.querySelector('input[type=file]')!
+  fireEvent.change(replacementInput, { target: { files: [] } })
   expect((consent as HTMLInputElement).checked).toBe(true)
   mock.parse.mockRejectedValueOnce(new Error('bad file'))
-  fireEvent.change(input, { target: { files: [new File([''], 'broken.csv')] } })
+  fireEvent.change(replacementInput, { target: { files: [new File([''], 'broken.csv')] } })
   await screen.findByText('bad file')
   expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true)
-  fireEvent.change(input, { target: { files: [new File([''], 'replacement.csv')] } })
+  fireEvent.change(replacementInput, { target: { files: [new File([''], 'replacement.csv')] } })
   await waitFor(() => expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(false))
   expect(mock.parse).toHaveBeenCalledTimes(3)
 })
@@ -72,9 +75,16 @@ it('restores a tab draft on remount, re-fetches recipient rows, and reuses the s
   seed()
   const view = render(<App />)
   await waitFor(() => expect((screen.getByRole('button', { name: 'Review campaign' }) as HTMLButtonElement).disabled).toBe(false))
-  fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Edited title' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Campaign name' }), { target: { value: 'Edited title' } })
   view.unmount(); render(<App />)
-  expect(((await screen.findByRole('textbox', { name: 'Name' })) as HTMLInputElement).value).toBe('Edited title')
+  await waitFor(() => expect((screen.getByRole('button', { name: 'Back' }) as HTMLButtonElement).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+  expect((screen.getByRole('textbox', { name: 'Campaign name' }) as HTMLInputElement).value).toBe('Edited title')
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to recipients' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to message' }))
   await waitFor(() => expect((screen.getByRole('button', { name: 'Review campaign' }) as HTMLButtonElement).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review campaign' }))
   await screen.findByRole('heading', { name: 'Review & confirm' }, { timeout: 5_000 })
@@ -83,15 +93,15 @@ it('restores a tab draft on remount, re-fetches recipient rows, and reuses the s
 })
 it('does not reveal another account’s tab draft', async () => {
   seed(); mock.user = { id: 'other' }; render(<App />)
-  expect(((await screen.findByRole('textbox', { name: 'Name' })) as HTMLInputElement).value).toBe('')
+  expect(((await screen.findByRole('textbox', { name: 'Campaign name' })) as HTMLInputElement).value).toBe('')
 })
 it('resumes an acknowledged preparation step after a later read fails without duplicating its import', async () => {
   seed({ prepared: null, draftId: null }); mock.validation.mockRejectedValueOnce(new Error('temporary read failure'))
   render(<App />)
   fireEvent.click(await screen.findByRole('checkbox'))
-  fireEvent.click(screen.getByRole('button', { name: /Continue with/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to message' }))
   await screen.findByText('temporary read failure')
-  fireEvent.click(screen.getByRole('button', { name: /Continue with/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to message' }))
   await screen.findByRole('textbox', { name: /^SMS message/ })
   expect(mock.imports).toHaveBeenCalledTimes(1)
   expect(mock.preview).toHaveBeenCalledTimes(1)
@@ -101,7 +111,7 @@ it('does not continue preparation with further writes after the screen unmounts'
   let resolve!: (value: string) => void
   mock.imports.mockImplementationOnce(() => new Promise((done) => { resolve = done }))
   const view = render(<App />)
-  fireEvent.click(await screen.findByRole('checkbox')); fireEvent.click(screen.getByRole('button', { name: /Continue with/ }))
+  fireEvent.click(await screen.findByRole('checkbox')); fireEvent.click(screen.getByRole('button', { name: 'Continue to message' }))
   view.unmount()
   await act(async () => { resolve('import') })
   expect(mock.validation).not.toHaveBeenCalled()
@@ -122,7 +132,11 @@ it('requires a phone choice when several are paired; confirms once and clears th
   const button = await screen.findByRole('button', { name: 'Confirm campaign' })
   expect((button as HTMLButtonElement).disabled).toBe(true)
   fireEvent.change(screen.getByRole('combobox', { name: 'Sending phone' }), { target: { value: 'phone2' } })
-  fireEvent.click(button); fireEvent.click(button)
+  fireEvent.click(button)
+  const dialog = await screen.findByRole('dialog', { name: 'Confirm campaign?' })
+  expect(mock.confirm).not.toHaveBeenCalled()
+  const confirmButton = within(dialog).getByRole('button', { name: 'Confirm campaign' })
+  fireEvent.click(confirmButton); fireEvent.click(confirmButton)
   expect(mock.confirm).toHaveBeenCalledTimes(1)
   expect(mock.confirm).toHaveBeenCalledWith('workspace', 'saved', 'phone2')
   await act(async () => { resolve('campaign') })

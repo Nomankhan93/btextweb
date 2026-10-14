@@ -17,14 +17,14 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.5-r1', 'frontend version must be 0.20.5-r1')
-check(lock.version === '0.20.5-r1' && lock.packages?.['']?.version === '0.20.5-r1', 'package-lock must match 0.20.5-r1')
+check(pkg.version === '0.20.12', 'frontend version must be 0.20.12')
+check(lock.version === '0.20.12' && lock.packages?.['']?.version === '0.20.12', 'package-lock must match 0.20.12')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
 check(Array.isArray(vercel.rewrites) && vercel.rewrites.length === 1, 'Vercel must define exactly one SPA fallback rewrite')
 check(vercel.rewrites[0]?.source === '/(.*)', 'Vercel SPA rewrite must cover deep routes')
 check(vercel.rewrites[0]?.destination === '/index.html', 'Vercel SPA rewrite must serve index.html for deep routes')
 
-check(sw.includes("const VERSION = '0.20.5-r1'"), 'service-worker cache identity must advance to 0.20.5-r1')
+check(sw.includes("const VERSION = '0.20.12'"), 'service-worker cache identity must advance to 0.20.12')
 check(sw.includes('async function installedShellNavigation(request)'), 'navigation must use the installed-shell strategy')
 check(sw.includes('if (installedShell) return installedShell'), 'active controlled clients must remain pinned to their installed shell')
 check(!sw.includes('async function networkFirstNavigation(request)'), 'network-first app navigation must be removed')
@@ -46,6 +46,6 @@ check(runtimeTest.includes("name: 'Updating…'"), 'runtime test must protect vi
 check(runtimeTest.includes("toHaveBeenCalledWith({ type: 'SKIP_WAITING' })"), 'runtime test must protect explicit activation message')
 
 const migrations = fs.readdirSync('supabase/migrations').filter((name) => name.endsWith('.sql'))
-check(!migrations.some((name) => name.includes('0203') || name.includes('0204')), '0.20.5-r1 must not add a database migration')
+check(!migrations.some((name) => name.includes('0203') || name.includes('0204')), '0.20.12 must not add a database migration')
 
-console.log(`Web 0.20.5-r1 production routing & controlled PWA update source contract: PASS (${assertions} assertions)`)
+console.log(`Web 0.20.12 production routing & controlled PWA update source contract: PASS (${assertions} assertions)`)
