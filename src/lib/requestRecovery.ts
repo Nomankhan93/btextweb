@@ -30,12 +30,18 @@ export function parseRetryAfter(value: string | null, now = Date.now()): number 
   return Number.isFinite(delay) ? Math.max(0, Math.min(delay, 86_400_000)) : 0
 }
 const retryHeaders = new WeakMap<AbortSignal, number>()
-/** Metadata only. Never retries fetch, especially not mutations. */
+/** Bounds auth headers AND body. Never retries fetch, especially not mutations. */
 export const recoveryFetch: typeof fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
   const authRead = /\/auth\/v1\/(user|token)(?:\?|$)/.test(url)
   const response = authRead
-    ? await withDeadline('auth-transport', signal => fetch(input, { ...init, signal }), init?.signal ?? undefined)
+    ? await withDeadline('auth-transport', async signal => {
+      const received = await fetch(input, { ...init, signal })
+      // fetch resolves at headers. Consume the body before deadline cleanup
+      // aborts the transport, then give the SDK an independent readable body.
+      const body = received.body === null ? null : await received.arrayBuffer()
+      return new Response(body, { status: received.status, statusText: received.statusText, headers: received.headers })
+    }, init?.signal ?? (input instanceof Request ? input.signal : undefined))
     : await fetch(input, init)
   if (init?.signal) retryHeaders.set(init.signal, parseRetryAfter(response.headers.get('Retry-After')))
   return response

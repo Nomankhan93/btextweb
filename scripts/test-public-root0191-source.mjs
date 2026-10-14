@@ -14,7 +14,7 @@ function check(condition, message) {
   assert.ok(condition, message)
 }
 
-check(pkg.version === '0.20.5', 'frontend version must be 0.20.3')
+check(pkg.version === '0.20.5-r1', 'frontend version must be 0.20.3')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
 check(Boolean(pkg.scripts?.['test:public-root-0191']), '0.20.3 App-level routing regression script must exist')
 check(Boolean(pkg.scripts?.['test:public-root-source-0191']), '0.20.3 source contract script must exist')

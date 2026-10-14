@@ -4,7 +4,7 @@ import process from 'node:process'
 let assertions = 0
 function check(condition, message) {
   assertions += 1
-  if (!condition) throw new Error(`0.20.5 recipient import scale source contract failed: ${message}`)
+  if (!condition) throw new Error(`0.20.5-r1 recipient import scale source contract failed: ${message}`)
 }
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
@@ -19,9 +19,9 @@ const migration = fs.readFileSync('supabase/migrations/20261013000100_recipient_
 const preflight = fs.readFileSync('scripts/preflight.mjs', 'utf8')
 const sw = fs.readFileSync('public/service-worker.js', 'utf8')
 
-check(pkg.version === '0.20.5', 'package version must be 0.20.5')
-check(lock.version === '0.20.5' && lock.packages?.['']?.version === '0.20.5', 'package-lock version must match 0.20.5')
-check(sw.includes("const VERSION = '0.20.5'"), 'service-worker cache identity must advance to 0.20.5')
+check(pkg.version === '0.20.5-r1', 'package version must be 0.20.5-r1')
+check(lock.version === '0.20.5-r1' && lock.packages?.['']?.version === '0.20.5-r1', 'package-lock version must match 0.20.5-r1')
+check(sw.includes("const VERSION = '0.20.5-r1'"), 'service-worker cache identity must advance to 0.20.5-r1')
 
 check(!importFiles.includes('MAX_IMPORT_FILE_BYTES'), 'the 5 MB browser product cap must be removed')
 check(!importFiles.includes('MAX_IMPORT_ROWS'), 'the 5,000-row parser product cap must be removed')
@@ -64,7 +64,7 @@ check(pagedRpc.includes('maxRows?: number'), 'callers may still opt into an expl
 check(!draftStorage.includes('value.rows.length > 5000'), 'offline draft validation must accept imports above 5,000 rows')
 check(!draftStorage.includes('value.length > 5000'), 'personalization draft validation must accept above 5,000 rows')
 
-check(preflight.includes('test-import-scale0204-source.mjs'), 'preflight must require the 0.20.5 source contract')
-check(preflight.includes('20261013000100_recipient_import_reliability_scale.sql'), 'preflight must require the 0.20.5 migration')
+check(preflight.includes('test-import-scale0204-source.mjs'), 'preflight must require the 0.20.5-r1 source contract')
+check(preflight.includes('20261013000100_recipient_import_reliability_scale.sql'), 'preflight must require the 0.20.5-r1 migration')
 
-console.log(`Web 0.20.5 recipient import reliability & scale source contract: PASS (${assertions} assertions)`)
+console.log(`Web 0.20.5-r1 recipient import reliability & scale source contract: PASS (${assertions} assertions)`)

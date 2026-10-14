@@ -47,3 +47,55 @@ it('retains an already classified failure', () => {
   const failure=new ApiFailure('Slow','timeout','read')
   expect(classifyFailure(failure)).toBe(failure)
 })
+
+function streamedAuthFetch(body: string, status = 200, delay = 10) {
+  return vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const abort = () => { clearTimeout(timer); controller.error(new DOMException('signal is aborted without reason', 'AbortError')) }
+        const timer = setTimeout(() => {
+          init?.signal?.removeEventListener('abort', abort)
+          controller.enqueue(new TextEncoder().encode(body)); controller.close()
+        }, delay)
+        init?.signal?.addEventListener('abort', abort, { once: true })
+      },
+    })
+    return new Response(stream, { status, headers: { 'Content-Type': 'application/json' } })
+  })
+}
+it('keeps delayed auth response bodies readable after headers arrive', async () => {
+  vi.stubGlobal('fetch', streamedAuthFetch('{"user":{"id":"u"}}'))
+  const response = await recoveryFetch('https://example.supabase.co/auth/v1/user')
+  await expect(response.json()).resolves.toEqual({ user: { id: 'u' } })
+})
+it('retains a delayed auth rejection body and HTTP status', async () => {
+  vi.stubGlobal('fetch', streamedAuthFetch('{"code":"invalid_credentials"}', 400))
+  const response = await recoveryFetch('https://example.supabase.co/auth/v1/token?grant_type=password', { method: 'POST' })
+  expect(response.status).toBe(400)
+  await expect(response.json()).resolves.toEqual({ code: 'invalid_credentials' })
+})
+it('bounds a stalled auth body, not just the response headers', async () => {
+  vi.useFakeTimers()
+  vi.stubGlobal('fetch', streamedAuthFetch('{}', 200, 60000))
+  const pending = recoveryFetch('https://example.supabase.co/auth/v1/user')
+  const assertion = expect(pending).rejects.toMatchObject({ kind: 'timeout' })
+  await vi.advanceTimersByTimeAsync(15000); await assertion
+})
+it('supports sign in, sign out, and sign in again through the real Supabase auth client', async () => {
+  const token = JSON.stringify({ access_token:'token', refresh_token:'refresh', token_type:'bearer', expires_in:3600, user:{ id:'u', aud:'authenticated', role:'authenticated', email:'test@example.com' } })
+  const streamed = streamedAuthFetch(token)
+  const transport = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).includes('/logout')) return new Response(null, { status:204 })
+    return streamed(input, init)
+  })
+  vi.stubGlobal('fetch',transport)
+  const client = createClient('https://example.supabase.co','test-key', { auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},global:{fetch:recoveryFetch} })
+  const credentials = {email:'test@example.com',password:'test-password'}
+  const first = await client.auth.signInWithPassword(credentials)
+  expect(first.error).toBeNull(); expect(first.data.session?.user.id).toBe('u')
+  expect((await client.auth.signOut()).error).toBeNull()
+  expect((await client.auth.getSession()).data.session).toBeNull()
+  const second = await client.auth.signInWithPassword(credentials)
+  expect(second.error).toBeNull(); expect(second.data.session?.user.id).toBe('u')
+  expect(transport).toHaveBeenCalledTimes(3)
+})

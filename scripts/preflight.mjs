@@ -71,7 +71,7 @@ if (/service[_-]?role|jwt[_-]?secret|sb_secret_/i.test(envExample)) {
   process.exit(1)
 }
 
-if (packageJson.version !== '0.20.5') { console.error(`Preflight failed. Expected package version 0.20.5, got ${packageJson.version}`); process.exit(1) }
+if (packageJson.version !== '0.20.5-r1') { console.error(`Preflight failed. Expected package version 0.20.5-r1, got ${packageJson.version}`); process.exit(1) }
 
 const importScaleSource = await readFile(new URL('../scripts/test-import-scale0204-source.mjs', import.meta.url), 'utf8')
 const importFiles0204 = await readFile(new URL('../src/lib/importFiles.ts', import.meta.url), 'utf8')
@@ -79,23 +79,23 @@ const importsApi0204 = await readFile(new URL('../src/lib/importsApi.ts', import
 const importsPage0204 = await readFile(new URL('../src/pages/ImportsPage.tsx', import.meta.url), 'utf8')
 const importMigration0204 = await readFile(new URL('../supabase/migrations/20261013000100_recipient_import_reliability_scale.sql', import.meta.url), 'utf8')
 if (!importScaleSource.includes('recipient import reliability & scale source contract')) {
-  console.error('Preflight failed. 0.20.5 recipient import source contract marker is missing.')
+  console.error('Preflight failed. 0.20.5-r1 recipient import source contract marker is missing.')
   process.exit(1)
 }
 if (importFiles0204.includes('MAX_IMPORT_FILE_BYTES') || importFiles0204.includes('MAX_IMPORT_ROWS') || !importFiles0204.includes('inflateRawFallback')) {
-  console.error('Preflight failed. 0.20.5 parser still contains a retired product cap or lacks the XLSX fallback.')
+  console.error('Preflight failed. 0.20.5-r1 parser still contains a retired product cap or lacks the XLSX fallback.')
   process.exit(1)
 }
 if (!importsApi0204.includes("'begin_contact_import'") || !importsApi0204.includes("'append_contact_import_rows'") || !importsApi0204.includes("'finalize_contact_import'")) {
-  console.error('Preflight failed. 0.20.5 batched import staging client contract is incomplete.')
+  console.error('Preflight failed. 0.20.5-r1 batched import staging client contract is incomplete.')
   process.exit(1)
 }
 if (importsPage0204.includes('max 5 MB') || importsPage0204.includes('MAX_IMPORT_ROWS') || !importsPage0204.includes('import-work-progress')) {
-  console.error('Preflight failed. 0.20.5 import UX still exposes a retired cap or lacks progress.')
+  console.error('Preflight failed. 0.20.5-r1 import UX still exposes a retired cap or lacks progress.')
   process.exit(1)
 }
 for (const marker of ['begin_contact_import', 'append_contact_import_rows', 'finalize_contact_import', 'abort_contact_import', "'import_fixed_file_size_cap', false", "'import_fixed_row_cap', false"]) {
-  if (!importMigration0204.includes(marker)) { console.error(`Preflight failed. 0.20.5 import migration marker missing: ${marker}`); process.exit(1) }
+  if (!importMigration0204.includes(marker)) { console.error(`Preflight failed. 0.20.5-r1 import migration marker missing: ${marker}`); process.exit(1) }
 }
 
 
@@ -109,19 +109,19 @@ if (
   || vercelConfig.rewrites[0]?.source !== '/(.*)'
   || vercelConfig.rewrites[0]?.destination !== '/index.html'
 ) {
-  console.error('Preflight failed. 0.20.5 Vercel SPA fallback is missing or broadened unexpectedly.')
+  console.error('Preflight failed. 0.20.5-r1 Vercel SPA fallback is missing or broadened unexpectedly.')
   process.exit(1)
 }
 if (!correctiveRoutingContract.includes('production routing & controlled PWA update source contract')) {
-  console.error('Preflight failed. 0.20.5 routing/PWA source contract marker is missing.')
+  console.error('Preflight failed. 0.20.5-r1 routing/PWA source contract marker is missing.')
   process.exit(1)
 }
 if (!correctiveCertifier.includes("'test:routing-pwa-source-0203r1'") || !correctiveCertifier.includes("'certify:0203'")) {
-  console.error('Preflight failed. 0.20.5 corrective certification chain is incomplete.')
+  console.error('Preflight failed. 0.20.5-r1 corrective certification chain is incomplete.')
   process.exit(1)
 }
 if (!correctivePrompts.includes("updating ? 'Updating…' : 'Update now'") || !correctivePrompts.includes('disabled={updating}')) {
-  console.error('Preflight failed. 0.20.5 explicit update progress UI is incomplete.')
+  console.error('Preflight failed. 0.20.5-r1 explicit update progress UI is incomplete.')
   process.exit(1)
 }
 
@@ -164,7 +164,7 @@ const observabilitySource = await readFile(new URL('../src/lib/observability.ts'
 const appErrorBoundarySource = await readFile(new URL('../src/components/AppErrorBoundary.tsx', import.meta.url), 'utf8')
 const settingsSource = await readFile(new URL('../src/pages/SettingsPage.tsx', import.meta.url), 'utf8')
 const observabilityMarkers = [
-  "OBSERVABILITY_RELEASE = '0.20.5'",
+  "OBSERVABILITY_RELEASE = '0.20.5-r1'",
   "STORAGE_KEY = 'bulktext:diagnostics:v1'",
   'MAX_EVENTS = 25',
   "window.addEventListener('error'",
@@ -267,11 +267,11 @@ const routeLoadingMarkers = [
 const missingRouteLoadingMarkers = routeLoadingMarkers.filter((marker) => !appSource.includes(marker))
 if (missingRouteLoadingMarkers.length) { console.error(`Preflight failed. 0.20.3 route-loading markers missing: ${missingRouteLoadingMarkers.join(', ')}`); process.exit(1) }
 if (!viteSource.includes("manifest: 'asset-manifest.json'")) { console.error('Preflight failed. 0.20.3 Vite asset manifest output is missing.'); process.exit(1) }
-for (const marker of ["const VERSION = '0.20.5'", "'/asset-manifest.json'", 'buildManifestAssets', 'cold-start offline route coverage after code splitting', 'async function installedShellNavigation(request)', 'if (installedShell) return installedShell', 'if (networkResponse.ok) return networkResponse']) {
-  if (!serviceWorkerSource.includes(marker)) { console.error(`Preflight failed. 0.20.5 PWA shell marker missing: ${marker}`); process.exit(1) }
+for (const marker of ["const VERSION = '0.20.5-r1'", "'/asset-manifest.json'", 'buildManifestAssets', 'cold-start offline route coverage after code splitting', 'async function installedShellNavigation(request)', 'if (installedShell) return installedShell', 'if (networkResponse.ok) return networkResponse']) {
+  if (!serviceWorkerSource.includes(marker)) { console.error(`Preflight failed. 0.20.5-r1 PWA shell marker missing: ${marker}`); process.exit(1) }
 }
 if (serviceWorkerSource.includes('async function networkFirstNavigation(request)')) {
-  console.error('Preflight failed. 0.20.5 must not restore network-first controlled HTML navigation.')
+  console.error('Preflight failed. 0.20.5-r1 must not restore network-first controlled HTML navigation.')
   process.exit(1)
 }
 
@@ -537,6 +537,6 @@ for (const marker of ["version', '') <> '0.18.5'", 'Production schema must not e
   if (!freshVerifier.includes(marker)) { console.error(`Preflight failed. Fresh-schema 0.18.4 marker missing: ${marker}`); process.exit(1) }
 }
 
-console.log('BulkText Web 0.20.5 / backend 0.18.5 preflight PASS')
+console.log('BulkText Web 0.20.5-r1 / backend 0.18.5 preflight PASS')
 
-if (packageJson.bulktext?.backendContractVersion !== '0.18.5') { console.error('Expected backend contract 0.18.5 for Web 0.20.5'); process.exit(1) }
+if (packageJson.bulktext?.backendContractVersion !== '0.18.5') { console.error('Expected backend contract 0.18.5 for Web 0.20.5-r1'); process.exit(1) }

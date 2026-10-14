@@ -16,7 +16,7 @@ const pkg = JSON.parse(pkgText)
 let assertions = 0
 function check(condition, message) { assert.ok(condition, message); assertions += 1 }
 
-check(pkg.version === '0.20.5', 'frontend version must be 0.20.3')
+check(pkg.version === '0.20.5-r1', 'frontend version must be 0.20.3')
 check(pkg.bulktext?.backendContractVersion === '0.18.5', 'backend contract must remain 0.18.5')
 check(pkg.scripts?.['test:offline-draft-01810']?.includes('offlineDraftStorage01810.test.ts'), 'targeted offline draft test script must exist')
 check(pkg.scripts?.['test:offline-draft-source-01810'] === 'node scripts/test-offline-draft01810-source.mjs', 'offline draft source contract script must exist')
@@ -47,7 +47,7 @@ check(campaign.includes('Local message edits are not sent to the server until yo
 check(campaign.includes('Discard draft'), 'local draft discard control must remain visible')
 
 check(auth.includes('clearAccountScopedState') && auth.includes('await clearCampaignDrafts()'), 'auth sign-out cleanup must remain wired through the account boundary')
-check(serviceWorker.includes("const VERSION = '0.20.5'"), 'PWA cache version must be 0.20.3')
+check(serviceWorker.includes("const VERSION = '0.20.5-r1'"), 'PWA cache version must be 0.20.3')
 check(!serviceWorker.includes('sync.add') && !serviceWorker.includes("addEventListener('sync'"), 'service worker must not add background send/sync replay')
 check(serviceWorker.includes('if (request.method !== \'GET\') return'), 'service worker must still ignore mutation requests')
 check(pwa.includes('Draft editing can continue') || pwa.includes('setOnline'), 'PWA online/offline foundation must remain present')
